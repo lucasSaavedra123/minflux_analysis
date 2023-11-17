@@ -1,5 +1,6 @@
 import numpy as np
 from Trajectory import Trajectory
+from scipy.spatial import KDTree
 
 
 def custom_histogram(data, starting_x, final_x, x_step):
@@ -110,7 +111,8 @@ def both_segments_intersect(segment_one, segment_two):
 
     return doIntersect(p1, q1, p2, q2)
 
-def both_trajectories_intersect(trajectory_one, trajectory_two):
+def both_trajectories_intersect(trajectory_one, trajectory_two, radius_threshold=1):
+    """
     points_one = np.column_stack((trajectory_one.get_noisy_x(),trajectory_one.get_noisy_y()))
     points_two = np.column_stack((trajectory_two.get_noisy_x(),trajectory_two.get_noisy_y()))
 
@@ -121,5 +123,18 @@ def both_trajectories_intersect(trajectory_one, trajectory_two):
         for segment_two in segments_two:
             if both_segments_intersect(segment_one, segment_two):
                 return True
+    """
 
-    return False
+    # Example curves represented as arrays of points (x, y)
+    curve1 = np.column_stack((trajectory_one.get_noisy_x(),trajectory_one.get_noisy_y()))
+    curve2 = np.column_stack((trajectory_two.get_noisy_x(),trajectory_two.get_noisy_y()))
+
+    # Create KD-trees
+    tree1 = KDTree(curve1)
+    tree2 = KDTree(curve2)
+
+    # Query for intersections between curves
+    intersections = tree1.query_ball_tree(tree2, r=radius_threshold)
+    intersections = [intersection for intersection in intersections if intersection != []]
+
+    return len(intersections) > 0
