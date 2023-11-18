@@ -59,7 +59,7 @@ def extract_dataframes_from_file(dataset_directory, a_file):
 
     extraction_result = []
 
-    for row_index in tqdm.tqdm(list(range(len(dataset)))):
+    for row_index in list(range(len(dataset))):
         if dataset.iloc[row_index]['track_id'] != current_id:
             extraction_result.append((
                 dataset.iloc[initial_row:row_index].copy().sort_values('t', ascending=True),
@@ -87,10 +87,10 @@ def get_trajectories_from(dataset_directory, file_index=None):
     if file_index is not None:
         file_names = [file_names[file_index]]
 
-    for a_file in tqdm.tqdm(file_names):
+    for a_file in file_names:
         extraction_result = extract_dataframes_from_file(dataset_directory, a_file)
         print(f"Reading trajectories from dataset {dataset_directory} and file {a_file}")
-        for info_extracted in tqdm.tqdm(extraction_result):
+        for info_extracted in extraction_result:
             trajectories.append(extract_trajectory_from(
                 info_extracted[0],
                 dataset_directory,
@@ -103,20 +103,21 @@ def get_trajectories_from(dataset_directory, file_index=None):
 
 number_of_files = len([file for file in os.listdir('Cholesterol and btx') if file.endswith('.txt')])
 
-trajectories_by_condition = defaultdict(lambda: [])
+number_of_intersections = 0
 
-for file_index in [2]:#range(number_of_files):
+for file_index in tqdm.tqdm(list(range(number_of_files))):
     trajectories = get_trajectories_from('Cholesterol and btx', file_index)
+    trajectories_by_condition = defaultdict(lambda: [])
 
     for trajectory in trajectories:
         trajectories_by_condition['fPEG-Chol' if np.mean(trajectory.info['dcr']) > TDCR_THRESHOLD else 'BTX680R'].append(trajectory)
 
-    for btx_trajectory in tqdm.tqdm(trajectories_by_condition['BTX680R']):
+    for btx_trajectory in trajectories_by_condition['BTX680R']:#tqdm.tqdm(trajectories_by_condition['BTX680R']):
         intersection = []
         for chol_trajectory in trajectories_by_condition['fPEG-Chol']:
-            if both_trajectories_intersect(btx_trajectory, chol_trajectory):
+            if both_trajectories_intersect(btx_trajectory, chol_trajectory, radius_threshold=0.01):
                 intersection.append(chol_trajectory)
-
+        """
         if len(intersection) != 0:
             plt.plot(btx_trajectory.get_noisy_x(), btx_trajectory.get_noisy_y(), color='blue')
 
@@ -124,3 +125,8 @@ for file_index in [2]:#range(number_of_files):
                 plt.plot(chol_trajectory.get_noisy_x(), chol_trajectory.get_noisy_y(), color='orange')
         
             plt.show()
+        """
+
+        number_of_intersections += 1
+
+print(number_of_intersections)
