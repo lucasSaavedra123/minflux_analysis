@@ -37,6 +37,11 @@ NUMBER_OF_POINTS_FOR_MSD = 250
 
 STEP_LAGS_FOR_ANGLE_ANALYSIS = [1,4,8,25,50]
 
+TDCR_THRESHOLD = 0.55
+
+BTX_NOMENCLATURE = 'BTX680R'
+CHOL_NOMENCLATURE = 'fPEG-Chol'
+
 def default_angles():
     return {str(step_lag): [] for step_lag in STEP_LAGS_FOR_ANGLE_ANALYSIS}
 
