@@ -100,7 +100,7 @@ def analyze_trajectory(trajectory_id):
     trajectory.info['analysis']['confinement-b'] = []
     trajectory.info['analysis']['confinement-e'] = []
 
-    _, intervals = trajectory.confinement_states(return_intervals=True, v_th=33)
+    states, intervals = trajectory.confinement_states(return_intervals=True, v_th=33)
 
     times = []
 
@@ -108,6 +108,7 @@ def analyze_trajectory(trajectory_id):
         times.append(interval[-1] - interval[0])
 
     trajectory.info['analysis']['residence_time'] = sum(times)
+    trajectory.info['analysis']['confinement-states'] = states
 
     reconstructed_trajectory = trajectory.reconstructed_trajectory(DATASET_TO_DELTA_T[trajectory.info['dataset']])
 
