@@ -10,7 +10,7 @@ from utils import both_trajectories_intersect
 
 
 DatabaseHandler.connect_over_network(None, None, IP_ADDRESS, COLLECTION_NAME)
-number_of_intersections = 0
+
 files = Trajectory.objects(info__dataset='Cholesterol and btx').distinct(field='info.file')
 
 for file in tqdm.tqdm(files):
