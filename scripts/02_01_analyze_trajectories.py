@@ -108,7 +108,7 @@ def analyze_trajectory(trajectory_id):
         times.append(interval[-1] - interval[0])
 
     trajectory.info['analysis']['residence_time'] = sum(times)
-    trajectory.info['analysis']['confinement-states'] = states
+    trajectory.info['analysis']['confinement-states'] = states.tolist()
 
     reconstructed_trajectory = trajectory.reconstructed_trajectory(DATASET_TO_DELTA_T[trajectory.info['dataset']])
 
