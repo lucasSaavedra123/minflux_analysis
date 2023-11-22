@@ -392,8 +392,8 @@ class Trajectory(Document):
     def is_immobile(self, threshold):
         return self.normalized_ratio <= threshold
 
-    def sub_trajectories_trajectories_from_confinement_states(self, v_th=11, window_size=3):
-        confinement_states = self.confinement_states(return_intervals=False, v_th=v_th, window_size=window_size)
+    def sub_trajectories_trajectories_from_confinement_states(self, v_th=11, window_size=3, use_info=False):
+        confinement_states = self.confinement_states(return_intervals=False, v_th=v_th, window_size=window_size) if not use_info else self.info['analysis']['confinement-states']
 
         trajectories = {
             0: [],
