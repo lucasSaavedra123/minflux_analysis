@@ -28,14 +28,23 @@ for file in tqdm.tqdm(files):
         
         btx_trajectory.save()
 
-        """
-        if len(intersection) != 0:
-            plt.plot(btx_trajectory.get_noisy_x(), btx_trajectory.get_noisy_y(), color='blue')
-
-            for chol_trajectory in intersection:
-                plt.plot(chol_trajectory.get_noisy_x(), chol_trajectory.get_noisy_y(), color='orange')
+    for chol_trajectory in tqdm.tqdm(trajectories_by_condition[CHOL_NOMENCLATURE]):
+        chol_trajectory.info[f'{BTX_NOMENCLATURE}_intersections'] = []
+        for btx_trajectory in trajectories_by_condition[BTX_NOMENCLATURE]:
+            if both_trajectories_intersect(chol_trajectory, btx_trajectory, radius_threshold=0.001):
+                chol_trajectory.info[f'{BTX_NOMENCLATURE}_intersections'].append(btx_trajectory.id)
         
-            plt.show()
-        """
+        chol_trajectory.save()
 
 DatabaseHandler.disconnect()
+
+#Plotting
+"""
+if len(intersection) != 0:
+    plt.plot(btx_trajectory.get_noisy_x(), btx_trajectory.get_noisy_y(), color='blue')
+
+    for chol_trajectory in intersection:
+        plt.plot(chol_trajectory.get_noisy_x(), chol_trajectory.get_noisy_y(), color='orange')
+
+    plt.show()
+"""
