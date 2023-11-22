@@ -26,8 +26,9 @@ for btx_trajectory_id in tqdm.tqdm(list(btx_trajectories_ids)):
     for btx_confinement in btx_confinements:
         there_is_overlap = any([both_trajectories_intersect(chol_confinement, btx_confinement, radius_threshold=0.001) for chol_confinement in chol_confinements])
         btx_trajectory.info[f'number_of_confinement_zones_with_{CHOL_NOMENCLATURE}'] += 1 if there_is_overlap else 0
-
+    
     assert btx_trajectory.info[f'number_of_confinement_zones_with_{CHOL_NOMENCLATURE}'] <= btx_trajectory.info['number_of_confinement_zones']
+    btx_trajectory.save()
 
 chol_trajectories_ids = Trajectory._get_collection().find({'info.classified_experimental_condition':CHOL_NOMENCLATURE}, {f'id':1})
 
@@ -47,5 +48,6 @@ for chol_trajectory_id in tqdm.tqdm(list(chol_trajectories_ids)):
         chol_trajectory.info[f'number_of_confinement_zones_with_{BTX_NOMENCLATURE}'] += 1 if there_is_overlap else 0
 
     assert chol_trajectory.info[f'number_of_confinement_zones_with_{BTX_NOMENCLATURE}'] <= chol_trajectory.info['number_of_confinement_zones']
+    chol_trajectory.save()
 
 DatabaseHandler.disconnect()
