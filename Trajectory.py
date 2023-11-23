@@ -432,7 +432,7 @@ class Trajectory(Document):
                     noisy=True
                 )
 
-    def confinement_states(self,v_th=11,window_size=3, return_intervals=False):
+    def confinement_states(self,v_th=11, window_size=3, transition_fix_threshold=9, return_intervals=False):
         """
         This method is the Array-Oriented Python implementation of the algorithm proposed in the referenced
         paper to identify periods of transient confinement within individual trajectories.
@@ -475,6 +475,10 @@ class Trajectory(Document):
             states[position_index] = np.sum(S[position_index, :] * V)
 
         states = (states > 0).astype(int)
+
+        #Spurious transitions are eliminated
+        for window_index in range(0,len(states), transition_fix_threshold):
+            states[window_index:window_index+transition_fix_threshold] = np.argmax(np.bincount(states[window_index:window_index+transition_fix_threshold]))
 
         if return_intervals:
             indices = np.nonzero(states[1:] != states[:-1])[0] + 1
