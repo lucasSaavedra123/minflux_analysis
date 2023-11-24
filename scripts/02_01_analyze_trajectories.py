@@ -155,7 +155,7 @@ def analyze_trajectory(trajectory_id):
     DatabaseHandler.disconnect()
 
 DatabaseHandler.connect_over_network(None, None, IP_ADDRESS, COLLECTION_NAME)
-uploaded_trajectories_ids = [str(trajectory_result['_id']) for trajectory_result in Trajectory._get_collection().find({'info.dataset':{'$in': DATASETS_LIST[:3]}}, {'_id':1})]
+uploaded_trajectories_ids = [str(trajectory_result['_id']) for trajectory_result in Trajectory._get_collection().find({}, {'_id':1})]
 DatabaseHandler.disconnect()
 
 for id_batch in tqdm.tqdm(list(batch(uploaded_trajectories_ids, n=1000))):

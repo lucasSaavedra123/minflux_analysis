@@ -178,6 +178,26 @@ for dataset in DATASETS_LIST:
     plt.plot(x,pdfs, color=DATASET_TO_COLOR[dataset])
     plt.hist(residence_times, density=True, bins='auto', histtype='stepfilled', alpha=0.2, color=DATASET_TO_COLOR[dataset])
 
+basic_info_file.write(f"{BTX_NOMENCLATURE} -> n={len(Trajectory._get_collection().count_documents({'info.classified_experimental_condition':BTX_NOMENCLATURE, 'info.immobile':False}))}\n")
+
+fractions = []
+
+for btx_id in Trajectory._get_collection().find({'info.classified_experimental_condition':BTX_NOMENCLATURE, 'info.immobile':False}, {f'id':1}):
+    btx_trajectory = Trajectory.objects(id=btx_id['_id'])[0]
+    if 'number_of_confinement_zones' in btx_trajectory.info and btx_trajectory.info['number_of_confinement_zones'] != 0:
+        fractions.append(btx_trajectory.info[f'number_of_confinement_zones_with_{CHOL_NOMENCLATURE}']/btx_trajectory.info['number_of_confinement_zones'])
+
+basic_info_file.write(f"{BTX_NOMENCLATURE} -> Fraction: {np.mean(fractions)}us, S.E.M: {sem(fractions)}s\n")
+
+fractions = []
+
+for chol_id in Trajectory._get_collection().find({'info.classified_experimental_condition':CHOL_NOMENCLATURE, 'info.immobile':False}, {f'id':1}):
+    chol_trajectory = Trajectory.objects(id=chol_id['_id'])[0]
+    if 'number_of_confinement_zones' in chol_trajectory.info and chol_trajectory.info['number_of_confinement_zones'] != 0:
+        fractions.append(chol_trajectory.info[f'number_of_confinement_zones_with_{BTX_NOMENCLATURE}']/chol_trajectory.info['number_of_confinement_zones'])
+
+basic_info_file.write(f"{CHOL_NOMENCLATURE} -> Fraction: {np.mean(fractions)}us, S.E.M: {sem(fractions)}s\n")
+
 basic_info_file.close()
 DatabaseHandler.disconnect()
 
