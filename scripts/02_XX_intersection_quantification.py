@@ -63,14 +63,14 @@ def analyze_chol_trajectory(chol_trajectory_id):
 
     DatabaseHandler.disconnect()
 
-"""
+
 DatabaseHandler.connect_over_network(None, None, IP_ADDRESS, COLLECTION_NAME)
 btx_trajectories_ids = list(Trajectory._get_collection().find({'info.classified_experimental_condition':BTX_NOMENCLATURE}, {f'id':1}))
 DatabaseHandler.disconnect()
 
 for id_batch in tqdm.tqdm(list(batch(btx_trajectories_ids, n=1000))):
     ray.get([analyze_btx_trajectory.remote(an_id) for an_id in id_batch])
-"""
+
 DatabaseHandler.connect_over_network(None, None, IP_ADDRESS, COLLECTION_NAME)
 chol_trajectories_ids = list(Trajectory._get_collection().find({'info.classified_experimental_condition':CHOL_NOMENCLATURE}, {f'id':1}))
 DatabaseHandler.disconnect()
