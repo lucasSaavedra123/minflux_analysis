@@ -49,3 +49,15 @@ def batch(iterable, n=1):
     l = len(iterable)
     for ndx in range(0, l, n):
         yield iterable[ndx:min(ndx + n, l)]
+
+def batch_for_gen(generator, n=1):
+    return_to_list = []
+    
+    for element in generator:
+        if len(return_to_list) == n:
+            yield return_to_list
+            return_to_list = [element]
+        else:
+            return_to_list.append(element)
+    
+    yield return_to_list
