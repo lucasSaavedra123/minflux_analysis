@@ -190,8 +190,9 @@ for dataset in new_datasets_list:
     x = np.arange(0.01,4,0.001)
     pdfs = expon.pdf(x, loc=0, scale=scale)
 
-    plt.plot(x,pdfs, color=DATASET_TO_COLOR[dataset])
-    plt.hist(residence_times, density=True, bins='auto', histtype='stepfilled', alpha=0.2, color=DATASET_TO_COLOR[dataset])
+    if dataset not in [CHOL_NOMENCLATURE, BTX_NOMENCLATURE]:
+        plt.plot(x,pdfs, color=DATASET_TO_COLOR[dataset])
+        plt.hist(residence_times, density=True, bins='auto', histtype='stepfilled', alpha=0.2, color=DATASET_TO_COLOR[dataset])
 
 basic_info_file.write(f"{BTX_NOMENCLATURE} -> n={Trajectory._get_collection().count_documents({'info.classified_experimental_condition':BTX_NOMENCLATURE, 'info.immobile':False})}\n")
 
