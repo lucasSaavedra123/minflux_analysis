@@ -20,32 +20,27 @@ def custom_histogram(data, starting_x, final_x, x_step):
 
   return frequency, bin_edges
 
-def get_list_of_values_of_analysis_field(dataset, field_name, apply_immobile_criteria=False):
-    filter_query = {'info.dataset': dataset, 'info.immobile': False} if apply_immobile_criteria else {'info.dataset': dataset}
+def get_list_of_values_of_analysis_field(filter_query, field_name):
     values = [document['info'].get('analysis', {}).get(field_name, None) for document in Trajectory._get_collection().find(filter_query, {f'info.analysis.{field_name}':1})]
     values = [value for value in values if value is not None]
     return values
 
-def get_list_of_values_of_field(dataset, field_name, apply_immobile_criteria=False):
-    filter_query = {'info.dataset': dataset, 'info.immobile': False} if apply_immobile_criteria else {'info.dataset': dataset}
+def get_list_of_values_of_field(filter_query, field_name):
     values = [document['info'].get(field_name, None) for document in Trajectory._get_collection().find(filter_query, {f'info.{field_name}':1})]
     values = [value for value in values if value is not None]
     return values
 
-def get_list_of_analysis_field(dataset, field_name, apply_immobile_criteria=False):
-    filter_query = {'info.dataset': dataset, 'info.immobile': False} if apply_immobile_criteria else {'info.dataset': dataset}
+def get_list_of_analysis_field(filter_query, field_name):
     list_of_list = [document['info'].get('analysis', {}).get(field_name, []) for document in Trajectory._get_collection().find(filter_query, {f'info.{field_name}':1})]
     list_of_list = [a_list for a_list in list_of_list if len(a_list) != 0]
     return list_of_list
 
-def get_list_of_main_field(dataset, field_name, apply_immobile_criteria=False):
-    filter_query = {'info.dataset': dataset, 'info.immobile': False} if apply_immobile_criteria else {'info.dataset': dataset}
+def get_list_of_main_field(filter_query, field_name):
     list_of_list = [document.get(field_name, []) for document in Trajectory._get_collection().find(filter_query, {f'{field_name}':1})]
     list_of_list = [a_list for a_list in list_of_list if len(a_list) != 0]
     return list_of_list
 
-def get_ids_of_trayectories_under_betha_limits(dataset, betha_min, betha_max, apply_immobile_criteria=False):
-    filter_query = {'info.dataset': dataset, 'info.immobile': False} if apply_immobile_criteria else {'info.dataset': dataset}
+def get_ids_of_trayectories_under_betha_limits(filter_query, betha_min, betha_max):
     filter_query['info.analysis.betha'] = {'$gt': betha_min, '$lte': betha_max}
     list_of_list = [str(document['_id']) for document in Trajectory._get_collection().find(filter_query, {f'_id':1})]
     return list_of_list
