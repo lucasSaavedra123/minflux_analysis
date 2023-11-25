@@ -89,7 +89,6 @@ for dataset in new_datasets_list:
                 filter_query,
                 DIFFUSION_BEHAVIOURS_INFORMATION[label]['range_0'],
                 DIFFUSION_BEHAVIOURS_INFORMATION[label]['range_1'],
-                APPLY_GS_CRITERIA
             )
 
             angles_infos = Trajectory._get_collection().find(
