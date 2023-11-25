@@ -18,10 +18,17 @@ APPLY_GS_CRITERIA = True
 DatabaseHandler.connect_over_network(None, None, IP_ADDRESS, COLLECTION_NAME)
 basic_info_file = open('./Results/basic_info.txt','w')
 
-for dataset in DATASETS_LIST:
+new_datasets_list = DATASETS_LIST.copy()
+new_datasets_list = DATASETS_LIST[:-1]
+new_datasets_list.append(BTX_NOMENCLATURE)
+new_datasets_list.append(CHOL_NOMENCLATURE)
+
+for dataset in new_datasets_list:
+    SEARCH_FIELD = 'info.dataset' if dataset not in [BTX_NOMENCLATURE, CHOL_NOMENCLATURE] else 'info.classified_experimental_condition'
     with pd.ExcelWriter(f"./Results/{dataset}_basic_information.xlsx") as writer:
         #Data that take into account GS criteria
-        filter_query = {'info.dataset': dataset, 'info.immobile': False} if APPLY_GS_CRITERIA else {'info.dataset': dataset}
+        filter_query = {SEARCH_FIELD: dataset, 'info.immobile': False} if APPLY_GS_CRITERIA else {SEARCH_FIELD: dataset}
+
         pd.DataFrame({'k': get_list_of_values_of_analysis_field(filter_query, 'k')}).to_excel(writer, sheet_name='k', index=False)
         pd.DataFrame({'betha': get_list_of_values_of_analysis_field(filter_query, 'betha')}).to_excel(writer, sheet_name='betha', index=False)
         pd.DataFrame({'dc': get_list_of_values_of_analysis_field(filter_query, 'directional_coefficient')}).to_excel(writer, sheet_name='directional_coefficient', index=False)
@@ -31,7 +38,7 @@ for dataset in DATASETS_LIST:
         pd.DataFrame({'residence_time': residence_times}).to_excel(writer, sheet_name='residence_time', index=False)
 
         #Data that takes all trajectories
-        filter_query = {'info.dataset': dataset}
+        filter_query = {SEARCH_FIELD: dataset}
         pd.DataFrame({'ratio': get_list_of_values_of_field(filter_query, 'ratio')}).to_excel(writer, sheet_name='ratio', index=False)
 
         list_of_trajectories_time = get_list_of_main_field(filter_query, 't')
@@ -48,7 +55,8 @@ for dataset in DATASETS_LIST:
         pd.DataFrame({'duration': durations}).to_excel(writer, sheet_name='duration', index=False)
 
         #Data that takes all mobile trajectories
-        filter_query = {'info.dataset': dataset, 'info.immobile': False}
+        filter_query = {SEARCH_FIELD: dataset, 'info.immobile': False}
+
         list_of_semi_major_axis = get_list_of_values_of_analysis_field(filter_query, 'confinement-a')
         list_of_semi_major_axis = list(itertools.chain.from_iterable([semi_major_axis for semi_major_axis in list_of_semi_major_axis]))
         pd.DataFrame({'semi_major_axis': list_of_semi_major_axis}).to_excel(writer, sheet_name='semi_major_axis', index=False)
@@ -75,7 +83,7 @@ for dataset in DATASETS_LIST:
         for label in DIFFUSION_BEHAVIOURS_INFORMATION:
             label_angle_information = default_angles()
 
-            filter_query = {'info.dataset': dataset, 'info.immobile': False} if APPLY_GS_CRITERIA else {'info.dataset': dataset}
+            filter_query = {SEARCH_FIELD: dataset, 'info.immobile': False} if APPLY_GS_CRITERIA else {SEARCH_FIELD: dataset}
 
             ids = get_ids_of_trayectories_under_betha_limits(
                 filter_query,
@@ -145,7 +153,8 @@ for dataset in DATASETS_LIST:
 
             numeric_label = 1 if label == 'confinement' else 0
 
-            filter_query = {'info.dataset': dataset, 'info.immobile': False} if APPLY_GS_CRITERIA else {'info.dataset': dataset}
+            filter_query = {SEARCH_FIELD: dataset, 'info.immobile': False} if APPLY_GS_CRITERIA else {SEARCH_FIELD: dataset}
+
             angles_infos = Trajectory._get_collection().find(filter_query,{f'info.analysis.angles_by_state.{numeric_label}.angles':1})
 
             for angle_info in angles_infos:
