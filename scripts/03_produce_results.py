@@ -16,6 +16,42 @@ from utils import *
 APPLY_GS_CRITERIA = True
 
 DatabaseHandler.connect_over_network(None, None, IP_ADDRESS, COLLECTION_NAME)
+
+"""
+pd.DataFrame({'ratio': get_list_of_values_of_field({'info.dataset': 'Control'}, 'ratio')}).to_csv('results/control_ratios.csv')
+pd.DataFrame({'ratio': get_list_of_values_of_field({'info.dataset': 'CDx'}, 'ratio')}).to_csv('results/cdx_ratios.csv')
+
+ratios = get_list_of_values_of_field({'info.dataset': 'BTX680R'}, 'ratio')
+ratios += get_list_of_values_of_field({'info.classified_experimental_condition': BTX_NOMENCLATURE}, 'ratio')
+pd.DataFrame({'ratio': ratios}).to_csv('results/btx_ratios.csv')
+
+ratios = get_list_of_values_of_field({'info.dataset': 'CholesterolPEGKK114'}, 'ratio')
+ratios += get_list_of_values_of_field({'info.classified_experimental_condition': CHOL_NOMENCLATURE}, 'ratio')
+pd.DataFrame({'ratio': ratios}).to_csv('results/chol_ratios.csv')
+"""
+
+"""
+list_of_trajectories_time = get_list_of_main_field({'info.dataset': 'Control'}, 't')
+intervals = list(itertools.chain.from_iterable([np.diff(time_list) for time_list in list_of_trajectories_time]))
+intervals = [interval for interval in intervals if interval != 0]
+print('Control->', np.mean(intervals))
+
+list_of_trajectories_time = get_list_of_main_field({'info.dataset': 'CDx'}, 't')
+intervals = list(itertools.chain.from_iterable([np.diff(time_list) for time_list in list_of_trajectories_time]))
+intervals = [interval for interval in intervals if interval != 0]
+print('CDx->', np.mean(intervals))
+
+list_of_trajectories_time = get_list_of_main_field({'info.dataset': 'BTX680R'}, 't') + get_list_of_main_field({'info.classified_experimental_condition': BTX_NOMENCLATURE}, 't')
+intervals = list(itertools.chain.from_iterable([np.diff(time_list) for time_list in list_of_trajectories_time]))
+intervals = [interval for interval in intervals if interval != 0]
+print('BTX->', np.mean(intervals))
+
+list_of_trajectories_time = get_list_of_main_field({'info.dataset': 'CholesterolPEGKK114'}, 't') + get_list_of_main_field({'info.classified_experimental_condition': CHOL_NOMENCLATURE}, 't')
+intervals = list(itertools.chain.from_iterable([np.diff(time_list) for time_list in list_of_trajectories_time]))
+intervals = [interval for interval in intervals if interval != 0]
+print('Chol->', np.mean(intervals))
+"""
+
 basic_info_file = open('./Results/basic_info.txt','w')
 
 new_datasets_list = DATASETS_LIST.copy()

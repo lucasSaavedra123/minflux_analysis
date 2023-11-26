@@ -64,7 +64,7 @@ def analyze_trajectory(trajectory_id):
     else:
         trajectory.info['analysis'] = {}
 
-    trajectory.info['immobile'] = trajectory.is_immobile(4.78)
+    trajectory.info['immobile'] = trajectory.is_immobile(4.295)
     trajectory.info['ratio'] = trajectory.normalized_ratio
 
     try:
@@ -111,7 +111,11 @@ def analyze_trajectory(trajectory_id):
     trajectory.info['analysis']['residence_time'] = sum(times)
     trajectory.info['analysis']['confinement-states'] = states.tolist()
 
-    reconstructed_trajectory = trajectory.reconstructed_trajectory(DATASET_TO_DELTA_T[trajectory.info['dataset']])
+    if trajectory.info['dataset'] != 'Cholesterol and btx':
+        reconstructed_trajectory = trajectory.reconstructed_trajectory(DATASET_TO_DELTA_T[trajectory.info['dataset']])
+    else:
+        selected_delta_t = DATASET_TO_DELTA_T[2] if trajectories.info['classified_experimental_condition'] == BTX_NOMENCLATURE else DATASET_TO_DELTA_T[3]
+        reconstructed_trajectory = trajectory.reconstructed_trajectory(selected_delta_t)
 
     if reconstructed_trajectory.length > NUMBER_OF_POINTS_FOR_MSD + 1:
         _,_,betha,k,goodness_of_fit = reconstructed_trajectory.temporal_average_mean_squared_displacement(log_log_fit_limit=NUMBER_OF_POINTS_FOR_MSD)
