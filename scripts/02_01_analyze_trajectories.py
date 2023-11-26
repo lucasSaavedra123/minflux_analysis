@@ -114,7 +114,7 @@ def analyze_trajectory(trajectory_id):
     if trajectory.info['dataset'] != 'Cholesterol and btx':
         reconstructed_trajectory = trajectory.reconstructed_trajectory(DATASET_TO_DELTA_T[trajectory.info['dataset']])
     else:
-        selected_delta_t = DATASET_TO_DELTA_T[2] if trajectories.info['classified_experimental_condition'] == BTX_NOMENCLATURE else DATASET_TO_DELTA_T[3]
+        selected_delta_t = DATASET_TO_DELTA_T[2] if trajectory.info['classified_experimental_condition'] == BTX_NOMENCLATURE else DATASET_TO_DELTA_T[3]
         reconstructed_trajectory = trajectory.reconstructed_trajectory(selected_delta_t)
 
     if reconstructed_trajectory.length > NUMBER_OF_POINTS_FOR_MSD + 1:
