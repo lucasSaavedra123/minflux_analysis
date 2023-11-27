@@ -17,19 +17,6 @@ APPLY_GS_CRITERIA = True
 
 DatabaseHandler.connect_over_network(None, None, IP_ADDRESS, COLLECTION_NAME)
 
-"""
-pd.DataFrame({'ratio': get_list_of_values_of_field({'info.dataset': 'Control'}, 'ratio')}).to_csv('results/control_ratios.csv')
-pd.DataFrame({'ratio': get_list_of_values_of_field({'info.dataset': 'CDx'}, 'ratio')}).to_csv('results/cdx_ratios.csv')
-
-ratios = get_list_of_values_of_field({'info.dataset': 'BTX680R'}, 'ratio')
-ratios += get_list_of_values_of_field({'info.classified_experimental_condition': BTX_NOMENCLATURE}, 'ratio')
-pd.DataFrame({'ratio': ratios}).to_csv('results/btx_ratios.csv')
-
-ratios = get_list_of_values_of_field({'info.dataset': 'CholesterolPEGKK114'}, 'ratio')
-ratios += get_list_of_values_of_field({'info.classified_experimental_condition': CHOL_NOMENCLATURE}, 'ratio')
-pd.DataFrame({'ratio': ratios}).to_csv('results/chol_ratios.csv')
-"""
-
 basic_info_file = open('./Results/basic_info.txt','w')
 
 new_datasets_list = DATASETS_LIST.copy()
