@@ -17,6 +17,28 @@ APPLY_GS_CRITERIA = True
 
 DatabaseHandler.connect_over_network(None, None, IP_ADDRESS, COLLECTION_NAME)
 """
+#GET PERCENTAGE OF IMMOBILIZED TRAJECTORIES
+quantity = Trajectory._get_collection().count_documents({'info.dataset':DATASETS_LIST[0]})
+immobile_quantity = Trajectory._get_collection().count_documents({'info.dataset':DATASETS_LIST[0], 'info.immobile':True})
+print(DATASETS_LIST[0], immobile_quantity/quantity)
+
+quantity = Trajectory._get_collection().count_documents({'info.dataset':DATASETS_LIST[1]})
+immobile_quantity = Trajectory._get_collection().count_documents({'info.dataset':DATASETS_LIST[1], 'info.immobile':True})
+print(DATASETS_LIST[1], immobile_quantity/quantity)
+
+quantity = Trajectory._get_collection().count_documents({'info.dataset':DATASETS_LIST[2]})
+quantity += Trajectory._get_collection().count_documents({'info.classified_experimental_condition':BTX_NOMENCLATURE})
+immobile_quantity = Trajectory._get_collection().count_documents({'info.dataset':DATASETS_LIST[2], 'info.immobile':True})
+immobile_quantity += Trajectory._get_collection().count_documents({'info.classified_experimental_condition':BTX_NOMENCLATURE, 'info.immobile':True})
+print(DATASETS_LIST[2], immobile_quantity/quantity)
+
+quantity = Trajectory._get_collection().count_documents({'info.dataset':DATASETS_LIST[3]})
+quantity += Trajectory._get_collection().count_documents({'info.classified_experimental_condition':CHOL_NOMENCLATURE})
+immobile_quantity = Trajectory._get_collection().count_documents({'info.dataset':DATASETS_LIST[3], 'info.immobile':True})
+immobile_quantity += Trajectory._get_collection().count_documents({'info.classified_experimental_condition':CHOL_NOMENCLATURE, 'info.immobile':True})
+print(DATASETS_LIST[3], immobile_quantity/quantity)
+"""
+"""
 #GET ALL RATIOS
 pd.DataFrame({'ratio': get_list_of_values_of_field({'info.dataset': 'Control'}, 'ratio')}).to_csv('results/control_ratios.csv')
 pd.DataFrame({'ratio': get_list_of_values_of_field({'info.dataset': 'CDx'}, 'ratio')}).to_csv('results/cdx_ratios.csv')
