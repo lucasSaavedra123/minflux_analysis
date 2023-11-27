@@ -60,6 +60,7 @@ new_datasets_list.append(BTX_NOMENCLATURE)
 new_datasets_list.append(CHOL_NOMENCLATURE)
 
 for dataset in new_datasets_list:
+    print(dataset)
     SEARCH_FIELD = 'info.dataset' if dataset not in [BTX_NOMENCLATURE, CHOL_NOMENCLATURE] else 'info.classified_experimental_condition'
     with pd.ExcelWriter(f"./Results/{dataset}_basic_information.xlsx") as writer:
         #Data that take into account GS criteria
