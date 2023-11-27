@@ -1,6 +1,7 @@
 import numpy as np
 from Trajectory import Trajectory
 from scipy.spatial import KDTree
+from shapely.geometry import MultiPoint, Point
 
 
 def custom_histogram(data, starting_x, final_x, x_step):
@@ -119,7 +120,7 @@ def both_trajectories_intersect(trajectory_one, trajectory_two, radius_threshold
             if both_segments_intersect(segment_one, segment_two):
                 return True
     """
-
+    """
     # Example curves represented as arrays of points (x, y)
     curve1 = np.column_stack((trajectory_one.get_noisy_x(),trajectory_one.get_noisy_y()))
     curve2 = np.column_stack((trajectory_two.get_noisy_x(),trajectory_two.get_noisy_y()))
@@ -133,3 +134,9 @@ def both_trajectories_intersect(trajectory_one, trajectory_two, radius_threshold
     intersections = [intersection for intersection in intersections if intersection != []]
 
     return len(intersections) > 0
+    """
+
+    t_one = MultiPoint([point for point in zip(trajectory_one.get_noisy_x(), trajectory_one.get_noisy_y())]).convex_hull
+    t_two = MultiPoint([point for point in zip(trajectory_two.get_noisy_x(), trajectory_two.get_noisy_y())]).convex_hull
+
+    return t_one.intersects(t_two)
