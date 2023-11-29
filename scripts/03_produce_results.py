@@ -68,10 +68,6 @@ for index, dataset in enumerate(new_datasets_list):
         list_of_confinement_areas = list(itertools.chain.from_iterable([[area * 1e6 for area in areas] for areas in list_of_confinement_areas]))
         pd.DataFrame({'area': list_of_confinement_areas}).to_excel(writer, sheet_name='area', index=False)
 
-        basic_info_file.write(f"{dataset}_{index} -> n={len(lengths)}\n")
-        basic_info_file.write(f"{dataset}_{index} -> Time Interval Mean: {np.mean(np.array(intervals)*1e6)}us, S.E.M: {sem(np.array(intervals)*1e6)}us\n")
-        basic_info_file.write(f"{dataset}_{index} -> Residence Time Scale: {np.mean(residence_times)}us, S.E.M: {sem(residence_times)}s\n")
-
         list_of_confinement_areas_centroids = get_list_of_values_of_analysis_field(filter_query, 'confinement_areas_centroids')
         list_of_confinement_areas_centroids = list(itertools.chain.from_iterable([pdist(np.array(confinement_areas_centroids) * 1e3).tolist() for confinement_areas_centroids in list_of_confinement_areas_centroids if len(confinement_areas_centroids) >= 2]))
         pd.DataFrame({'confinement_areas_distance': list_of_confinement_areas_centroids}).to_csv(f'./Results/{dataset}_{index}_confinement_areas_distance.csv')
