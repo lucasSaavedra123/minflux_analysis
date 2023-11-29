@@ -187,7 +187,6 @@ for btx_id in Trajectory._get_collection().find({'info.classified_experimental_c
     btx_trajectory = Trajectory.objects(id=btx_id['_id'])[0]
     if 'number_of_confinement_zones' in btx_trajectory.info and btx_trajectory.info['number_of_confinement_zones'] != 0:
         fractions.append(btx_trajectory.info[f'number_of_confinement_zones_with_{CHOL_NOMENCLATURE}']/btx_trajectory.info['number_of_confinement_zones'])
-        print(np.mean(fractions))
 
 basic_info_file.write(f"{BTX_NOMENCLATURE} -> Fraction: {np.mean(fractions)}us, S.E.M: {sem(fractions)}s\n")
 
