@@ -183,16 +183,6 @@ for index, dataset in enumerate(new_datasets_list):
             new_angle_information = new_angle_information[cols]
             new_angle_information.to_excel(writer, sheet_name=label, index=False)
 
-    #Exponential Fitting
-    loc, scale = expon.fit(residence_times, floc=0)
-
-    x = np.arange(0.01,4,0.001)
-    pdfs = expon.pdf(x, loc=0, scale=scale)
-
-    if dataset not in [CHOL_NOMENCLATURE, BTX_NOMENCLATURE]:
-        plt.plot(x,pdfs, color=DATASET_TO_COLOR[dataset])
-        plt.hist(residence_times, density=True, bins='auto', histtype='stepfilled', alpha=0.2, color=DATASET_TO_COLOR[dataset])
-
 basic_info_file.write(f"{BTX_NOMENCLATURE} -> n={Trajectory._get_collection().count_documents({'info.classified_experimental_condition':BTX_NOMENCLATURE, 'info.immobile':False})}\n")
 
 fractions = []
@@ -217,11 +207,3 @@ basic_info_file.write(f"{CHOL_NOMENCLATURE} -> Fraction: {np.mean(fractions)}us,
 
 basic_info_file.close()
 DatabaseHandler.disconnect()
-
-plt.xlabel('Confinement Time [s]', fontname="Arial", fontsize=40)
-plt.yticks(visible=False)
-plt.xlim([0,4])
-plt.xticks(fontname="Arial", fontsize=40)
-plt.ylabel('Frequency', fontname="Arial", fontsize=40)
-
-plt.show()
