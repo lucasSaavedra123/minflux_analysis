@@ -107,7 +107,7 @@ def both_segments_intersect(segment_one, segment_two):
 
     return doIntersect(p1, q1, p2, q2)
 
-def both_trajectories_intersect(trajectory_one, trajectory_two, radius_threshold=1):
+def both_trajectories_intersect(trajectory_one, trajectory_two, via='kd-tree', radius_threshold=1):
     """
     points_one = np.column_stack((trajectory_one.get_noisy_x(),trajectory_one.get_noisy_y()))
     points_two = np.column_stack((trajectory_two.get_noisy_x(),trajectory_two.get_noisy_y()))
@@ -121,22 +121,35 @@ def both_trajectories_intersect(trajectory_one, trajectory_two, radius_threshold
                 return True
     """
     """
-    # Example curves represented as arrays of points (x, y)
-    curve1 = np.column_stack((trajectory_one.get_noisy_x(),trajectory_one.get_noisy_y()))
-    curve2 = np.column_stack((trajectory_two.get_noisy_x(),trajectory_two.get_noisy_y()))
-
-    # Create KD-trees
-    tree1 = KDTree(curve1)
-    tree2 = KDTree(curve2)
-
-    # Query for intersections between curves
-    intersections = tree1.query_ball_tree(tree2, r=radius_threshold)
-    intersections = [intersection for intersection in intersections if intersection != []]
-
-    return len(intersections) > 0
     """
+    if via=='hull':
+        t_one = MultiPoint([point for point in zip(trajectory_one.get_noisy_x(), trajectory_one.get_noisy_y())]).convex_hull
+        t_two = MultiPoint([point for point in zip(trajectory_two.get_noisy_x(), trajectory_two.get_noisy_y())]).convex_hull
+        return t_one.intersects(t_two)
+    elif via=='brute-force':
+        points_one = np.column_stack((trajectory_one.get_noisy_x(),trajectory_one.get_noisy_y()))
+        points_two = np.column_stack((trajectory_two.get_noisy_x(),trajectory_two.get_noisy_y()))
 
-    t_one = MultiPoint([point for point in zip(trajectory_one.get_noisy_x(), trajectory_one.get_noisy_y())]).convex_hull
-    t_two = MultiPoint([point for point in zip(trajectory_two.get_noisy_x(), trajectory_two.get_noisy_y())]).convex_hull
+        segments_one = [points_one[i:i+2] for i in range(trajectory_one.length - 1)]
+        segments_two = [points_two[i:i+2] for i in range(trajectory_two.length - 1)]
 
-    return t_one.intersects(t_two)
+        for segment_one in segments_one:
+            for segment_two in segments_two:
+                if both_segments_intersect(segment_one, segment_two):
+                    return True
+    elif via=='kd-tree':
+        # Example curves represented as arrays of points (x, y)
+        curve1 = np.column_stack((trajectory_one.get_noisy_x(),trajectory_one.get_noisy_y()))
+        curve2 = np.column_stack((trajectory_two.get_noisy_x(),trajectory_two.get_noisy_y()))
+
+        # Create KD-trees
+        tree1 = KDTree(curve1)
+        tree2 = KDTree(curve2)
+
+        # Query for intersections between curves
+        intersections = tree1.query_ball_tree(tree2, r=radius_threshold)
+        intersections = [intersection for intersection in intersections if intersection != []]
+
+        return len(intersections) > 0
+    else:
+        raise ValueError(f"via={via} is not correct")

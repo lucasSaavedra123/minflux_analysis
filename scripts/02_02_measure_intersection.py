@@ -23,17 +23,17 @@ for file in tqdm.tqdm(files):
     for btx_trajectory in tqdm.tqdm(trajectories_by_condition[BTX_NOMENCLATURE]):
         btx_trajectory.info[f'{CHOL_NOMENCLATURE}_intersections'] = []
         for chol_trajectory in trajectories_by_condition[CHOL_NOMENCLATURE]:
-            if both_trajectories_intersect(btx_trajectory, chol_trajectory, radius_threshold=0.001):
+            if both_trajectories_intersect(btx_trajectory, chol_trajectory, via='kd-tree', radius_threshold=0.01):
                 btx_trajectory.info[f'{CHOL_NOMENCLATURE}_intersections'].append(chol_trajectory.id)
-        
+
         btx_trajectory.save()
 
     for chol_trajectory in tqdm.tqdm(trajectories_by_condition[CHOL_NOMENCLATURE]):
         chol_trajectory.info[f'{BTX_NOMENCLATURE}_intersections'] = []
         for btx_trajectory in trajectories_by_condition[BTX_NOMENCLATURE]:
-            if both_trajectories_intersect(chol_trajectory, btx_trajectory, radius_threshold=0.001):
+            if both_trajectories_intersect(chol_trajectory, btx_trajectory, via='kd-tree', radius_threshold=0.01):
                 chol_trajectory.info[f'{BTX_NOMENCLATURE}_intersections'].append(btx_trajectory.id)
-        
+
         chol_trajectory.save()
 
 DatabaseHandler.disconnect()
