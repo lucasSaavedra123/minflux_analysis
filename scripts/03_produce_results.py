@@ -17,41 +17,6 @@ APPLY_GS_CRITERIA = True
 
 DatabaseHandler.connect_over_network(None, None, IP_ADDRESS, COLLECTION_NAME)
 
-"""
-pd.DataFrame({'ratio': get_list_of_values_of_field({'info.dataset': 'Control'}, 'ratio')}).to_csv('results/control_ratios.csv')
-pd.DataFrame({'ratio': get_list_of_values_of_field({'info.dataset': 'CDx'}, 'ratio')}).to_csv('results/cdx_ratios.csv')
-
-ratios = get_list_of_values_of_field({'info.dataset': 'BTX680R'}, 'ratio')
-ratios += get_list_of_values_of_field({'info.classified_experimental_condition': BTX_NOMENCLATURE}, 'ratio')
-pd.DataFrame({'ratio': ratios}).to_csv('results/btx_ratios.csv')
-
-ratios = get_list_of_values_of_field({'info.dataset': 'CholesterolPEGKK114'}, 'ratio')
-ratios += get_list_of_values_of_field({'info.classified_experimental_condition': CHOL_NOMENCLATURE}, 'ratio')
-pd.DataFrame({'ratio': ratios}).to_csv('results/chol_ratios.csv')
-"""
-
-"""
-list_of_trajectories_time = get_list_of_main_field({'info.dataset': 'Control'}, 't')
-intervals = list(itertools.chain.from_iterable([np.diff(time_list) for time_list in list_of_trajectories_time]))
-intervals = [interval for interval in intervals if interval != 0]
-print('Control->', np.mean(intervals))
-
-list_of_trajectories_time = get_list_of_main_field({'info.dataset': 'CDx'}, 't')
-intervals = list(itertools.chain.from_iterable([np.diff(time_list) for time_list in list_of_trajectories_time]))
-intervals = [interval for interval in intervals if interval != 0]
-print('CDx->', np.mean(intervals))
-
-list_of_trajectories_time = get_list_of_main_field({'info.dataset': 'BTX680R'}, 't') + get_list_of_main_field({'info.classified_experimental_condition': BTX_NOMENCLATURE}, 't')
-intervals = list(itertools.chain.from_iterable([np.diff(time_list) for time_list in list_of_trajectories_time]))
-intervals = [interval for interval in intervals if interval != 0]
-print('BTX->', np.mean(intervals))
-
-list_of_trajectories_time = get_list_of_main_field({'info.dataset': 'CholesterolPEGKK114'}, 't') + get_list_of_main_field({'info.classified_experimental_condition': CHOL_NOMENCLATURE}, 't')
-intervals = list(itertools.chain.from_iterable([np.diff(time_list) for time_list in list_of_trajectories_time]))
-intervals = [interval for interval in intervals if interval != 0]
-print('Chol->', np.mean(intervals))
-"""
-
 basic_info_file = open('./Results/basic_info.txt','w')
 
 new_datasets_list = DATASETS_LIST.copy()
@@ -59,10 +24,10 @@ new_datasets_list = DATASETS_LIST[:-1]
 new_datasets_list.append(BTX_NOMENCLATURE)
 new_datasets_list.append(CHOL_NOMENCLATURE)
 
-for dataset in new_datasets_list:
+for index, dataset in enumerate(new_datasets_list):
     print(dataset)
-    SEARCH_FIELD = 'info.dataset' if dataset not in [BTX_NOMENCLATURE, CHOL_NOMENCLATURE] else 'info.classified_experimental_condition'
-    with pd.ExcelWriter(f"./Results/{dataset}_basic_information.xlsx") as writer:
+    SEARCH_FIELD = 'info.dataset' if index < 4 else 'info.classified_experimental_condition'
+    with pd.ExcelWriter(f"./Results/{dataset}_{index}_basic_information.xlsx") as writer:
         #Data that take into account GS criteria
         filter_query = {SEARCH_FIELD: dataset, 'info.immobile': False} if APPLY_GS_CRITERIA else {SEARCH_FIELD: dataset}
 
@@ -79,9 +44,6 @@ for dataset in new_datasets_list:
         pd.DataFrame({'ratio': get_list_of_values_of_field(filter_query, 'ratio')}).to_excel(writer, sheet_name='ratio', index=False)
 
         list_of_trajectories_time = get_list_of_main_field(filter_query, 't')
-        intervals = list(itertools.chain.from_iterable([np.diff(time_list) for time_list in list_of_trajectories_time]))
-        intervals = [interval for interval in intervals if interval != 0]
-        #pd.DataFrame({'interval': intervals}).to_excel(writer, sheet_name='interval', index=False)
 
         lengths = [len(time_list) for time_list in list_of_trajectories_time]
         lengths = [length for length in lengths if length != 1]
@@ -106,15 +68,15 @@ for dataset in new_datasets_list:
         list_of_confinement_areas = list(itertools.chain.from_iterable([[area * 1e6 for area in areas] for areas in list_of_confinement_areas]))
         pd.DataFrame({'area': list_of_confinement_areas}).to_excel(writer, sheet_name='area', index=False)
 
-        basic_info_file.write(f"{dataset} -> n={len(lengths)}\n")
-        basic_info_file.write(f"{dataset} -> Time Interval Mean: {np.mean(np.array(intervals)*1e6)}us, S.E.M: {sem(np.array(intervals)*1e6)}us\n")
-        basic_info_file.write(f"{dataset} -> Residence Time Scale: {np.mean(residence_times)}us, S.E.M: {sem(residence_times)}s\n")
+        basic_info_file.write(f"{dataset}_{index} -> n={len(lengths)}\n")
+        basic_info_file.write(f"{dataset}_{index} -> Time Interval Mean: {np.mean(np.array(intervals)*1e6)}us, S.E.M: {sem(np.array(intervals)*1e6)}us\n")
+        basic_info_file.write(f"{dataset}_{index} -> Residence Time Scale: {np.mean(residence_times)}us, S.E.M: {sem(residence_times)}s\n")
 
         list_of_confinement_areas_centroids = get_list_of_values_of_analysis_field(filter_query, 'confinement_areas_centroids')
         list_of_confinement_areas_centroids = list(itertools.chain.from_iterable([pdist(np.array(confinement_areas_centroids) * 1e3).tolist() for confinement_areas_centroids in list_of_confinement_areas_centroids if len(confinement_areas_centroids) >= 2]))
-        pd.DataFrame({'confinement_areas_distance': list_of_confinement_areas_centroids}).to_csv(f'./Results/{dataset}_confinement_areas_distance.csv')
+        pd.DataFrame({'confinement_areas_distance': list_of_confinement_areas_centroids}).to_csv(f'./Results/{dataset}_{index}_confinement_areas_distance.csv')
 
-    with pd.ExcelWriter(f"./Results/{dataset}_angles_information.xlsx") as writer:
+    with pd.ExcelWriter(f"./Results/{dataset}_{index}_angles_information.xlsx") as writer:
         all_angles = default_angles()
         
         for label in DIFFUSION_BEHAVIOURS_INFORMATION:
@@ -221,16 +183,6 @@ for dataset in new_datasets_list:
             new_angle_information = new_angle_information[cols]
             new_angle_information.to_excel(writer, sheet_name=label, index=False)
 
-    #Exponential Fitting
-    loc, scale = expon.fit(residence_times, floc=0)
-
-    x = np.arange(0.01,4,0.001)
-    pdfs = expon.pdf(x, loc=0, scale=scale)
-
-    if dataset not in [CHOL_NOMENCLATURE, BTX_NOMENCLATURE]:
-        plt.plot(x,pdfs, color=DATASET_TO_COLOR[dataset])
-        plt.hist(residence_times, density=True, bins='auto', histtype='stepfilled', alpha=0.2, color=DATASET_TO_COLOR[dataset])
-
 basic_info_file.write(f"{BTX_NOMENCLATURE} -> n={Trajectory._get_collection().count_documents({'info.classified_experimental_condition':BTX_NOMENCLATURE, 'info.immobile':False})}\n")
 
 fractions = []
@@ -255,11 +207,3 @@ basic_info_file.write(f"{CHOL_NOMENCLATURE} -> Fraction: {np.mean(fractions)}us,
 
 basic_info_file.close()
 DatabaseHandler.disconnect()
-
-plt.xlabel('Confinement Time [s]', fontname="Arial", fontsize=40)
-plt.yticks(visible=False)
-plt.xlim([0,4])
-plt.xticks(fontname="Arial", fontsize=40)
-plt.ylabel('Frequency', fontname="Arial", fontsize=40)
-
-plt.show()
