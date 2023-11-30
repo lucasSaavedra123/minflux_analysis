@@ -32,10 +32,11 @@ for dataset in dataset_to_results:
     plt.plot(x,pdfs, color=DATASET_TO_COLOR[dataset])
     plt.hist(residence_times, density=True, bins='auto', histtype='stepfilled', alpha=0.2, color=DATASET_TO_COLOR[dataset])
 
-plt.xlabel('Confinement Time [s]', fontname="Arial", fontsize=40)
+plt.xlabel('Confinement Time [s]', fontname="Arial", fontsize=30)
 plt.yticks(visible=False)
-plt.xlim([0,4])
-plt.xticks(fontname="Arial", fontsize=40)
-plt.ylabel('Frequency', fontname="Arial", fontsize=40)
+plt.xlim([0,2])
+plt.ylim([0,3])
+plt.xticks(fontname="Arial", fontsize=30)
+plt.ylabel('Frequency', fontname="Arial", fontsize=30)
 
 plt.show()
