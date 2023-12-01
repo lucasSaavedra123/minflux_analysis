@@ -351,12 +351,12 @@ class Trajectory(Document):
 
         plt.show()
 
-    def plot_confinement_states(self, v_th=11, window_size=3, non_confinement_color='black', confinement_color='green', show=True, alpha=1):
+    def plot_confinement_states(self, v_th=11, window_size=3, transition_fix_threshold=9, non_confinement_color='black', confinement_color='green', show=True, alpha=1):
         x = self.get_noisy_x().tolist()
         y = self.get_noisy_y().tolist()
 
         state_to_color = {1:confinement_color, 0:non_confinement_color}
-        states_as_color = np.vectorize(state_to_color.get)(self.confinement_states(v_th=v_th, window_size=window_size))
+        states_as_color = np.vectorize(state_to_color.get)(self.confinement_states(v_th=v_th, window_size=window_size, transition_fix_threshold=transition_fix_threshold))
 
         for i,(x1, x2, y1,y2) in enumerate(zip(x, x[1:], y, y[1:])):
             plt.plot([x1, x2], [y1, y2], states_as_color[i], alpha=alpha)
@@ -392,7 +392,7 @@ class Trajectory(Document):
     def is_immobile(self, threshold):
         return self.normalized_ratio <= threshold
 
-    def sub_trajectories_trajectories_from_confinement_states(self, v_th=11, window_size=3, use_info=False):
+    def sub_trajectories_trajectories_from_confinement_states(self, v_th=11, window_size=3, transition_fix_threshold=9, use_info=False):
         confinement_states = self.confinement_states(return_intervals=False, v_th=v_th, window_size=window_size) if not use_info else self.info['analysis']['confinement-states']
 
         trajectories = {
