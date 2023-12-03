@@ -57,16 +57,24 @@ for index, dataset in enumerate(new_datasets_list):
         filter_query = {SEARCH_FIELD: dataset, 'info.immobile': False}
 
         list_of_semi_major_axis = get_list_of_values_of_analysis_field(filter_query, 'confinement-a')
-        list_of_semi_major_axis = list(itertools.chain.from_iterable([semi_major_axis for semi_major_axis in list_of_semi_major_axis]))
+        list_of_semi_major_axis = list(itertools.chain.from_iterable(list_of_semi_major_axis))
         pd.DataFrame({'semi_major_axis': list_of_semi_major_axis}).to_excel(writer, sheet_name='semi_major_axis', index=False)
 
         list_of_eccentricities = get_list_of_values_of_analysis_field(filter_query, 'confinement-e')
-        list_of_eccentricities = list(itertools.chain.from_iterable([eccentricities for eccentricities in list_of_eccentricities]))
+        list_of_eccentricities = list(itertools.chain.from_iterable(list_of_eccentricities))
         pd.DataFrame({'eccentricity': list_of_eccentricities}).to_excel(writer, sheet_name='eccentricity', index=False)
 
         list_of_confinement_areas = get_list_of_values_of_analysis_field(filter_query, 'confinement-area')
         list_of_confinement_areas = list(itertools.chain.from_iterable([[area * 1e6 for area in areas] for areas in list_of_confinement_areas]))
         pd.DataFrame({'area': list_of_confinement_areas}).to_excel(writer, sheet_name='area', index=False)
+
+        list_of_steps = get_list_of_values_of_analysis_field(filter_query, 'non-confinement-steps')
+        list_of_steps = list(itertools.chain.from_iterable(list_of_steps))
+        pd.DataFrame({'non-confinement-steps': list_of_steps}).to_excel(writer, sheet_name='non-confinement-steps', index=False)
+
+        list_of_steps = get_list_of_values_of_analysis_field(filter_query, 'confinement-steps')
+        list_of_steps = list(itertools.chain.from_iterable(list_of_steps))
+        pd.DataFrame({'confinement-steps': list_of_steps}).to_excel(writer, sheet_name='confinement-steps', index=False)
 
         list_of_confinement_areas_centroids = get_list_of_values_of_analysis_field(filter_query, 'confinement_areas_centroids')
         list_of_confinement_areas_centroids = list(itertools.chain.from_iterable([pdist(np.array(confinement_areas_centroids) * 1e3).tolist() for confinement_areas_centroids in list_of_confinement_areas_centroids if len(confinement_areas_centroids) >= 2]))
