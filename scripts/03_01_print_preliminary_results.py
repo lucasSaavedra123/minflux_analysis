@@ -26,16 +26,20 @@ quantity = Trajectory._get_collection().count_documents({'info.dataset':DATASETS
 immobile_quantity = Trajectory._get_collection().count_documents({'info.dataset':DATASETS_LIST[1], 'info.immobile':True})
 print(DATASETS_LIST[1], immobile_quantity/quantity)
 
+quantity = Trajectory._get_collection().count_documents({'info.classified_experimental_condition':BTX_NOMENCLATURE})
+immobile_quantity = Trajectory._get_collection().count_documents({'info.classified_experimental_condition':BTX_NOMENCLATURE, 'info.immobile':True})
+print(BTX_NOMENCLATURE, immobile_quantity/quantity)
+
 quantity = Trajectory._get_collection().count_documents({'info.dataset':DATASETS_LIST[2]})
-quantity += Trajectory._get_collection().count_documents({'info.classified_experimental_condition':BTX_NOMENCLATURE})
 immobile_quantity = Trajectory._get_collection().count_documents({'info.dataset':DATASETS_LIST[2], 'info.immobile':True})
-immobile_quantity += Trajectory._get_collection().count_documents({'info.classified_experimental_condition':BTX_NOMENCLATURE, 'info.immobile':True})
 print(DATASETS_LIST[2], immobile_quantity/quantity)
 
+quantity = Trajectory._get_collection().count_documents({'info.classified_experimental_condition':CHOL_NOMENCLATURE})
+immobile_quantity = Trajectory._get_collection().count_documents({'info.classified_experimental_condition':CHOL_NOMENCLATURE, 'info.immobile':True})
+print(CHOL_NOMENCLATURE, immobile_quantity/quantity)
+
 quantity = Trajectory._get_collection().count_documents({'info.dataset':DATASETS_LIST[3]})
-quantity += Trajectory._get_collection().count_documents({'info.classified_experimental_condition':CHOL_NOMENCLATURE})
 immobile_quantity = Trajectory._get_collection().count_documents({'info.dataset':DATASETS_LIST[3], 'info.immobile':True})
-immobile_quantity += Trajectory._get_collection().count_documents({'info.classified_experimental_condition':CHOL_NOMENCLATURE, 'info.immobile':True})
 print(DATASETS_LIST[3], immobile_quantity/quantity)
 """
 """
@@ -65,16 +69,28 @@ intervals = list(itertools.chain.from_iterable([np.diff(time_list) for time_list
 intervals = [interval for interval in intervals if interval != 0]
 print(f'CDx(n={len(list_of_trajectories_time)})->', np.mean(intervals) * 1e6, sem(intervals) * 1e6)
 
-list_of_trajectories_time = get_list_of_main_field({'info.dataset': 'BTX680R'}, 't') + get_list_of_main_field({'info.classified_experimental_condition': BTX_NOMENCLATURE}, 't')
+list_of_trajectories_time = get_list_of_main_field({'info.classified_experimental_condition': BTX_NOMENCLATURE}, 't')
 list_of_trajectories_time = [l for l in list_of_trajectories_time if len(l) > 1]
 intervals = list(itertools.chain.from_iterable([np.diff(time_list) for time_list in list_of_trajectories_time]))
 intervals = [interval for interval in intervals if interval != 0]
-print(f'BTX(n={len(list_of_trajectories_time)})->', np.mean(intervals) * 1e6, sem(intervals) * 1e6)
+print(f'{BTX_NOMENCLATURE} with Chol (n={len(list_of_trajectories_time)})->', np.mean(intervals) * 1e6, sem(intervals) * 1e6)
 
-list_of_trajectories_time = get_list_of_main_field({'info.dataset': 'CholesterolPEGKK114'}, 't') + get_list_of_main_field({'info.classified_experimental_condition': CHOL_NOMENCLATURE}, 't')
+list_of_trajectories_time = get_list_of_main_field({'info.dataset': 'BTX680R'}, 't')
 list_of_trajectories_time = [l for l in list_of_trajectories_time if len(l) > 1]
 intervals = list(itertools.chain.from_iterable([np.diff(time_list) for time_list in list_of_trajectories_time]))
 intervals = [interval for interval in intervals if interval != 0]
-print(f'Chol(n={len(list_of_trajectories_time)})->', np.mean(intervals) * 1e6, sem(intervals) * 1e6)
+print(f'BTX680R(n={len(list_of_trajectories_time)})->', np.mean(intervals) * 1e6, sem(intervals) * 1e6)
+
+list_of_trajectories_time = get_list_of_main_field({'info.dataset': 'CholesterolPEGKK114'}, 't')
+list_of_trajectories_time = [l for l in list_of_trajectories_time if len(l) > 1]
+intervals = list(itertools.chain.from_iterable([np.diff(time_list) for time_list in list_of_trajectories_time]))
+intervals = [interval for interval in intervals if interval != 0]
+print(f'CholesterolPEGKK114(n={len(list_of_trajectories_time)})->', np.mean(intervals) * 1e6, sem(intervals) * 1e6)
+
+list_of_trajectories_time = get_list_of_main_field({'info.classified_experimental_condition': CHOL_NOMENCLATURE}, 't')
+list_of_trajectories_time = [l for l in list_of_trajectories_time if len(l) > 1]
+intervals = list(itertools.chain.from_iterable([np.diff(time_list) for time_list in list_of_trajectories_time]))
+intervals = [interval for interval in intervals if interval != 0]
+print(f'{CHOL_NOMENCLATURE}(n={len(list_of_trajectories_time)})->', np.mean(intervals) * 1e6, sem(intervals) * 1e6)
 """
 DatabaseHandler.disconnect()
