@@ -60,14 +60,25 @@ files = [
 for file in tqdm.tqdm(files):
     trajectories = Trajectory.objects(info__file=file)
     trajectories_by_condition = defaultdict(lambda: [])
-
     for trajectory in trajectories:
         trajectories_by_condition[trajectory.info['classified_experimental_condition']].append(trajectory)
 
+        if trajectory.info['classified_experimental_condition'] == BTX_NOMENCLATURE:
+            trajectory.plot_confinement_states(v_th=33, non_confinement_color='#b1ff00', confinement_color='#537700', show=False, alpha=1)
+
+            for chol_trajectory_id in trajectory.info[f'{CHOL_NOMENCLATURE}_intersections']:
+                Trajectory.objects(id=chol_trajectory_id)[0].plot_confinement_states(v_th=33, non_confinement_color='#ff8200', confinement_color='#7b3f00', show=False, alpha=0.5)
+
+            if trajectory.info['number_of_confinement_zones'] != 0:
+                plt.title(trajectory.info[f'number_of_confinement_zones_with_{CHOL_NOMENCLATURE}']/trajectory.info['number_of_confinement_zones'])
+            plt.show()
+
+        """
         if trajectory.info['classified_experimental_condition'] == CHOL_NOMENCLATURE:
             trajectory.plot_confinement_states(v_th=33, non_confinement_color='#b1ff00', confinement_color='#537700', show=False, alpha=0.5)
         else:
             trajectory.plot_confinement_states(v_th=33, non_confinement_color='#ff8200', confinement_color='#7b3f00', show=False, alpha=0.5)
+        """
 
     """
     for btx_trajectory in tqdm.tqdm(trajectories_by_condition[BTX_NOMENCLATURE]):
@@ -82,6 +93,6 @@ for file in tqdm.tqdm(files):
             if both_trajectories_intersect(chol_trajectory, btx_trajectory, via='kd-tree', radius_threshold=0.01):
                 chol_trajectory.info[f'{BTX_NOMENCLATURE}_intersections'].append(btx_trajectory.id)
     """
-    plt.plot()
+    #plt.savefig('a.jpg')
 
 DatabaseHandler.disconnect()
