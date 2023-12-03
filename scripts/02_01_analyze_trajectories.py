@@ -100,6 +100,9 @@ def analyze_trajectory(trajectory_id):
     trajectory.info['analysis']['confinement-a'] = []
     trajectory.info['analysis']['confinement-b'] = []
     trajectory.info['analysis']['confinement-e'] = []
+    trajectory.info['analysis']['confinement-steps'] = []
+    trajectory.info['analysis']['non-confinement-steps'] = []
+    trajectory.info['analysis']['confinement_areas_centroids'] = []
 
     states, intervals = trajectory.confinement_states(return_intervals=True, v_th=33)
 
@@ -126,8 +129,6 @@ def analyze_trajectory(trajectory_id):
     for angle in trajectory.info['analysis']['angles_analysis']:
         trajectory.info['analysis']['angles_analysis'][angle] = trajectory.turning_angles(steps_lag=int(angle))
 
-    trajectory.info['analysis']['confinement_areas_centroids'] = []
-
     sub_trajectories_by_state = trajectory.sub_trajectories_trajectories_from_confinement_states(v_th=33)
     for state in sub_trajectories_by_state:
         for sub_trajectory in sub_trajectories_by_state[state]:
@@ -143,6 +144,7 @@ def analyze_trajectory(trajectory_id):
 
                     trajectory.info['analysis']['confinement_areas_centroids'].append(np.mean(raw_trajectory, axis=0).tolist())
 
+                    trajectory.info['analysis']['confinement-steps'].append(sub_trajectory.length)
                     trajectory.info['analysis']['confinement-area'].append(area)
                     trajectory.info['analysis']['confinement-a'].append(a)
                     trajectory.info['analysis']['confinement-b'].append(b)
@@ -150,6 +152,8 @@ def analyze_trajectory(trajectory_id):
 
                 except QhullError:
                     pass
+            else:
+                trajectory.info['analysis']['non-confinement-steps'].append(sub_trajectory.length)
 
             for angle in trajectory.info['analysis']['angles_by_state'][str(state)]['angles']:
                 trajectory.info['analysis']['angles_by_state'][str(state)]['angles'][angle] += sub_trajectory.turning_angles(steps_lag=int(angle))
