@@ -17,7 +17,7 @@ APPLY_GS_CRITERIA = True
 
 DatabaseHandler.connect_over_network(None, None, IP_ADDRESS, COLLECTION_NAME)
 
-#GET PERCENTAGE OF IMMOBILIZED TRAJECTORIES
+print("PERCENTAGE OF IMMOBILIZED TRAJECTORIES")
 quantity = Trajectory._get_collection().count_documents({'info.dataset':DATASETS_LIST[0]})
 immobile_quantity = Trajectory._get_collection().count_documents({'info.dataset':DATASETS_LIST[0], 'info.immobile':True})
 print(DATASETS_LIST[0], immobile_quantity/quantity)
@@ -42,7 +42,7 @@ quantity = Trajectory._get_collection().count_documents({'info.dataset':DATASETS
 immobile_quantity = Trajectory._get_collection().count_documents({'info.dataset':DATASETS_LIST[3], 'info.immobile':True})
 print(DATASETS_LIST[3], immobile_quantity/quantity)
 
-#GET ALL RATIOS
+print("RATIOS")
 pd.DataFrame({'ratio': get_list_of_values_of_field({'info.dataset': 'Control'}, 'ratio')}).to_csv('Results/control_ratios.csv')
 pd.DataFrame({'ratio': get_list_of_values_of_field({'info.dataset': 'CDx'}, 'ratio')}).to_csv('Results/cdx_ratios.csv')
 
@@ -54,7 +54,7 @@ ratios = get_list_of_values_of_field({'info.dataset': 'CholesterolPEGKK114'}, 'r
 ratios += get_list_of_values_of_field({'info.classified_experimental_condition': CHOL_NOMENCLATURE}, 'ratio')
 pd.DataFrame({'ratio': ratios}).to_csv('Results/chol_ratios.csv')
 
-#GET ALL INTERVALS
+print("ALL INTERVALS")
 list_of_trajectories_time = get_list_of_main_field({'info.dataset': 'Control'}, 't')
 list_of_trajectories_time = [l for l in list_of_trajectories_time if len(l) > 1]
 intervals = list(itertools.chain.from_iterable([np.diff(time_list) for time_list in list_of_trajectories_time]))
