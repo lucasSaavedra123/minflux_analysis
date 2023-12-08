@@ -60,17 +60,20 @@ files = [
 for file in tqdm.tqdm(files):
     trajectories = Trajectory.objects(info__file=file)
     trajectories_by_condition = defaultdict(lambda: [])
-    for trajectory in trajectories:
+    for index, trajectory in enumerate(trajectories):
         trajectories_by_condition[trajectory.info['classified_experimental_condition']].append(trajectory)
 
         if trajectory.info['classified_experimental_condition'] == BTX_NOMENCLATURE:
-            trajectory.plot_confinement_states(v_th=33, non_confinement_color='#b1ff00', confinement_color='#537700', show=False, alpha=1)
+            trajectory.plot_confinement_states(v_th=33, non_confinement_color='green', confinement_color='green', show=False, alpha=0.75, plot_confinement_convex_hull=True, color_confinement_convex_hull='green')
 
             for chol_trajectory_id in trajectory.info[f'{CHOL_NOMENCLATURE}_intersections']:
-                Trajectory.objects(id=chol_trajectory_id)[0].plot_confinement_states(v_th=33, non_confinement_color='#ff8200', confinement_color='#7b3f00', show=False, alpha=0.5)
+                Trajectory.objects(id=chol_trajectory_id)[0].plot_confinement_states(v_th=33, non_confinement_color='red', confinement_color='red', show=False, alpha=0.75, plot_confinement_convex_hull=True, color_confinement_convex_hull='red')
 
             if trajectory.info['number_of_confinement_zones'] != 0:
-                plt.title(trajectory.info[f'number_of_confinement_zones_with_{CHOL_NOMENCLATURE}']/trajectory.info['number_of_confinement_zones'])
+                print(trajectory.info[f'number_of_confinement_zones_with_{CHOL_NOMENCLATURE}']/trajectory.info['number_of_confinement_zones'])
+
+            plt.gca().set_aspect('equal')
+            plt.tight_layout()
             plt.show()
 
         """
