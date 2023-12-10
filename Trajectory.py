@@ -8,7 +8,7 @@ from scipy.optimize import curve_fit
 from sklearn.metrics import r2_score
 import ruptures as rpt
 from mongoengine import Document, FloatField, ListField, DictField, BooleanField
-
+from scipy.spatial import ConvexHull
 #Example about how to read trajectories from .mat
 """
 from scipy.io import loadmat
@@ -351,7 +351,19 @@ class Trajectory(Document):
 
         plt.show()
 
-    def plot_confinement_states(self, v_th=11, window_size=3, transition_fix_threshold=9, non_confinement_color='black', confinement_color='green', show=True, alpha=1):
+    def plot_confinement_states(
+        self,
+        v_th=11,
+        window_size=3,
+        transition_fix_threshold=9,
+        non_confinement_color='black',
+        confinement_color='green',
+        show=True,
+        alpha=1,
+        plot_confinement_convex_hull=False,
+        color_confinement_convex_hull='grey',
+        alpha_confinement_convex_hull=0.5
+    ):
         x = self.get_noisy_x().tolist()
         y = self.get_noisy_y().tolist()
 
@@ -361,6 +373,17 @@ class Trajectory(Document):
         for i,(x1, x2, y1,y2) in enumerate(zip(x, x[1:], y, y[1:])):
             plt.plot([x1, x2], [y1, y2], states_as_color[i], alpha=alpha)
 
+        confinement_sub_trajectories = self.sub_trajectories_trajectories_from_confinement_states(v_th=v_th, window_size=window_size, transition_fix_threshold=transition_fix_threshold)[1]
+
+        if plot_confinement_convex_hull:
+            for trajectory in confinement_sub_trajectories:
+                points = np.zeros((trajectory.length, 2))
+                points[:,0] = trajectory.get_noisy_x()
+                points[:,1] = trajectory.get_noisy_y()
+                hull = ConvexHull(points)
+
+                plt.fill(points[hull.vertices, 0], points[hull.vertices, 1], color_confinement_convex_hull, alpha=alpha_confinement_convex_hull)
+        
         if show:
             plt.show()
 

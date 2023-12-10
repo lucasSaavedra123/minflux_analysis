@@ -10,17 +10,15 @@ from CONSTANTS import *
 
 
 NUMBER_OF_POINTS_FOR_MSD = 250
-
 ray.init()
 
 @ray.remote
 def analyze_trajectory(trajectory_id, dataset):
     DatabaseHandler.connect_over_network(None, None, IP_ADDRESS, COLLECTION_NAME)
-
     trajectories = Trajectory.objects(id=trajectory_id)
     assert len(trajectories) == 1
     trajectory = trajectories[0]
-
+    DatabaseHandler.disconnect()
     reconstructed_trajectory = trajectory.reconstructed_trajectory(DATASET_TO_DELTA_T[dataset])
 
     if reconstructed_trajectory.length > NUMBER_OF_POINTS_FOR_MSD + 1:
@@ -29,29 +27,26 @@ def analyze_trajectory(trajectory_id, dataset):
     else:
         return None
 
-    DatabaseHandler.disconnect()
 
     return reconstructed_trajectory, msd
 
 DatabaseHandler.connect_over_network(None, None, IP_ADDRESS, COLLECTION_NAME)
 
-new_datasets_list = DATASETS_LIST.copy()[:-3]
+new_datasets_list = DATASETS_LIST.copy()
+new_datasets_list = DATASETS_LIST[:-1]
 new_datasets_list.append(BTX_NOMENCLATURE)
 new_datasets_list.append(CHOL_NOMENCLATURE)
 
-for dataset in new_datasets_list:
+for index, dataset in enumerate(new_datasets_list):
+    if index < 5:
+        continue
     print(dataset)
-    uploaded_trajectories_ids = []
-    if dataset not in [BTX_NOMENCLATURE, CHOL_NOMENCLATURE]:
-        uploaded_trajectories_ids = [str(trajectory_result['_id']) for trajectory_result in Trajectory._get_collection().find({'info.dataset': dataset, 'info.immobile': False}, {'_id':1})]
-    else:
-        uploaded_trajectories_ids = [str(trajectory_result['_id']) for trajectory_result in Trajectory._get_collection().find({'info.classified_experimental_condition': dataset, 'info.immobile': False}, {'_id':1})]
+    SEARCH_FIELD = 'info.dataset' if index < 4 else 'info.classified_experimental_condition'
 
-        if dataset == BTX_NOMENCLATURE:
-            uploaded_trajectories_ids += [str(trajectory_result['_id']) for trajectory_result in Trajectory._get_collection().find({'info.dataset': 'BTX680R', 'info.immobile': False}, {'_id':1})]
-        else:
-            uploaded_trajectories_ids += [str(trajectory_result['_id']) for trajectory_result in Trajectory._get_collection().find({'info.dataset': 'CholesterolPEGKK114', 'info.immobile': False}, {'_id':1})]
-            dataset = 'CholesterolPEGKK114'
+    uploaded_trajectories_ids = [str(trajectory_result['_id']) for trajectory_result in Trajectory._get_collection().find({SEARCH_FIELD: dataset, 'info.immobile': False}, {'_id':1})]
+
+    if dataset == 'fPEG-Chol':
+        dataset = 'CholesterolPEGKK114'
 
     results = []
 
@@ -74,7 +69,7 @@ for dataset in new_datasets_list:
     plt.xlim([plt.xlim()[0], max(t_lag)])
     plt.xticks(fontsize=20)
     plt.yticks(fontsize=20)
-    plt.savefig(f"{dataset}_msd.png", dpi=300)
+    plt.savefig(f"{index}_{dataset}_msd.png", dpi=300)
     plt.clf()
 
     ea_ta_msd = np.mean(msd_results, axis=0)
@@ -87,7 +82,7 @@ for dataset in new_datasets_list:
     plt.xlim([plt.xlim()[0], max(t_lag)])
     plt.xticks(fontsize=15)
     plt.yticks(fontsize=15)
-    plt.savefig(f"{dataset}_ea_msd.png", dpi=300)
+    plt.savefig(f"{index}_{dataset}_ea_msd.png", dpi=300)
     plt.clf()
 
 DatabaseHandler.disconnect()
