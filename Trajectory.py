@@ -147,7 +147,7 @@ class Trajectory(Document):
     @classmethod
     def ensamble_average_mean_square_displacement(cls, trajectories, number_of_points_for_msd=50, alpha=0.95):
         trajectories = [trajectory for trajectory in trajectories if trajectory.length > number_of_points_for_msd + 1]
-
+        #print("len average ->", np.mean([t.length for t in trajectories]))
         ea_msd = np.zeros((len(trajectories), number_of_points_for_msd))
         mu_t = np.zeros((len(trajectories), number_of_points_for_msd))
 
