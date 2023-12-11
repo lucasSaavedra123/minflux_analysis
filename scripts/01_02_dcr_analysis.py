@@ -22,7 +22,7 @@ chol_dcr_values = [np.mean(dcr_values) for dcr_values in chol_dcr_values]
 
 dcr_dataframe = pd.DataFrame({
     'Track detection channel ratio (tDCR)': btx_dcr_values + chol_dcr_values,
-    'Experimental condition': ['CF®680R-BTX'] * len(btx_dcr_values) + ['fPEG-Chol'] * len(chol_dcr_values)
+    'Experimental condition': [r'CF$^{®}$680R-BTX'] * len(btx_dcr_values) + ['fPEG-Chol'] * len(chol_dcr_values)
 })
 
 DatabaseHandler.disconnect()
@@ -37,7 +37,7 @@ chol_and_btx_dcr_values = [np.mean(dcr_values) for dcr_values in chol_and_btx_dc
 
 dcr_dataframe = pd.DataFrame({
     'Track detection channel ratio (tDCR)': chol_and_btx_dcr_values,
-    'Experimental condition': [r'fPEG-Chol$_{BTX}$ + CF®680R-BTX$_{Chol}$'] * len(chol_and_btx_dcr_values)
+    'Experimental condition': [r'fPEG-Chol$_{BTX}$ + CF$^{®}$680R-BTX$_{Chol}$'] * len(chol_and_btx_dcr_values)
 })
 
 DatabaseHandler.disconnect()
