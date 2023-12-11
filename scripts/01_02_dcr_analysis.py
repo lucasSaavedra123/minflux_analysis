@@ -10,8 +10,6 @@ from CONSTANTS import *
 from utils import *
 
 
-APPLY_GS_CRITERIA = True
-
 DatabaseHandler.connect_over_network(None, None, IP_ADDRESS, COLLECTION_NAME)
 
 btx_dcr_values = get_list_of_values_of_field({'info.dataset': 'BTX680R'}, 'dcr')
@@ -37,7 +35,7 @@ chol_and_btx_dcr_values = [np.mean(dcr_values) for dcr_values in chol_and_btx_dc
 
 dcr_dataframe = pd.DataFrame({
     'Track detection channel ratio (tDCR)': chol_and_btx_dcr_values,
-    'Experimental condition': [r'fPEG-Chol$_{BTX}$ + CF$^{®}$680R-BTX$_{Chol}$'] * len(chol_and_btx_dcr_values)
+    'Experimental condition': [r'fPEG-Chol(+CF$^{®}$680R-BTX)' + "\n+\n" + r'CF$^{®}$680R-BTX(+fPEG-Chol)'] * len(chol_and_btx_dcr_values)
 })
 
 DatabaseHandler.disconnect()
