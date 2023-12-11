@@ -69,7 +69,7 @@ for file in tqdm.tqdm(files):
             for chol_trajectory_id in trajectory.info[f'{CHOL_NOMENCLATURE}_intersections']:
                 Trajectory.objects(id=chol_trajectory_id)[0].plot_confinement_states(v_th=33, non_confinement_color='red', confinement_color='red', show=False, alpha=0.75, plot_confinement_convex_hull=True, color_confinement_convex_hull='red')
 
-            if trajectory.info['number_of_confinement_zones'] != 0 and 0.34 < trajectory.info[f'number_of_confinement_zones_with_{CHOL_NOMENCLATURE}']/trajectory.info['number_of_confinement_zones'] < 0.36:
+            if trajectory.info['number_of_confinement_zones'] != 0:
                 print(trajectory.info[f'number_of_confinement_zones_with_{CHOL_NOMENCLATURE}']/trajectory.info['number_of_confinement_zones'])
 
                 plt.gca().set_aspect('equal')
