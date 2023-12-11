@@ -40,5 +40,5 @@ dcr_dataframe = pd.DataFrame({
 
 DatabaseHandler.disconnect()
 
-sns.histplot(data=dcr_dataframe, x='Track detection channel ratio (tDCR)', hue='Experimental condition', kde=True)
+sns.histplot(data=dcr_dataframe, x='Track detection channel ratio (tDCR)', color='#805380', edgecolor='#634163', kde=True)
 plt.show()
