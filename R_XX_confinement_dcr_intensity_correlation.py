@@ -86,7 +86,6 @@ for file in tqdm.tqdm(list(os.listdir('Cholesterol and btx'))):
             if both_trajectories_intersect(btx_trajectory, chol_trajectory, via='kd-tree', radius_threshold=0.01):
                 btx_trajectory.info[f'{CHOL_NOMENCLATURE}_intersections'].append(chol_trajectory)
 
-    for btx_trajectory in trajectories_by_condition[BTX_NOMENCLATURE]:
         btx_confinements = btx_trajectory.sub_trajectories_trajectories_from_confinement_states(v_th=33)[1]
 
         chol_trajectories = btx_trajectory.info[f'{CHOL_NOMENCLATURE}_intersections']

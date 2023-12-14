@@ -447,13 +447,20 @@ class Trajectory(Document):
         
         return trajectories
 
-    def build_noisy_subtrajectory_from_range(self, initial_index, final_index):
-        return Trajectory(
+    def build_noisy_subtrajectory_from_range(self, initial_index, final_index, noisy=True):
+        new_trajectory = Trajectory(
                     x = self.get_noisy_x()[initial_index:final_index],
                     y = self.get_noisy_y()[initial_index:final_index],
                     t = self.get_time()[initial_index:final_index],
-                    noisy=True
+                    noisy=noisy
                 )
+        
+        if 'dcr' in self.info:
+            new_trajectory.info['dcr'] = self.info['dcr'][initial_index:final_index]
+        if 'intensity' in self.info:
+            new_trajectory.info['intensity'] = self.info['intensity'][initial_index:final_index]
+
+        return new_trajectory
 
     def confinement_states(self,v_th=11, window_size=3, transition_fix_threshold=9, return_intervals=False):
         """
