@@ -75,7 +75,7 @@ for file in tqdm.tqdm(files):
 
                 for index, intersection in enumerate(intersections):
                     if len(intersection) != 0:
-                        btx_trajectory.info[f'{CHOL_NOMENCLATURE}_single_intersections'] = 1
+                        btx_trajectory.info[f'{CHOL_NOMENCLATURE}_single_intersections'][index] = 1
 
         btx_trajectory.save()
 
@@ -90,7 +90,7 @@ for file in tqdm.tqdm(files):
 
                 for index, intersection in enumerate(intersections):
                     if len(intersection) != 0:
-                        chol_trajectory.info[f'{BTX_NOMENCLATURE}_single_intersections'] = 1
+                        chol_trajectory.info[f'{BTX_NOMENCLATURE}_single_intersections'][index] = 1
 
         chol_trajectory.save()
 
