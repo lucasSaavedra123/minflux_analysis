@@ -150,9 +150,8 @@ def both_trajectories_intersect(trajectory_one, trajectory_two, via='kd-tree', r
         intersections = tree1.query_ball_tree(tree2, r=radius_threshold)
 
         if return_kd_tree_intersections:
-            return intersections
-
-        intersections = [intersection for intersection in intersections if intersection != []]
-        return len(intersections) > 0
+            return len([intersection for intersection in intersections if intersection != []]) > 0, intersections
+        else:
+            return len([intersection for intersection in intersections if intersection != []]) > 0
     else:
         raise ValueError(f"via={via} is not correct")
