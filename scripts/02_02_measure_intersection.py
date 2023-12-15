@@ -21,18 +21,32 @@ for file in tqdm.tqdm(files):
         trajectories_by_condition[trajectory.info['classified_experimental_condition']].append(trajectory)
 
     for btx_trajectory in tqdm.tqdm(trajectories_by_condition[BTX_NOMENCLATURE]):
+        btx_trajectory.info[f'{CHOL_NOMENCLATURE}_single_intersections'] = np.zeros(btx_trajectory.length).tolist()
         btx_trajectory.info[f'{CHOL_NOMENCLATURE}_intersections'] = []
         for chol_trajectory in trajectories_by_condition[CHOL_NOMENCLATURE]:
-            if both_trajectories_intersect(btx_trajectory, chol_trajectory, via='kd-tree', radius_threshold=0.01):
+            overlap, intersections = both_trajectories_intersect(btx_trajectory, chol_trajectory, via='kd-tree', radius_threshold=0.03, return_kd_tree_intersections=True)
+
+            if overlap:
                 btx_trajectory.info[f'{CHOL_NOMENCLATURE}_intersections'].append(chol_trajectory.id)
+
+                for index, intersection in enumerate(intersections):
+                    if len(intersection) != 0:
+                        btx_trajectory.info[f'{CHOL_NOMENCLATURE}_single_intersections'] = 1
 
         btx_trajectory.save()
 
     for chol_trajectory in tqdm.tqdm(trajectories_by_condition[CHOL_NOMENCLATURE]):
+        chol_trajectory.info[f'{BTX_NOMENCLATURE}_single_intersections'] = np.zeros(chol_trajectory.length).tolist()
         chol_trajectory.info[f'{BTX_NOMENCLATURE}_intersections'] = []
         for btx_trajectory in trajectories_by_condition[BTX_NOMENCLATURE]:
-            if both_trajectories_intersect(chol_trajectory, btx_trajectory, via='kd-tree', radius_threshold=0.01):
+            overlap, intersections = both_trajectories_intersect(chol_trajectory, btx_trajectory, via='kd-tree', radius_threshold=0.03, return_kd_tree_intersections=True)
+            
+            if overlap:
                 chol_trajectory.info[f'{BTX_NOMENCLATURE}_intersections'].append(btx_trajectory.id)
+
+                for index, intersection in enumerate(intersections):
+                    if len(intersection) != 0:
+                        chol_trajectory.info[f'{BTX_NOMENCLATURE}_single_intersections'] = 1
 
         chol_trajectory.save()
 
