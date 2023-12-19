@@ -1,11 +1,9 @@
 import os
 from collections import defaultdict
-import itertools
 import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np
 import tqdm
-from scipy.signal import correlate
 
 from Trajectory import Trajectory
 from utils import *
@@ -78,8 +76,22 @@ for file in tqdm.tqdm(list(os.listdir('Cholesterol and btx'))):
     trajectories_by_condition = defaultdict(lambda: [])
     
     for trajectory in trajectories_from_file:
-        trajectories_by_condition[CHOL_NOMENCLATURE if np.mean(trajectory.info['dcr']) > TDCR_THRESHOLD else BTX_NOMENCLATURE].append(trajectory)
+        picked_label = CHOL_NOMENCLATURE if np.mean(trajectory.info['dcr']) > TDCR_THRESHOLD else BTX_NOMENCLATURE
+        trajectories_by_condition[picked_label].append(trajectory)
 
+        if np.max(trajectory.get_noisy_y()) < 0:
+            if picked_label == CHOL_NOMENCLATURE:
+                cm = plt.cm.get_cmap('autumn_r')
+                color = 'orange'
+            else:
+                cm = plt.cm.get_cmap('winter_r')
+                color = 'blue'
+
+            plt.scatter(trajectory.get_noisy_x(), trajectory.get_noisy_y(), c=trajectory.info['intensity'], vmin=100_000, vmax=200_000, s=35, cmap=cm)
+            #plt.plot(trajectory.get_noisy_x(), trajectory.get_noisy_y(), c=color)
+
+    plt.show()
+    """
     for btx_trajectory in trajectories_by_condition[BTX_NOMENCLATURE]:
         btx_trajectory.info[f'{CHOL_NOMENCLATURE}_intersections'] = []
         for chol_trajectory in trajectories_by_condition[CHOL_NOMENCLATURE]:
@@ -87,7 +99,7 @@ for file in tqdm.tqdm(list(os.listdir('Cholesterol and btx'))):
                 btx_trajectory.info[f'{CHOL_NOMENCLATURE}_intersections'].append(chol_trajectory)
 
         btx_confinements = btx_trajectory.sub_trajectories_trajectories_from_confinement_states(v_th=33)[1]
-
+        
         chol_trajectories = btx_trajectory.info[f'{CHOL_NOMENCLATURE}_intersections']
         chol_confinements = [chol_trajectory.sub_trajectories_trajectories_from_confinement_states(v_th=33)[1] for chol_trajectory in chol_trajectories]
         chol_confinements = list(itertools.chain.from_iterable(chol_confinements))
@@ -100,5 +112,6 @@ for file in tqdm.tqdm(list(os.listdir('Cholesterol and btx'))):
             else:
                 intensities_without_overlap += btx_confinement.info['intensity']
 
-    np.savetxt('on_overlap.txt', intensities_on_overlap)
-    np.savetxt('without_overlap.txt', intensities_without_overlap)
+    #np.savetxt('on_overlap.txt', intensities_on_overlap)
+    #np.savetxt('without_overlap.txt', intensities_without_overlap)
+    """
