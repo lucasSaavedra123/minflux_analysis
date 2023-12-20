@@ -35,7 +35,6 @@ def predict(trajectory):
     return 10**result
 
 def analyze_trajectory(trajectory_id):
-
     trajectories = Trajectory.objects(id=trajectory_id)
     assert len(trajectories) == 1
     trajectory = trajectories[0]
