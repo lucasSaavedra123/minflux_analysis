@@ -42,7 +42,9 @@ def extract_dataframes_from_file(dataset_directory, a_file):
     print(f"Extracting info from dataset {dataset_directory} and file {a_file}")
     dataset = pd.read_csv(os.path.join(dataset_directory,a_file), sep=' ', header=None)
 
-    if len(dataset.columns) == 5:
+    if len(dataset.columns) == 6:
+        dataset = dataset.rename(columns={index: value for index, value in enumerate(['track_id', 't', 'x', 'y', 'intensity', 'dcr'])})
+    elif len(dataset.columns) == 5:
         dataset = dataset.rename(columns={index: value for index, value in enumerate(['track_id', 't', 'x', 'y', 'dcr'])})
     elif len(dataset.columns) == 4:
         dataset = dataset.rename(columns={index: value for index, value in enumerate(['track_id', 't', 'x', 'y'])})

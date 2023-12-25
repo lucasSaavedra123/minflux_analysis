@@ -1,21 +1,20 @@
 import numpy as np
 import tqdm
 from torch import from_numpy
-
+from step.data import *
+from step.models import *
+from step.utils import *
+from fastai.vision.all import *
+import matplotlib.pyplot as plt
 from DatabaseHandler import DatabaseHandler
 from Trajectory import Trajectory
 from CONSTANTS import *
-
-from step.step.data import *
-from step.step.models import *
-from step.step.utils import *
-from fastai.vision.all import *
 
 
 dim = 2
 dls = DataLoaders.from_dsets([], []) # Empty train and validation datasets
 model = XResAttn(dim, n_class=1, stem_szs=(64,), conv_blocks=[1, 1, 1],
-                block_szs=[128, 256, 512], pos_enc=True,
+                block_szs=[128, 256, 512], pos_enc=False,
                 n_encoder_layers=4, dim_ff=512, nhead_enc=8,
                 linear_layers=[], norm=False, yrange=(-3.1, 3.1), time_included=True)
 
@@ -39,20 +38,44 @@ def analyze_trajectory(trajectory_id):
     assert len(trajectories) == 1
     trajectory = trajectories[0]
 
-    #if 'analysis' in trajectory.info or trajectory.length == 1:
+    #if trajectory.length == 1 or 'step_result' in trajectory.info['analysis']:
     if trajectory.length == 1:
         return None
     else:
         trajectory.info['analysis']['step_result'] = None
+            
+    trajectory.info['analysis']['step_result'] = predict(trajectory).tolist()
+    """
+    plt.plot(trajectory.info['analysis']['step_result'])
+    plt.show()
 
-    trajectory.info['analysis']['step_result'] =  predict(trajectory)
+    plt.plot(
+        trajectory.get_noisy_x(),
+        trajectory.get_noisy_y(),
+        c='grey',
+        linewidth=1,
+        zorder=-1
+    )
+
+    plt.scatter(
+        trajectory.get_noisy_x(),
+        trajectory.get_noisy_y(),
+        c=trajectory.info['analysis']['step_result'],
+        vmin=np.min(trajectory.info['analysis']['step_result']),
+        vmax=np.max(trajectory.info['analysis']['step_result']),
+        s=30,
+        cmap=plt.cm.get_cmap('autumn_r'),
+    )
+
+    plt.show()
+    """
     trajectory.save()
 
 DatabaseHandler.connect_over_network(None, None, IP_ADDRESS, COLLECTION_NAME)
 
-uploaded_trajectories_ids = [str(trajectory_result['_id']) for trajectory_result in Trajectory._get_collection().find({}, {'_id':1})]
+#uploaded_trajectories_ids = [str(trajectory_result['_id']) for trajectory_result in Trajectory._get_collection().find({}, {'_id':1})]
 
-for an_id in tqdm.tqdm(uploaded_trajectories_ids):
-    analyze_trajectory(an_id)
+for a_result in tqdm.tqdm(Trajectory._get_collection().find({}, {'_id':1})):
+    analyze_trajectory(str(a_result['_id']))
 
 DatabaseHandler.disconnect()
