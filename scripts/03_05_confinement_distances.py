@@ -13,27 +13,29 @@ from utils import *
 
 
 FONT_SIZE = 45
-
+file = open('Results/confinement_distances.txt', 'w')
 a = pd.read_csv(os.path.join('Results', 'Control_0_confinement_areas_distance.csv'))['confinement_areas_distance'].tolist()
-print('Control', np.mean(a), sem(a))
+file.write('Control', np.mean(a), sem(a), '\n')
 
 b = pd.read_csv(os.path.join('Results', 'CDx_1_confinement_areas_distance.csv'))['confinement_areas_distance'].tolist()
-print('CDx', np.mean(b), sem(b))
+file.write('CDx', np.mean(b), sem(b), '\n')
 
-print('Control-CDx', kstest(a, b, alternative='two-sided'))
+file.write('Control-CDx', kstest(a, b, alternative='two-sided'), '\n')
 
 a = pd.read_csv(os.path.join('Results', 'CholesterolPEGKK114_3_confinement_areas_distance.csv'))['confinement_areas_distance'].tolist()
-print('fPEG-Chol', np.mean(a), sem(a))
+file.write('fPEG-Chol', np.mean(a), sem(a), '\n')
 
 b = pd.read_csv(os.path.join('Results', 'fPEG-Chol_5_confinement_areas_distance.csv'))['confinement_areas_distance'].tolist()
-print('fPEG-Chol with BTX', np.mean(b), sem(b))
+file.write('fPEG-Chol with BTX', np.mean(b), sem(b), '\n')
 
-print('fPEG-Chol', kstest(a, b, alternative='two-sided'))
+file.write('fPEG-Chol', kstest(a, b, alternative='two-sided'), '\n')
 
 a = pd.read_csv(os.path.join('Results', 'BTX680R_2_confinement_areas_distance.csv'))['confinement_areas_distance'].tolist()
-print('BTX', np.mean(a), sem(a))
+file.write('BTX', np.mean(a), sem(a), '\n')
 
 b = pd.read_csv(os.path.join('Results', 'BTX680R_4_confinement_areas_distance.csv'))['confinement_areas_distance'].tolist()
-print('BTX with Chol', np.mean(b), sem(b))
+file.write('BTX with Chol', np.mean(b), sem(b), '\n')
 
-print('BTX', kstest(a, b, alternative='two-sided'))
+file.write('BTX', kstest(a, b, alternative='two-sided'), '\n')
+
+file.close()
