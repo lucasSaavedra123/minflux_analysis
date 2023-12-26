@@ -88,7 +88,7 @@ for file in tqdm.tqdm(list(os.listdir('Cholesterol and btx'))):
                 color = 'blue'
 
             plt.scatter(trajectory.get_noisy_x(), trajectory.get_noisy_y(), c=trajectory.info['intensity'], vmin=100_000, vmax=200_000, s=35, cmap=cm)
-            #plt.plot(trajectory.get_noisy_x(), trajectory.get_noisy_y(), c=color)
+            plt.plot(trajectory.get_noisy_x(), trajectory.get_noisy_y(), c=color)
 
     plt.show()
     """
