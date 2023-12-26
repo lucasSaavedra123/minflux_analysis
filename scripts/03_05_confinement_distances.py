@@ -1,3 +1,6 @@
+"""
+Confinement distances are measured
+"""
 import os
 
 import numpy as np

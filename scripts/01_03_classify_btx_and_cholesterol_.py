@@ -1,3 +1,8 @@
+"""
+With the DCR value selected on 01_02_dcr_analysis.py, 
+the classification is done
+"""
+
 import tqdm
 import numpy as np
 

@@ -1,3 +1,6 @@
+"""
+Residence times are plotted
+"""
 import os
 
 import numpy as np

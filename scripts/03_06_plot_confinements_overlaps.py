@@ -1,3 +1,6 @@
+"""
+All BTX trajectories are plotted with their corresponding overlap Chol ones.
+"""
 from collections import defaultdict
 
 import tqdm
@@ -59,10 +62,7 @@ files = [
 
 for file in tqdm.tqdm(files):
     trajectories = Trajectory.objects(info__file=file)
-    trajectories_by_condition = defaultdict(lambda: [])
     for index, trajectory in enumerate(trajectories):
-        trajectories_by_condition[trajectory.info['classified_experimental_condition']].append(trajectory)
-
         if trajectory.info['classified_experimental_condition'] == BTX_NOMENCLATURE:
             trajectory.plot_confinement_states(v_th=33, non_confinement_color='green', confinement_color='green', show=False, alpha=0.75, plot_confinement_convex_hull=True, color_confinement_convex_hull='green')
 
@@ -77,26 +77,5 @@ for file in tqdm.tqdm(files):
                 plt.show()
             else:
                 plt.clf()
-        """
-        if trajectory.info['classified_experimental_condition'] == CHOL_NOMENCLATURE:
-            trajectory.plot_confinement_states(v_th=33, non_confinement_color='#b1ff00', confinement_color='#537700', show=False, alpha=0.5)
-        else:
-            trajectory.plot_confinement_states(v_th=33, non_confinement_color='#ff8200', confinement_color='#7b3f00', show=False, alpha=0.5)
-        """
-
-    """
-    for btx_trajectory in tqdm.tqdm(trajectories_by_condition[BTX_NOMENCLATURE]):
-        btx_trajectory.info[f'{CHOL_NOMENCLATURE}_intersections'] = []
-        for chol_trajectory in trajectories_by_condition[CHOL_NOMENCLATURE]:
-            if both_trajectories_intersect(btx_trajectory, chol_trajectory, via='kd-tree', radius_threshold=0.01):
-                btx_trajectory.info[f'{CHOL_NOMENCLATURE}_intersections'].append(chol_trajectory.id)
-
-    for chol_trajectory in tqdm.tqdm(trajectories_by_condition[CHOL_NOMENCLATURE]):
-        chol_trajectory.info[f'{BTX_NOMENCLATURE}_intersections'] = []
-        for btx_trajectory in trajectories_by_condition[BTX_NOMENCLATURE]:
-            if both_trajectories_intersect(chol_trajectory, btx_trajectory, via='kd-tree', radius_threshold=0.01):
-                chol_trajectory.info[f'{BTX_NOMENCLATURE}_intersections'].append(btx_trajectory.id)
-    """
-    #plt.savefig('a.jpg')
 
 DatabaseHandler.disconnect()

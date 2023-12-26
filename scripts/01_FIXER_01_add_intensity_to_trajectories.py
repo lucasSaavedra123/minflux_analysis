@@ -1,4 +1,9 @@
-#THIS SCRIPT UPLOAD INTENSITY TO ALREADY UPLOADED TRAJECTORIES!!!
+"""
+For some reason, at the beggining, trajectories were not included
+with the intensity. Hence, this script add the intensity from
+the complete raw files.
+"""
+
 import os
 from collections import defaultdict
 import glob

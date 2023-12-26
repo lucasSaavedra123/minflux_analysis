@@ -1,3 +1,7 @@
+"""
+All important results like areas, axis lengths, etc. 
+are produced within this file.
+"""
 import itertools
 
 import numpy as np

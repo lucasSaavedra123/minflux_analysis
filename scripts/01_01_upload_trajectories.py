@@ -1,3 +1,7 @@
+"""
+This script upload all trajectories to the MongoDB database.
+"""
+
 import os
 from collections import defaultdict
 

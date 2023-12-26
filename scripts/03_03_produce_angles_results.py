@@ -1,3 +1,6 @@
+"""
+Turning angles files are produced with this script
+"""
 import itertools
 
 import numpy as np

@@ -1,3 +1,6 @@
+"""
+All Bethas and Ks are calculated here
+"""
 import itertools
 
 import ray

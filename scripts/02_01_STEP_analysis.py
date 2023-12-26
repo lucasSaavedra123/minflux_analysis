@@ -1,3 +1,7 @@
+"""
+STEP is executed to every trajectory.
+"""
+
 import numpy as np
 import tqdm
 from torch import from_numpy

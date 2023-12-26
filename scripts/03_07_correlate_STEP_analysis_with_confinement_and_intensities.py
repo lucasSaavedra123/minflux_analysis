@@ -1,3 +1,8 @@
+"""
+Upong STEP analysis, intensity and diffusion coefficient
+of all experiment within and out confinement zones
+are produced
+"""
 import itertools
 
 import numpy as np

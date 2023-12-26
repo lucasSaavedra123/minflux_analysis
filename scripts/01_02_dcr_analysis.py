@@ -1,3 +1,10 @@
+"""
+Some experiments included at the same time Chol and BTX.
+Hence, to classify trajectories between both types,
+this script analyze the suitable DCR threshold to 
+accomplish the classification.  
+"""
+
 import itertools
 
 import numpy as np

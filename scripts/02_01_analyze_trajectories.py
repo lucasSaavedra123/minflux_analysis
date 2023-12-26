@@ -1,3 +1,7 @@
+"""
+ALL trajectories are analyzed.
+"""
+
 import ray
 import numpy as np
 import tqdm

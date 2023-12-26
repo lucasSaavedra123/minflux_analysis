@@ -1,3 +1,7 @@
+"""
+From the paper, this is the "basic" characterization
+of trajectories.
+"""
 import itertools
 
 import numpy as np

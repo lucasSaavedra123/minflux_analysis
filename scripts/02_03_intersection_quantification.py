@@ -1,3 +1,8 @@
+"""
+Upon intersection measure, we measure which
+BTX confinement zones overlap with those
+of Chol confinement.
+"""
 import itertools
 
 import tqdm

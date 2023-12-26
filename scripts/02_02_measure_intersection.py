@@ -1,3 +1,12 @@
+"""
+Intersection = Overlap
+
+Whenever a BTX trajectory is near 
+(distance between points is less than 30nm)
+from a Chol trajectory, we consider that 
+there is an overlap
+"""
+
 from collections import defaultdict
 
 import tqdm
