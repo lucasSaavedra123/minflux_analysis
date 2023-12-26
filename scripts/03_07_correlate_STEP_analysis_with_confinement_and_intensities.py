@@ -10,6 +10,8 @@ import pandas as pd
 from scipy.spatial.distance import pdist
 import warnings
 
+import tqdm
+
 from DatabaseHandler import DatabaseHandler
 from Trajectory import Trajectory
 from CONSTANTS import *
@@ -33,14 +35,19 @@ for index, dataset in enumerate(new_datasets_list):
         continue
 
     if index < 4:
-        trajectories = Trajectory.objects(info__dataset=dataset, info__immobile=False)
+        #trajectories = Trajectory.objects(info__dataset=dataset, info__immobile=False)
+        filter_query = {'info.dataset': dataset, 'info.immobile': False}
     else:
-        trajectories = Trajectory.objects(info__classified_experimental_condition=dataset, info__immobile=False)
+        #trajectories = Trajectory.objects(info__classified_experimental_condition=dataset, info__immobile=False)
+        filter_query = {'info.classified_experimental_condition': dataset, 'info.immobile': False}
+
+    trajectory_ids = [str(document['_id']) for document in Trajectory._get_collection().find(filter_query, {f'_id':1})]
 
     intensities_confined, diffusion_confined = np.array([]), np.array([])
     intensities_non_confined, diffusion_non_confined = np.array([]), np.array([])
 
-    for trajectory in trajectories:
+    for trajectory_id in tqdm.tqdm(trajectory_ids):
+        trajectory = Trajectory.objects(id=trajectory_id)[0]
         if trajectory.length == 1:
             continue
 
