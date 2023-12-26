@@ -116,6 +116,7 @@ def analyze_trajectory(trajectory_id):
         times.append(interval[-1] - interval[0])
 
     trajectory.info['analysis']['residence_time'] = sum(times)
+    trajectory.info['analysis']['inverse_residence_time'] = trajectory.duration - trajectory.info['analysis']['residence_time']
     trajectory.info['analysis']['confinement-states'] = states.tolist()
 
     if trajectory.info['dataset'] != 'Cholesterol and btx':
