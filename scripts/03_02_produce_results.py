@@ -43,7 +43,7 @@ for index, dataset in enumerate(new_datasets_list):
 
         inverse_residence_times = get_list_of_values_of_analysis_field(filter_query, 'inverse_residence_time')
         inverse_residence_times = [inverse_residence_time for inverse_residence_time in inverse_residence_times if inverse_residence_time != 0]
-        pd.DataFrame({'inverse_residence_time': residence_times}).to_excel(writer, sheet_name='inverse_residence_time', index=False)
+        pd.DataFrame({'inverse_residence_time': inverse_residence_times}).to_excel(writer, sheet_name='inverse_residence_time', index=False)
 
         #Data that takes all trajectories
         filter_query = {SEARCH_FIELD: dataset}
