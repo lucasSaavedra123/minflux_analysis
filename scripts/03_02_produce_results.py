@@ -58,8 +58,8 @@ for index, dataset in enumerate(new_datasets_list):
             for sub_trajectory in sub_trajectories_by_state[1]:
                 confined_portions.append(sub_trajectory.duration)
 
-        pd.DataFrame({'browian_portions': browian_portions}).to_excel(writer, sheet_name='browian_portions', index=False)
-        pd.DataFrame({'confined_portions': confined_portions}).to_excel(writer, sheet_name='confined_portions', index=False)
+        pd.DataFrame({'browian_portions': [p for p in browian_portions if p != 0]}).to_excel(writer, sheet_name='browian_portions', index=False)
+        pd.DataFrame({'confined_portions': [p for p in confined_portions if p != 0]}).to_excel(writer, sheet_name='confined_portions', index=False)
 
         #Data that takes all trajectories
         filter_query = {SEARCH_FIELD: dataset}
