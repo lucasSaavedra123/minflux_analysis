@@ -21,6 +21,11 @@ def custom_histogram(data, starting_x, final_x, x_step):
 
   return frequency, bin_edges
 
+def get_list_of_positions(filter_query):
+    values = [np.vstack((document['x'], document['y'])) for document in Trajectory._get_collection().find(filter_query, {'x':1,'y':1})]
+    values = [value for value in values if value.shape[1] > 1]
+    return values
+
 def get_list_of_values_of_analysis_field(filter_query, field_name):
     values = [document['info'].get('analysis', {}).get(field_name, None) for document in Trajectory._get_collection().find(filter_query, {f'info.analysis.{field_name}':1})]
     values = [value for value in values if value is not None]
