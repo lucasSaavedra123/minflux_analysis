@@ -41,6 +41,26 @@ for index, dataset in enumerate(new_datasets_list):
         residence_times = [residence_time for residence_time in residence_times if residence_time != 0]
         pd.DataFrame({'residence_time': residence_times}).to_excel(writer, sheet_name='residence_time', index=False)
 
+        inverse_residence_times = get_list_of_values_of_analysis_field(filter_query, 'inverse_residence_time')
+        inverse_residence_times = [inverse_residence_time for inverse_residence_time in inverse_residence_times if inverse_residence_time != 0]
+        pd.DataFrame({'inverse_residence_time': inverse_residence_times}).to_excel(writer, sheet_name='inverse_residence_time', index=False)
+
+        browian_portions = []
+        confined_portions = []
+
+        for result in Trajectory._get_collection().find(filter_query, {'_id':1}):
+            a_trajectory = Trajectory.objects(id=str(result['_id']))[0]
+            sub_trajectories_by_state = a_trajectory.sub_trajectories_trajectories_from_confinement_states(use_info=True)
+
+            for sub_trajectory in sub_trajectories_by_state[0]:
+                browian_portions.append(sub_trajectory.duration)
+
+            for sub_trajectory in sub_trajectories_by_state[1]:
+                confined_portions.append(sub_trajectory.duration)
+
+        pd.DataFrame({'browian_portions': browian_portions}).to_excel(writer, sheet_name='browian_portions', index=False)
+        pd.DataFrame({'confined_portions': confined_portions}).to_excel(writer, sheet_name='confined_portions', index=False)
+
         #Data that takes all trajectories
         filter_query = {SEARCH_FIELD: dataset}
         pd.DataFrame({'ratio': get_list_of_values_of_field(filter_query, 'ratio')}).to_excel(writer, sheet_name='ratio', index=False)
