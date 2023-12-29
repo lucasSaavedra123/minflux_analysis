@@ -101,37 +101,37 @@ list_of_trajectories_positions = get_list_of_main_field({'info.dataset': 'Contro
 list_of_trajectories_positions = [l for l in list_of_trajectories_positions if len(l) > 1]
 intervals = list(itertools.chain.from_iterable([np.abs(np.diff(position_list)) for position_list in list_of_trajectories_positions]))
 intervals = [interval for interval in intervals if interval != 0]
-print(f'Control(n={len(list_of_trajectories_positions)})-> (nm) Distance Intervals {np.mean(intervals) * 1e3} {np.std(intervals) * 1e3} {sem(intervals) * 1e3}\n')
+file.write(f'Control(n={len(list_of_trajectories_positions)})-> (nm) Distance Intervals {np.mean(intervals) * 1e3} {np.std(intervals) * 1e3} {sem(intervals) * 1e3}\n')
 
 list_of_trajectories_positions = get_list_of_main_field({'info.dataset': 'CDx'}, 'x') + get_list_of_main_field({'info.dataset': 'Control'}, 'y')
 list_of_trajectories_positions = [l for l in list_of_trajectories_positions if len(l) > 1]
 intervals = list(itertools.chain.from_iterable([np.abs(np.diff(position_list)) for position_list in list_of_trajectories_positions]))
 intervals = [interval for interval in intervals if interval != 0]
-print(f'CDx(n={len(list_of_trajectories_positions)})-> (nm) Distance Intervals {np.mean(intervals) * 1e3} {np.std(intervals) * 1e3} {sem(intervals) * 1e3}\n')
+file.write(f'CDx(n={len(list_of_trajectories_positions)})-> (nm) Distance Intervals {np.mean(intervals) * 1e3} {np.std(intervals) * 1e3} {sem(intervals) * 1e3}\n')
 
 list_of_trajectories_positions = get_list_of_main_field({'info.classified_experimental_condition': BTX_NOMENCLATURE}, 'x') + get_list_of_main_field({'info.classified_experimental_condition': BTX_NOMENCLATURE}, 'y')
 list_of_trajectories_positions = [l for l in list_of_trajectories_positions if len(l) > 1]
 intervals = list(itertools.chain.from_iterable([np.abs(np.diff(position_list)) for position_list in list_of_trajectories_positions]))
 intervals = [interval for interval in intervals if interval != 0]
-print(f'{BTX_NOMENCLATURE} with Chol (n={len(list_of_trajectories_positions)})-> (nm) Distance Intervals {np.mean(intervals) * 1e3} {np.std(intervals) * 1e3} {sem(intervals) * 1e3}\n')
+file.write(f'{BTX_NOMENCLATURE} with Chol (n={len(list_of_trajectories_positions)})-> (nm) Distance Intervals {np.mean(intervals) * 1e3} {np.std(intervals) * 1e3} {sem(intervals) * 1e3}\n')
 
 list_of_trajectories_positions = get_list_of_main_field({'info.dataset': 'BTX680R'}, 'x') + get_list_of_main_field({'info.dataset': 'BTX680R'}, 'y')
 list_of_trajectories_positions = [l for l in list_of_trajectories_positions if len(l) > 1]
 intervals = list(itertools.chain.from_iterable([np.abs(np.diff(position_list)) for position_list in list_of_trajectories_positions]))
 intervals = [interval for interval in intervals if interval != 0]
-print(f'BTX680R(n={len(list_of_trajectories_positions)})-> (nm) Distance Intervals {np.mean(intervals) * 1e3} {np.std(intervals) * 1e3} {sem(intervals) * 1e3}\n')
+file.write(f'BTX680R(n={len(list_of_trajectories_positions)})-> (nm) Distance Intervals {np.mean(intervals) * 1e3} {np.std(intervals) * 1e3} {sem(intervals) * 1e3}\n')
 
 list_of_trajectories_positions = get_list_of_main_field({'info.dataset': 'CholesterolPEGKK114'}, 'x') + get_list_of_main_field({'info.dataset': 'CholesterolPEGKK114'}, 'y')
 list_of_trajectories_positions = [l for l in list_of_trajectories_positions if len(l) > 1]
 intervals = list(itertools.chain.from_iterable([np.abs(np.diff(position_list)) for position_list in list_of_trajectories_positions]))
 intervals = [interval for interval in intervals if interval != 0]
-print(f'CholesterolPEGKK114(n={len(list_of_trajectories_positions)})-> (nm) Distance Intervals {np.mean(intervals) * 1e3} {np.std(intervals) * 1e3} {sem(intervals) * 1e3}\n')
+file.write(f'CholesterolPEGKK114(n={len(list_of_trajectories_positions)})-> (nm) Distance Intervals {np.mean(intervals) * 1e3} {np.std(intervals) * 1e3} {sem(intervals) * 1e3}\n')
 
 list_of_trajectories_positions = get_list_of_main_field({'info.classified_experimental_condition': CHOL_NOMENCLATURE}, 'x') + get_list_of_main_field({'info.classified_experimental_condition': CHOL_NOMENCLATURE}, 'y')
 list_of_trajectories_positions = [l for l in list_of_trajectories_positions if len(l) > 1]
 intervals = list(itertools.chain.from_iterable([np.abs(np.diff(position_list)) for position_list in list_of_trajectories_positions]))
 intervals = [interval for interval in intervals if interval != 0]
-print(f'{CHOL_NOMENCLATURE}(n={len(list_of_trajectories_positions)})-> (nm) Distance Intervals {np.mean(intervals) * 1e3} {np.std(intervals) * 1e3} {sem(intervals) * 1e3}\n')
+file.write(f'{CHOL_NOMENCLATURE}(n={len(list_of_trajectories_positions)})-> (nm) Distance Intervals {np.mean(intervals) * 1e3} {np.std(intervals) * 1e3} {sem(intervals) * 1e3}\n')
 
 file.close()
 DatabaseHandler.disconnect()
