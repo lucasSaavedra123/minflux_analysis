@@ -50,34 +50,26 @@ def analyze_trajectory(trajectory_id):
             
     trajectory.info['analysis']['step_result'] = predict(trajectory).tolist()
     """
+    cm = plt.cm.get_cmap('copper_r')
+
     plt.plot(trajectory.info['analysis']['step_result'])
     plt.show()
 
-    plt.plot(
-        trajectory.get_noisy_x(),
-        trajectory.get_noisy_y(),
-        c='grey',
-        linewidth=1,
-        zorder=-1
-    )
+    plt.scatter(trajectory.get_noisy_x(), trajectory.get_noisy_y(), c=trajectory.info['analysis']['step_result'], s=35, cmap=cm)
+    cbar = plt.colorbar()
+    cbar.ax.set_ylabel(r'$D ({\mu m}^{2}/{s})$')
+    plt.xlabel(r'X [$\mu m$]')
+    plt.ylabel(r'Y [$\mu m$]')
+    plt.xticks([])
+    plt.yticks([])
+    plt.tight_layout()
 
-    plt.scatter(
-        trajectory.get_noisy_x(),
-        trajectory.get_noisy_y(),
-        c=trajectory.info['analysis']['step_result'],
-        vmin=np.min(trajectory.info['analysis']['step_result']),
-        vmax=np.max(trajectory.info['analysis']['step_result']),
-        s=30,
-        cmap=plt.cm.get_cmap('autumn_r'),
-    )
-
+    plt.plot(trajectory.get_noisy_x(), trajectory.get_noisy_y(), c='grey', zorder=-99, linewidth='1')
     plt.show()
     """
     trajectory.save()
 
 DatabaseHandler.connect_over_network(None, None, IP_ADDRESS, COLLECTION_NAME)
-
-#uploaded_trajectories_ids = [str(trajectory_result['_id']) for trajectory_result in Trajectory._get_collection().find({}, {'_id':1})]
 
 for a_result in tqdm.tqdm(Trajectory._get_collection().find({}, {'_id':1})):
     analyze_trajectory(str(a_result['_id']))
