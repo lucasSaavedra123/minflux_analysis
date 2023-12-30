@@ -459,9 +459,10 @@ class Trajectory(Document):
             new_trajectory.info['dcr'] = self.info['dcr'][initial_index:final_index]
         if 'intensity' in self.info:
             new_trajectory.info['intensity'] = self.info['intensity'][initial_index:final_index]
-        if 'analysis' in self.info and 'step_result' in self.info['analysis']:
+        if 'analysis' in self.info:
             new_trajectory.info['analysis'] = {}
-            new_trajectory.info['analysis']['step_result'] = self.info['analysis']['step_result'][initial_index:final_index]
+            if 'step_result' in self.info['analysis']:
+                new_trajectory.info['analysis']['step_result'] = self.info['analysis']['step_result'][initial_index:final_index]
 
         return new_trajectory
 
