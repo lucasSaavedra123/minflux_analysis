@@ -31,9 +31,6 @@ for index, dataset in enumerate(new_datasets_list):
     print(dataset)
     SEARCH_FIELD = 'info.dataset' if index < 4 else 'info.classified_experimental_condition'
 
-    if index < 5:
-        continue
-
     if index < 4:
         #trajectories = Trajectory.objects(info__dataset=dataset, info__immobile=False)
         filter_query = {'info.dataset': dataset, 'info.immobile': False}
