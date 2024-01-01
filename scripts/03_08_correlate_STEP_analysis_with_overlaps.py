@@ -1,20 +1,20 @@
-import itertools
+"""
+All BTX trajectories are plotted with their corresponding overlap Chol ones.
+"""
+from collections import defaultdict
 
 import tqdm
-import numpy as np
-import pandas as pd
-from scipy.spatial.distance import pdist
-import warnings
+import matplotlib.pyplot as plt
 
 from DatabaseHandler import DatabaseHandler
 from Trajectory import Trajectory
 from CONSTANTS import *
-from utils import *
+from utils import both_trajectories_intersect
 
-warnings.filterwarnings('error') 
-warnings.filterwarnings("ignore", category=DeprecationWarning) 
 
 DatabaseHandler.connect_over_network(None, None, IP_ADDRESS, COLLECTION_NAME)
+
+#files = Trajectory.objects(info__dataset='Cholesterol and btx').distinct(field='info.file')
 
 files = [
     '231013-105211_mbm test.txt',
@@ -60,58 +60,22 @@ files = [
 ]
 
 
-intensities_chol, diffusion_chol, intensities_chol_with_btx, diffusion_chol_with_btx = np.array([]), np.array([]), np.array([]), np.array([])
-intensities_btx, diffusion_btx, intensities_btx_with_chol, diffusion_btx_with_chol = np.array([]), np.array([]), np.array([]), np.array([])
-
-
 for file in tqdm.tqdm(files):
-    for trajectory in Trajectory.objects(info__file=file):
-        if trajectory.length == 1 or not ('intensity' in trajectory.info and len(trajectory.info['intensity']) != 0):
-            continue
-
+    trajectories = Trajectory.objects(info__file=file)
+    for index, trajectory in enumerate(trajectories):
         if trajectory.info['classified_experimental_condition'] == BTX_NOMENCLATURE:
-            intersections_with_chol = np.array(trajectory.info[f'{CHOL_NOMENCLATURE}_single_intersections'])
-            assert len(intersections_with_chol) == trajectory.length
+            trajectory.plot_confinement_states(v_th=33, non_confinement_color='green', confinement_color='green', show=False, alpha=0.75, plot_confinement_convex_hull=True, color_confinement_convex_hull='green')
 
-            there_is_intersection = intersections_with_chol == 1
-            there_is_no_intersection = intersections_with_chol == 0
+            for chol_trajectory_id in trajectory.info[f'{CHOL_NOMENCLATURE}_intersections']:
+                Trajectory.objects(id=chol_trajectory_id)[0].plot_confinement_states(v_th=33, non_confinement_color='red', confinement_color='red', show=False, alpha=0.75, plot_confinement_convex_hull=True, color_confinement_convex_hull='red')
 
-            intensities_btx = np.append(intensities_btx, np.array(trajectory.info['intensity'])[there_is_no_intersection])
-            diffusion_btx = np.append(diffusion_btx, np.array(trajectory.info['analysis']['step_result'])[there_is_no_intersection])
+            if trajectory.info['number_of_confinement_zones'] != 0:
+                print(trajectory.info[f'number_of_confinement_zones_with_{CHOL_NOMENCLATURE}']/trajectory.info['number_of_confinement_zones'])
 
-            intensities_btx_with_chol = np.append(intensities_btx_with_chol, np.array(trajectory.info['intensity'])[there_is_intersection])
-            diffusion_btx_with_chol = np.append(diffusion_btx_with_chol, np.array(trajectory.info['analysis']['step_result'])[there_is_intersection])
-        else:
-            intersections_with_btx = np.array(trajectory.info[f'{BTX_NOMENCLATURE}_single_intersections'])
-            assert len(intersections_with_btx) == trajectory.length
-
-            there_is_intersection = intersections_with_btx == 1
-            there_is_no_intersection = intersections_with_btx == 0
-
-            intensities_chol = np.append(intensities_chol, np.array(trajectory.info['intensity'])[there_is_no_intersection])
-            diffusion_chol = np.append(diffusion_chol, np.array(trajectory.info['analysis']['step_result'])[there_is_no_intersection])
-
-            intensities_chol_with_btx = np.append(intensities_chol_with_btx, np.array(trajectory.info['intensity'])[there_is_intersection])
-            diffusion_chol_with_btx = np.append(diffusion_chol_with_btx, np.array(trajectory.info['analysis']['step_result'])[there_is_intersection])
-
-pd.DataFrame({
-    'intensity': intensities_btx,
-    'diffusion': diffusion_btx,
-}).to_csv('Results/STEP_correlation_btx.csv', index=False)
-
-pd.DataFrame({
-    'intensity_with_intersection': intensities_btx_with_chol,
-    'diffusion_with_intersection': diffusion_btx_with_chol,
-}).to_csv('Results/STEP_correlation_btx_with_chol.csv', index=False)
-
-pd.DataFrame({
-    'intensity': intensities_chol,
-    'diffusion': diffusion_chol,
-}).to_csv('Results/STEP_correlation_chol.csv', index=False)
-
-pd.DataFrame({
-    'intensity_with_intersection': intensities_chol_with_btx,
-    'diffusion_with_intersection': diffusion_chol_with_btx,
-}).to_csv('Results/STEP_correlation_chol_with_btx.csv', index=False)
+                plt.gca().set_aspect('equal')
+                plt.tight_layout()
+                plt.show()
+            else:
+                plt.clf()
 
 DatabaseHandler.disconnect()

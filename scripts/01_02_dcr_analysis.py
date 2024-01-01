@@ -17,6 +17,7 @@ from CONSTANTS import *
 from utils import *
 
 
+plt.rcParams['savefig.dpi'] = 500
 DatabaseHandler.connect_over_network(None, None, IP_ADDRESS, COLLECTION_NAME)
 
 btx_dcr_values = get_list_of_values_of_field({'info.dataset': 'BTX680R'}, 'dcr')
@@ -32,6 +33,7 @@ dcr_dataframe = pd.DataFrame({
 
 DatabaseHandler.disconnect()
 
+sns.set(font_scale=3.5)
 sns.histplot(data=dcr_dataframe, x='Track detection channel ratio (tDCR)', hue='Experimental condition', kde=True)
 plt.show()
 
@@ -47,5 +49,6 @@ dcr_dataframe = pd.DataFrame({
 
 DatabaseHandler.disconnect()
 
+sns.set(font_scale=3.5)
 sns.histplot(data=dcr_dataframe, x='Track detection channel ratio (tDCR)', color='#805380', edgecolor='#634163', kde=True)
 plt.show()
