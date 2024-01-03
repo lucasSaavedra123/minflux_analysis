@@ -44,13 +44,16 @@ for data in dataset:
 
 
 def turning_angles(length, x, y, steps_lag=1, normalized=False):
-    if length/steps_lag <= 2:
-        return []
+    #if length/steps_lag <= 1:
+    #    return []
 
     X = np.zeros((length,2))
     X[:,0] = x
     X[:,1] = y
+    X = X[::steps_lag,:]
+    length = X.shape[0]
 
+    steps_lag = 1
     U_t = X[:length-steps_lag]
     U_t_plus_delta = X[np.arange(0, length-steps_lag)+steps_lag]
 
