@@ -161,6 +161,9 @@ def both_trajectories_intersect(trajectory_one, trajectory_two, via='kd-tree', r
     else:
         raise ValueError(f"via={via} is not correct")
 
+"""
+THE FOLLOWING CODE IS FROM https://github.com/LazyVinh/convex-polygon-intersection/tree/master
+"""
 def get_edges(polygon):
     """
     :param polygon: a list of points (point = list or tuple holding two numbers)
