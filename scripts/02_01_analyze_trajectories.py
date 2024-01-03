@@ -57,6 +57,7 @@ def analyze_trajectory(trajectory_id):
     DatabaseHandler.connect_over_network(None, None, IP_ADDRESS, COLLECTION_NAME)
 
     NUMBER_OF_POINTS_FOR_MSD = 250
+    NUMBER_OF_POINTS_FOR_SUB_MSD = 50
 
     trajectories = Trajectory.objects(id=trajectory_id)
     assert len(trajectories) == 1
@@ -105,7 +106,14 @@ def analyze_trajectory(trajectory_id):
     trajectory.info['analysis']['confinement-b'] = []
     trajectory.info['analysis']['confinement-e'] = []
     trajectory.info['analysis']['confinement-steps'] = []
+    trajectory.info['analysis']['confinement-k'] = []
+    trajectory.info['analysis']['confinement-betha'] = []
+    trajectory.info['analysis']['confinement-goodness_of_fit'] = []
     trajectory.info['analysis']['non-confinement-steps'] = []
+    trajectory.info['analysis']['non-confinement-k'] = []
+    trajectory.info['analysis']['non-confinement-betha'] = []
+    trajectory.info['analysis']['non-confinement-goodness_of_fit'] = []
+
     trajectory.info['analysis']['confinement_areas_centroids'] = []
 
     states, intervals = trajectory.confinement_states(return_intervals=True, v_th=33)
@@ -120,10 +128,11 @@ def analyze_trajectory(trajectory_id):
     trajectory.info['analysis']['confinement-states'] = states.tolist()
 
     if trajectory.info['dataset'] != 'Cholesterol and btx':
-        reconstructed_trajectory = trajectory.reconstructed_trajectory(DATASET_TO_DELTA_T[trajectory.info['dataset']])
+        selected_delta_t = DATASET_TO_DELTA_T[trajectory.info['dataset']]
     else:
         selected_delta_t = DATASET_TO_DELTA_T[DATASETS_LIST[2]] if trajectory.info['classified_experimental_condition'] == BTX_NOMENCLATURE else DATASET_TO_DELTA_T[DATASETS_LIST[3]]
-        reconstructed_trajectory = trajectory.reconstructed_trajectory(selected_delta_t)
+    
+    reconstructed_trajectory = trajectory.reconstructed_trajectory(selected_delta_t)
 
     if reconstructed_trajectory.length > NUMBER_OF_POINTS_FOR_MSD + 1:
         _,_,betha,k,goodness_of_fit = reconstructed_trajectory.temporal_average_mean_squared_displacement(log_log_fit_limit=NUMBER_OF_POINTS_FOR_MSD)
@@ -155,10 +164,23 @@ def analyze_trajectory(trajectory_id):
                     trajectory.info['analysis']['confinement-b'].append(b)
                     trajectory.info['analysis']['confinement-e'].append(e)
 
+                    reconstructed_sub_trajectory = sub_trajectory.reconstructed_trajectory(selected_delta_t)
+                    if reconstructed_sub_trajectory.length > NUMBER_OF_POINTS_FOR_SUB_MSD + 1:
+                        _,_,betha,k,goodness_of_fit = reconstructed_sub_trajectory.temporal_average_mean_squared_displacement(log_log_fit_limit=NUMBER_OF_POINTS_FOR_SUB_MSD)
+                        trajectory.info['analysis']['confinement-k'].append(k)
+                        trajectory.info['analysis']['confinement-betha'].append(betha)
+                        trajectory.info['analysis']['confinement-goodness_of_fit'].append(goodness_of_fit)
+
                 except QhullError:
                     pass
             else:
                 trajectory.info['analysis']['non-confinement-steps'].append(sub_trajectory.length)
+                reconstructed_sub_trajectory = sub_trajectory.reconstructed_trajectory(selected_delta_t)
+                if reconstructed_sub_trajectory.length > NUMBER_OF_POINTS_FOR_SUB_MSD + 1:
+                    _,_,betha,k,goodness_of_fit = reconstructed_sub_trajectory.temporal_average_mean_squared_displacement(log_log_fit_limit=NUMBER_OF_POINTS_FOR_SUB_MSD)
+                    trajectory.info['analysis']['non-confinement-k'].append(k)
+                    trajectory.info['analysis']['non-confinement-betha'].append(betha)
+                    trajectory.info['analysis']['non-confinement-goodness_of_fit'].append(goodness_of_fit)
 
             for angle in trajectory.info['analysis']['angles_by_state'][str(state)]['angles']:
                 trajectory.info['analysis']['angles_by_state'][str(state)]['angles'][angle] += sub_trajectory.turning_angles(steps_lag=int(angle))
