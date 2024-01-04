@@ -38,36 +38,17 @@ for index, dataset in enumerate(new_datasets_list):
         #trajectories = Trajectory.objects(info__classified_experimental_condition=dataset, info__immobile=False)
         filter_query = {'info.classified_experimental_condition': dataset, 'info.immobile': False}
 
-    trajectory_ids = [str(document['_id']) for document in Trajectory._get_collection().find(filter_query, {f'_id':1})]
-
-    intensities_confined, diffusion_confined = np.array([]), np.array([])
-    intensities_non_confined, diffusion_non_confined = np.array([]), np.array([])
-
-    for trajectory_id in tqdm.tqdm(trajectory_ids):
-        trajectory = Trajectory.objects(id=trajectory_id)[0]
-        if trajectory.length == 1:
-            continue
-
-        confinement_states = trajectory.sub_trajectories_trajectories_from_confinement_states(v_th=33, window_size=3, transition_fix_threshold=9, use_info=True)
-
-        for sub_trajectory in confinement_states[0]:
-            if 'intensity' in sub_trajectory.info and len(sub_trajectory.info['intensity']) != 0:
-                intensities_non_confined = np.append(intensities_non_confined, np.mean(sub_trajectory.info['intensity']))
-                diffusion_non_confined = np.append(diffusion_non_confined, np.mean(sub_trajectory.info['analysis']['step_result']))
-
-        for sub_trajectory in confinement_states[1]:
-            if 'intensity' in sub_trajectory.info and len(sub_trajectory.info['intensity']) != 0:
-                intensities_confined = np.append(intensities_confined, np.mean(sub_trajectory.info['intensity']))
-                diffusion_confined = np.append(diffusion_confined, np.mean(sub_trajectory.info['analysis']['step_result']))
+    trajectory_info = list(Trajectory._get_collection().find(filter_query, {f'info.analysis.step_result.non-confinement': 1, '_id': 0}))
+    diffusion_non_confined = list(itertools.chain.from_iterable([i['info']['analysis']['step_result']['non-confinement'] for i in trajectory_info]))
+    trajectory_info = list(Trajectory._get_collection().find(filter_query, {f'info.analysis.step_result.confinement': 1, '_id': 0}))
+    diffusion_confined = list(itertools.chain.from_iterable([i['info']['analysis']['step_result']['confinement'] for i in trajectory_info]))
 
     with pd.ExcelWriter(f"./Results/{dataset}_{index}_gs_True_correlation.xlsx") as writer:
         pd.DataFrame({
-            'intensity_mean': intensities_confined,
             'diffusion_mean': diffusion_confined,
         }).to_excel(writer, sheet_name='confined', index=False)
 
         pd.DataFrame({
-            'intensity_mean': intensities_non_confined,
             'diffusion_mean': diffusion_non_confined,
         }).to_excel(writer, sheet_name='non-confined', index=False)
 
