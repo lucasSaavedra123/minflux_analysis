@@ -47,8 +47,21 @@ def analyze_trajectory(trajectory_id):
         return None
     else:
         trajectory.info['analysis']['step_result'] = None
-            
-    trajectory.info['analysis']['step_result'] = predict(trajectory).tolist()
+
+    trajectory.info['analysis']['step_result'] = {
+        'confinement': [],
+        'non-confinement': []
+    }
+
+    s = trajectory.sub_trajectories_trajectories_from_confinement_states(v_th=33)
+
+    for t in s[0]:
+        if t.length > 100:
+            trajectory.info['analysis']['step_result']['non-confinement'].append(np.mean(predict(t).tolist()))
+
+    for t in s[1]:
+        if t.length > 100:
+            trajectory.info['analysis']['step_result']['confinement'].append(np.mean(predict(t).tolist()))
     """
     cm = plt.cm.get_cmap('copper_r')
 
