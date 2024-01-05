@@ -45,6 +45,21 @@ for index, dataset in enumerate(new_datasets_list):
         inverse_residence_times = [inverse_residence_time for inverse_residence_time in inverse_residence_times if inverse_residence_time != 0]
         pd.DataFrame({'inverse_residence_time': inverse_residence_times}).to_excel(writer, sheet_name='inverse_residence_time', index=False)
 
+        def measure_ratio(residence, inverse):
+            if residence is None or inverse is None:
+                return None
+            else:
+                return residence/(inverse+residence)
+
+        residence_times_and_durations = [document for document in Trajectory._get_collection().find(filter_query, {f'info.analysis.inverse_residence_time':1, f'info.analysis.residence_time': 1})]
+        residence_times_and_durations = [measure_ratio(document.get('info', {}).get('analysis', {}).get('residence_time'), document.get('info', {}).get('analysis', {}).get('inverse_residence_time')) for document in residence_times_and_durations]
+        residence_times_and_durations = [value for value in residence_times_and_durations if value is not None]
+        pd.DataFrame({'residence_times_and_durations': residence_times_and_durations}).to_excel(writer, sheet_name='residence_ratios', index=False)
+
+        list_of_semi_major_axis = get_list_of_values_of_analysis_field(filter_query, 'confinement-a')
+        list_of_semi_major_axis = list(itertools.chain.from_iterable(list_of_semi_major_axis))
+        pd.DataFrame({'semi_major_axis': list_of_semi_major_axis}).to_excel(writer, sheet_name='semi_major_axis', index=False)
+
         browian_portions = []
         confined_portions = []
 
