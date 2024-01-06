@@ -64,7 +64,7 @@ for file in tqdm.tqdm(files):
     trajectories = Trajectory.objects(info__file=file)
     for index, trajectory in enumerate(trajectories):
         if trajectory.info['classified_experimental_condition'] == BTX_NOMENCLATURE and trajectory.info['number_of_confinement_zones'] != 0 and 0.30 <= trajectory.info[f'number_of_confinement_zones_with_{CHOL_NOMENCLATURE}']/trajectory.info['number_of_confinement_zones'] <= 0.40:
-            trajectory.plot_confinement_states(v_th=33, non_confinement_color='green', confinement_color='green', show=False, alpha=0.75, plot_confinement_convex_hull=True, color_confinement_convex_hull='#ffff00', alpha_confinement_convex_hull=0.5)
+            trajectory.plot_confinement_states(v_th=33, non_confinement_color='green', confinement_color='green', show=False, alpha=0.75, plot_confinement_convex_hull=False, color_confinement_convex_hull='#ffff00', alpha_confinement_convex_hull=0.5)
             base_polygons = []
             extra_polygons = []
 
@@ -76,7 +76,7 @@ for file in tqdm.tqdm(files):
 
             for chol_trajectory_id in trajectory.info[f'{CHOL_NOMENCLATURE}_intersections']:
                 aux_t = Trajectory.objects(id=chol_trajectory_id)[0]
-                aux_t.plot_confinement_states(v_th=33, non_confinement_color='red', confinement_color='red', show=False, alpha=0.75, plot_confinement_convex_hull=True, color_confinement_convex_hull='#ff00ff', alpha_confinement_convex_hull=0.5)
+                aux_t.plot_confinement_states(v_th=33, non_confinement_color='red', confinement_color='red', show=False, alpha=0.75, plot_confinement_convex_hull=False, color_confinement_convex_hull='#ff00ff', alpha_confinement_convex_hull=0.5)
 
                 for sub_t in aux_t.sub_trajectories_trajectories_from_confinement_states(v_th=33)[1]:
                     xx, yy = MultiPoint(list(zip(sub_t.get_noisy_x(), sub_t.get_noisy_y()))).convex_hull.exterior.coords.xy
@@ -92,7 +92,7 @@ for file in tqdm.tqdm(files):
                         polygon_intersection.append(polygon_intersection[0])
                         x, y = zip(*polygon_intersection)
                         #plt.plot(x, y, 'o-')
-                        plt.fill(x, y, alpha=0.5, color='orange')
+                        plt.fill(x, y, alpha=1, color='#ffff00')
 
             if trajectory.info['number_of_confinement_zones'] != 0:
                 print(trajectory.info[f'number_of_confinement_zones_with_{CHOL_NOMENCLATURE}']/trajectory.info['number_of_confinement_zones'])
