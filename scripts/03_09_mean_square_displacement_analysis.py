@@ -1,4 +1,3 @@
-import ray
 import tqdm
 import numpy as np
 import matplotlib.pyplot as plt
@@ -10,15 +9,11 @@ from CONSTANTS import *
 
 
 NUMBER_OF_POINTS_FOR_MSD = 250
-ray.init()
 
-@ray.remote
 def analyze_trajectory(trajectory_id, dataset):
-    DatabaseHandler.connect_over_network(None, None, IP_ADDRESS, COLLECTION_NAME)
     trajectories = Trajectory.objects(id=trajectory_id)
     assert len(trajectories) == 1
     trajectory = trajectories[0]
-    DatabaseHandler.disconnect()
     reconstructed_trajectory = trajectory.reconstructed_trajectory(DATASET_TO_DELTA_T[dataset])
 
     if reconstructed_trajectory.length > NUMBER_OF_POINTS_FOR_MSD + 1:
@@ -51,7 +46,7 @@ for index, dataset in enumerate(new_datasets_list):
     results = []
 
     for id_batch in tqdm.tqdm(batch(uploaded_trajectories_ids, n=1000)):
-        results += ray.get([analyze_trajectory.remote(an_id, dataset) for an_id in id_batch])
+        results += [analyze_trajectory(an_id, dataset) for an_id in id_batch]
 
     results = [result for result in results if result is not None]
 
@@ -69,6 +64,7 @@ for index, dataset in enumerate(new_datasets_list):
     plt.xlim([plt.xlim()[0], max(t_lag)])
     plt.xticks(fontsize=20)
     plt.yticks(fontsize=20)
+    plt.subplots_adjust(left=0.17)
     plt.savefig(f"{index}_{dataset}_msd.png", dpi=300)
     plt.clf()
 
@@ -80,8 +76,9 @@ for index, dataset in enumerate(new_datasets_list):
     plt.plot(t_lag,intervals[1],color='blue', linestyle='dashed')
     plt.plot(t_lag,ea_msd,color='blue')
     plt.xlim([plt.xlim()[0], max(t_lag)])
-    plt.xticks(fontsize=15)
-    plt.yticks(fontsize=15)
+    plt.xticks(fontsize=20)
+    plt.yticks(fontsize=20)
+    plt.subplots_adjust(left=0.20)
     plt.savefig(f"{index}_{dataset}_ea_msd.png", dpi=300)
     plt.clf()
 
