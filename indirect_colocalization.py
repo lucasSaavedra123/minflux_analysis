@@ -10,73 +10,12 @@ from shapely.geometry import MultiPoint, Point
 from DatabaseHandler import DatabaseHandler
 from Trajectory import Trajectory
 from CONSTANTS import *
-from spit.colocalize import colocalize_from_locs
+#from spit.colocalize import colocalize_from_locs
 from shapely.geometry import Point
 from shapely.geometry.polygon import Polygon
 
 
-PATH = '../Chol and BTX datasets'
-
-
-
-def get_trajectory_from_track_dataset(track_dataset, dataset_directory, file_name, track_id):
-    info_value = {'dataset': dataset_directory, 'file': file_name, 'trajectory_id': track_id}
-
-    info_value['dcr'] = track_dataset['dcr'].values
-    info_value['intensity'] = track_dataset['intensity'].values
-
-    return Trajectory(
-        x = track_dataset['x'].values * 1e6,
-        y = track_dataset['y'].values * 1e6,
-        t = track_dataset['t'].values,
-        info=info_value,
-        noisy=True
-    )
-
-def extract_dataframes_from_file(a_file):
-    dataset = pd.read_csv(a_file, sep=' ', header=None)
-    dataset = dataset.rename(columns={index: value for index, value in enumerate(['track_id', 't', 'x', 'y', 'intensity', 'dcr'])})
-
-    current_id = dataset.iloc[0]['track_id']
-    initial_row = 0
-    row_index = 1
-    ids_historial = defaultdict(lambda: 0)
-
-    extraction_result = []
-
-    for row_index in tqdm.tqdm(list(range(len(dataset)))):
-        if dataset.iloc[row_index]['track_id'] != current_id:
-            extraction_result.append((
-                dataset.iloc[initial_row:row_index].copy().sort_values('t', ascending=True),
-                int(current_id),
-                int(ids_historial[current_id]),
-            ))
-
-            ids_historial[current_id] += 1
-            initial_row = row_index
-            current_id = dataset.iloc[row_index]['track_id']
-
-    extraction_result.append((
-        dataset.iloc[initial_row:row_index].copy().sort_values('t', ascending=True),
-        int(current_id),
-        int(ids_historial[current_id]),
-    ))
-
-    return extraction_result
-
-def upload_trajectories_from_file(a_file):
-    t = []
-    extraction_result = extract_dataframes_from_file(a_file)
-    #return [i[0] for i in extraction_result]
-    for info_extracted in extraction_result:
-        t.append(get_trajectory_from_track_dataset(
-            info_extracted[0],
-            'test',
-            a_file,
-            f"{info_extracted[1]}_{info_extracted[2]}"
-        ))
-    return t
-
+DatabaseHandler.connect_over_network(None, None, IP_ADDRESS, COLLECTION_NAME)
 
 files = [
     '231013-105211_mbm test.txt',
@@ -122,37 +61,56 @@ files = [
 ]
 
 
-for file_name in tqdm.tqdm(os.listdir(PATH)):
+def se_sobrelapan(rango1, rango2):
+    # Verificar si el rango1 se encuentra completamente a la izquierda del rango2
+    if rango1[1] < rango2[0]:
+        return False
+    # Verificar si el rango1 se encuentra completamente a la derecha del rango2
+    elif rango1[0] > rango2[1]:
+        return False
+    # Si no se cumple ninguna de las condiciones anteriores, los rangos se sobrelapan
+    else:
+        return True
+
+
+for file_name in tqdm.tqdm(files):
     trajectories_divided = {'btx':[],'chol':[]}
     chol_confined_zones = []
-
     #Discriminate trajectories and keep confined zones of Chol
-    for t in tqdm.tqdm(upload_trajectories_from_file(os.path.join(PATH,file_name))):
+    for t in tqdm.tqdm(Trajectory.objects(info__file=file_name)):
         label = 'chol' if np.mean(t.info['dcr']) > TDCR_THRESHOLD else 'btx'
-        if not t.is_immobile(4.295):
+        if 'immobile' in t.info and not t.info['immobile']:
             trajectories_divided[label].append(t)
-
             if label == 'chol':
-                for subt_chol in t.sub_trajectories_trajectories_from_confinement_states(v_th=33)[1]:
+                for subt_chol in t.sub_trajectories_trajectories_from_confinement_states(v_th=33, use_info=True)[1]:
                     #t.info['analysis'] = {}
                     #t.info['analysis']['confinement-states'] = t.confinement_states(return_intervals=False, v_th=33)
                     chol_confined_zones.append((subt_chol, MultiPoint([p for p in zip(subt_chol.get_noisy_x(), subt_chol.get_noisy_y())]).convex_hull))
-
+    """
+    #print("Chol", 1/np.min(trajectories_divided['chol']))
+    #print("btx", 1/np.min(trajectories_divided['btx']))
+    #plt.hist(trajectories_divided['chol'], color='orange', alpha=0.5)
+    #plt.hist(trajectories_divided['btx'], color='blue', alpha=0.5)
+    #plt.show()
+    """
     for btx in trajectories_divided['btx']:
-        index = 0
-        while index < btx.length:            
-            for j in chol_confined_zones:
-                if j[1].contains(Point(btx.get_noisy_x()[index], btx.get_noisy_y()[index])):
-                    t_0 = btx.get_time()[index]
-                    index += 1
+        for j in chol_confined_zones:
+            index_btx = 0
 
-                    while index < btx.length and j[1].contains(Point(btx.get_noisy_x()[index], btx.get_noisy_y()[index])):
-                        index += 1
+            if j[1].contains(Point(btx.get_noisy_x()[index_btx], btx.get_noisy_y()[index_btx])):
+                t_0 = btx.get_time()[index_btx]
+                index_btx += 1
 
-                    t_1 = btx.get_time()[index-1]
-        
-                    t = t_1 - t_0
+                while index_btx < btx.length and j[1].contains(Point(btx.get_noisy_x()[index_btx], btx.get_noisy_y()[index_btx])):
+                    index_btx += 1
 
+                t_1 = btx.get_time()[index_btx-1]
+    
+                t = t_1 - t_0
+                if se_sobrelapan([t_0, t_1], [j[0].get_time()[0], j[0].get_time()[-1]]):
                     plt.plot(np.linspace(t_0, t_1, 100), [1]*100)
                     plt.plot(np.linspace(j[0].get_time()[0], j[0].get_time()[-1], 100), [2]*100)
+                    plt.title(t)
                     plt.show()
+
+DatabaseHandler.disconnect()
