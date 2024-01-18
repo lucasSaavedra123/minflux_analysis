@@ -72,26 +72,69 @@ def se_sobrelapan(rango1, rango2):
     else:
         return True
 
-
 for file_name in tqdm.tqdm(files):
+    #fig, axs = plt.subplots(nrows=2)
+
+    """
+    data = {
+        'channel': [],
+        'x': [],
+        'y': [],
+        't': [],
+        'id': [],
+    }
+    """
     trajectories_divided = {'btx':[],'chol':[]}
-    chol_confined_zones = []
+    chol_geometries = []
+    btx_geometries = []
     #Discriminate trajectories and keep confined zones of Chol
     for t in tqdm.tqdm(Trajectory.objects(info__file=file_name)):
         label = 'chol' if np.mean(t.info['dcr']) > TDCR_THRESHOLD else 'btx'
         if 'immobile' in t.info and not t.info['immobile']:
             trajectories_divided[label].append(t)
+            """
+            if label == 'chol':
+                axs[1].axvspan(t.get_time()[0],t.get_time()[-1],0,1, color='orange', alpha=0.5)
+            else:
+                axs[0].axvspan(t.get_time()[0],t.get_time()[-1],0,1, color='blue', alpha=0.5)
+            """
+            """
+            data['channel'] += t.length * [label]
+            data['id'] += t.length * [t.info['id']]
+            data['x'] += t.get_noisy_x().tolist()
+            data['y'] += t.get_noisy_y().tolist()
+            data['t'] += t.get_time().tolist()
+            """
+            """
             if label == 'chol':
                 for subt_chol in t.sub_trajectories_trajectories_from_confinement_states(v_th=33, use_info=True)[1]:
                     #t.info['analysis'] = {}
                     #t.info['analysis']['confinement-states'] = t.confinement_states(return_intervals=False, v_th=33)
                     chol_confined_zones.append((subt_chol, MultiPoint([p for p in zip(subt_chol.get_noisy_x(), subt_chol.get_noisy_y())]).convex_hull))
+            """
+
+            if label == 'chol':
+                chol_geometries.append((t, MultiPoint([p for p in zip(t.get_noisy_x(), t.get_noisy_y(), t.get_time())]).convex_hull))
+            else:
+                btx_geometries.append((t, MultiPoint([p for p in zip(t.get_noisy_x(), t.get_noisy_y(), t.get_time())]).convex_hull))
+
+    #plt.show()
     """
     #print("Chol", 1/np.min(trajectories_divided['chol']))
     #print("btx", 1/np.min(trajectories_divided['btx']))
     #plt.hist(trajectories_divided['chol'], color='orange', alpha=0.5)
     #plt.hist(trajectories_divided['btx'], color='blue', alpha=0.5)
     #plt.show()
+    """
+
+    for btx in btx_geometries:
+        for chol in chol_geometries:
+            if any([chol[1].contains(Point(btx[0].get_noisy_x()[index_btx], btx[0].get_noisy_y()[index_btx])) for index_btx in range(btx[0].length)]):
+                ax = plt.figure().add_subplot(projection='3d')
+                ax.plot(btx[0].get_noisy_x(), btx[0].get_time(), btx[0].get_noisy_y(), color='blue')
+                ax.plot(chol[0].get_noisy_x(), chol[0].get_time(), chol[0].get_noisy_y(), color='orange')
+                plt.show()
+
     """
     for btx in trajectories_divided['btx']:
         for j in chol_confined_zones:
@@ -112,5 +155,5 @@ for file_name in tqdm.tqdm(files):
                     plt.plot(np.linspace(j[0].get_time()[0], j[0].get_time()[-1], 100), [2]*100)
                     plt.title(t)
                     plt.show()
-
+    """
 DatabaseHandler.disconnect()
