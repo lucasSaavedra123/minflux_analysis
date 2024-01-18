@@ -72,6 +72,8 @@ def se_sobrelapan(rango1, rango2):
     else:
         return True
 
+np.random.shuffle(files)
+
 for file_name in tqdm.tqdm(files):
     #fig, axs = plt.subplots(nrows=2)
 
@@ -114,9 +116,24 @@ for file_name in tqdm.tqdm(files):
             """
 
             if label == 'chol':
-                chol_geometries.append((t, MultiPoint([p for p in zip(t.get_noisy_x(), t.get_noisy_y(), t.get_time())]).convex_hull))
+                chol_geometries.append((t, np.array(list(zip(t.get_noisy_x(), t.get_noisy_y(), t.get_time())))))
             else:
-                btx_geometries.append((t, MultiPoint([p for p in zip(t.get_noisy_x(), t.get_noisy_y(), t.get_time())]).convex_hull))
+                btx_geometries.append((t, np.array(list(zip(t.get_noisy_x(), t.get_noisy_y(), t.get_time())))))
+
+    def in_hull(p, hull):
+        """
+        Test if points in `p` are in `hull`
+
+        `p` should be a `NxK` coordinates of `N` points in `K` dimensions
+        `hull` is either a scipy.spatial.Delaunay object or the `MxK` array of the 
+        coordinates of `M` points in `K`dimensions for which Delaunay triangulation
+        will be computed
+        """
+        from scipy.spatial import Delaunay
+        if not isinstance(hull,Delaunay):
+            hull = Delaunay(hull)
+
+        return hull.find_simplex(p)>=0
 
     #plt.show()
     """
@@ -129,7 +146,8 @@ for file_name in tqdm.tqdm(files):
 
     for btx in btx_geometries:
         for chol in chol_geometries:
-            if any([chol[1].contains(Point(btx[0].get_noisy_x()[index_btx], btx[0].get_noisy_y()[index_btx])) for index_btx in range(btx[0].length)]):
+            #if any([chol[1].contains(Point(btx[0].get_noisy_x()[index_btx], btx[0].get_noisy_y()[index_btx], btx[0].get_time()[index_btx])) for index_btx in range(btx[0].length)]):
+            if any(in_hull(btx[1], chol[1])):
                 ax = plt.figure().add_subplot(projection='3d')
                 ax.plot(btx[0].get_noisy_x(), btx[0].get_time(), btx[0].get_noisy_y(), color='blue')
                 ax.plot(chol[0].get_noisy_x(), chol[0].get_time(), chol[0].get_noisy_y(), color='orange')
