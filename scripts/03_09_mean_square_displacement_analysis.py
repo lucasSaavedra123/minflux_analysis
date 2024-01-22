@@ -6,7 +6,7 @@ from scipy.stats import chi2
 from DatabaseHandler import DatabaseHandler
 from Trajectory import Trajectory
 from CONSTANTS import *
-
+from scipy.optimize import curve_fit
 
 NUMBER_OF_POINTS_FOR_MSD = 250
 
@@ -17,13 +17,13 @@ def analyze_trajectory(trajectory_id, dataset):
     reconstructed_trajectory = trajectory.reconstructed_trajectory(DATASET_TO_DELTA_T[dataset])
 
     if reconstructed_trajectory.length > NUMBER_OF_POINTS_FOR_MSD + 1:
-        _,msd,_,_,_ = reconstructed_trajectory.temporal_average_mean_squared_displacement(log_log_fit_limit=NUMBER_OF_POINTS_FOR_MSD)
+        t_vec,msd,_,_,_ = reconstructed_trajectory.temporal_average_mean_squared_displacement(log_log_fit_limit=NUMBER_OF_POINTS_FOR_MSD)
         msd = msd[:NUMBER_OF_POINTS_FOR_MSD]
     else:
         return None
 
 
-    return reconstructed_trajectory, msd
+    return reconstructed_trajectory, msd, t_vec
 
 DatabaseHandler.connect_over_network(None, None, IP_ADDRESS, COLLECTION_NAME)
 
@@ -33,8 +33,6 @@ new_datasets_list.append(BTX_NOMENCLATURE)
 new_datasets_list.append(CHOL_NOMENCLATURE)
 
 for index, dataset in enumerate(new_datasets_list):
-    if index < 5:
-        continue
     print(dataset)
     SEARCH_FIELD = 'info.dataset' if index < 4 else 'info.classified_experimental_condition'
 
@@ -53,13 +51,21 @@ for index, dataset in enumerate(new_datasets_list):
     number_of_analyzed_trajectories = len(results)
     reconstructed_trajectories_results = [result[0] for result in results]
     msd_results = np.vstack([result[1] for result in results])
+    t_lag = [result[2] for result in results][0][:NUMBER_OF_POINTS_FOR_MSD]
+
     #print("n->", len(msd_results))
-    t_lag = np.arange(0,NUMBER_OF_POINTS_FOR_MSD * DATASET_TO_DELTA_T[dataset], DATASET_TO_DELTA_T[dataset])
+    #t_lag = np.arange(0,NUMBER_OF_POINTS_FOR_MSD * DATASET_TO_DELTA_T[dataset], DATASET_TO_DELTA_T[dataset])
+    #t_lag = np.linspace(DATASET_TO_DELTA_T[dataset], DATASET_TO_DELTA_T[dataset] * 250, 250 - 2)
 
     for i in range(number_of_analyzed_trajectories):
         plt.loglog(t_lag, msd_results[i],color='cyan')
 
-    plt.loglog(t_lag,t_lag,color='black', linestyle='dashed')
+    ea_ta_msd = np.mean(msd_results, axis=0)
+    popt, _ = curve_fit(lambda t,b,k: np.log(k) + (np.log(t) * b), t_lag, np.log(ea_ta_msd), bounds=((0, 0), (2, np.inf)), maxfev=2000)
+    print(popt[0], popt[1])
+
+    plt.loglog(t_lag,t_lag, color='black', linestyle='dashed')
+    plt.loglog(t_lag,popt[1]*(t_lag**popt[0]), color='red')
 
     plt.xlim([plt.xlim()[0], max(t_lag)])
     plt.xticks(fontsize=20)
@@ -68,7 +74,6 @@ for index, dataset in enumerate(new_datasets_list):
     plt.savefig(f"{index}_{dataset}_msd.png", dpi=300)
     plt.clf()
 
-    ea_ta_msd = np.mean(msd_results, axis=0)
     ea_msd, intervals = Trajectory.ensamble_average_mean_square_displacement(reconstructed_trajectories_results, number_of_points_for_msd=NUMBER_OF_POINTS_FOR_MSD)
 
     plt.plot(t_lag,ea_ta_msd,color='red')
