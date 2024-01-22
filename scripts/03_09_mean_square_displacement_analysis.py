@@ -16,7 +16,7 @@ def analyze_trajectory(trajectory_id, dataset):
     trajectory = trajectories[0]
     reconstructed_trajectory = trajectory.reconstructed_trajectory(DATASET_TO_DELTA_T[dataset])
 
-    if reconstructed_trajectory.length > NUMBER_OF_POINTS_FOR_MSD + 1:
+    if reconstructed_trajectory.length > NUMBER_OF_POINTS_FOR_MSD + 2:
         t_vec,msd,_,_,_ = reconstructed_trajectory.temporal_average_mean_squared_displacement(log_log_fit_limit=NUMBER_OF_POINTS_FOR_MSD)
         msd = msd[:NUMBER_OF_POINTS_FOR_MSD]
     else:

@@ -208,9 +208,14 @@ class Trajectory(Document):
     """
     Below method only works for bidimension trajectories
     """
-    def reconstructed_trajectory(self, delta_t):
-        x = self.get_noisy_x()
-        y = self.get_noisy_y()
+    def reconstructed_trajectory(self, delta_t, with_noise=True):
+        if with_noise:
+            x = self.get_noisy_x()
+            y = self.get_noisy_y()
+        else:
+            x = self.get_x()
+            y = self.get_y()
+
         t = self.get_time()
 
         new_x = []
@@ -523,9 +528,9 @@ class Trajectory(Document):
         else:
             return states
 
-    def temporal_average_mean_squared_displacement(self, non_linear=True, log_log_fit_limit=50):
+    def temporal_average_mean_squared_displacement(self, non_linear=True, log_log_fit_limit=50, with_noise=True):
         """
-        Code Obtained from https://github.com/hectorbm/DL_anomalous_diffusion/blob/ab13739cb8fdb947dd1ebc9a8f537668eb26266a/Tools/analysis_tools.py#L36C67-L36C67
+        Code Obtained from https://github.com/Eggeling-Lab-Microscope-Software/TRAIT2D/blob/b51498b730140ffac5c0abfc5494ebfca25b445e/trait2d/tracker.py#L22
         """
         def real_func(t, betha, k):
             return k * (t ** betha)
@@ -533,35 +538,34 @@ class Trajectory(Document):
         def linear_func(t, betha, k):
             return np.log(k) + (np.log(t) * betha)
 
-        x = self.get_noisy_x()
-        y = self.get_noisy_y()
-        time_length = self.duration
-        data = np.sqrt(x ** 2 + y ** 2)
-        number_of_delta_t = self.length - 1
-        t_vec = np.arange(1, number_of_delta_t)
+        if with_noise:
+            x = self.get_noisy_x()
+            y = self.get_noisy_y()
+        else:
+            x = self.get_x()
+            y = self.get_y()
 
-        msd = np.zeros(len(t_vec))
-        for index, dt in enumerate(t_vec):
-            squared_displacement = (data[1 + dt:] - data[:-1 - dt]) ** 2
-            msd[index] = np.mean(squared_displacement, axis=0)
+        N = len(x)
+        col_Array  = np.zeros(N-3)
+        Err_col_Array = np.zeros(N-3)
 
-        t_vec = np.linspace(self.get_time()[1] - self.get_time()[0], time_length, self.length - 2)
-        #t_vec = self.get_time() - self.get_time()[0]
-        #t_vec = np.linspace(0, self.length-2,1) * 
+        data_tmp = np.column_stack((x, y))
 
+        for i in range(1,N-2):
+            calc_tmp = np.sum(np.abs((data_tmp[1+i:N,:] - data_tmp[1:N - i,:]) ** 2), axis=1)
+            col_Array[i-1] = np.mean(calc_tmp)
+            Err_col_Array[i-1] = np.std(calc_tmp)
+
+        msd = col_Array
+
+        t_vec = self.get_time()[1:-2]-self.get_time().min()
+        assert len(t_vec) == len(msd)
         msd_fit = msd[0:log_log_fit_limit]
         t_vec_fit = t_vec[0:log_log_fit_limit]
+        assert len(t_vec_fit) == log_log_fit_limit
+        assert len(msd_fit) == log_log_fit_limit
 
         popt, _ = curve_fit(linear_func, t_vec_fit, np.log(msd_fit), bounds=((0, 0), (2, np.inf)), maxfev=2000)
-        
-        """
-        if non_linear:
-            popt, _ = curve_fit(real_func, t_vec_fit, msd_fit, bounds=((0, 0), (2, np.inf)), maxfev=2000)
-            #popt2, _ = curve_fit(linear_func, t_vec_fit, np.log(msd_fit), bounds=((0, 0), (2, np.inf)), maxfev=2000)
-        else:
-            popt, _ = curve_fit(real_func, t_vec_fit, msd_fit, bounds=((0, 0, -np.inf), (2, np.inf, np.inf)), maxfev=2000)
-        """
-
         goodness_of_fit = r2_score(np.log(msd_fit), linear_func(t_vec_fit, popt[0], popt[1]))
 
         return t_vec, msd, popt[0], popt[1], goodness_of_fit
