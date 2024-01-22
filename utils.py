@@ -2,6 +2,7 @@ import numpy as np
 from Trajectory import Trajectory
 from scipy.spatial import KDTree
 from shapely.geometry import MultiPoint, Point
+import scipy
 
 
 def custom_histogram(data, starting_x, final_x, x_step):
@@ -50,6 +51,23 @@ def get_ids_of_trayectories_under_betha_limits(filter_query, betha_min, betha_ma
     filter_query['info.analysis.betha'] = {'$gt': betha_min, '$lte': betha_max}
     list_of_list = [str(document['_id']) for document in Trajectory._get_collection().find(filter_query, {f'_id':1})]
     return list_of_list
+
+def irregular_brownian_motion(n_traj, length, D, dim=1, dt=None, lower=100e-6, upper=50e-3, scale=500e-6):
+    assert lower < scale < upper, f"{lower } < {scale} < {upper}"
+    return_intervals = False
+
+    if dt is None:
+        return_intervals = True
+        dt = scipy.stats.truncexpon(b=(upper-lower)/scale, loc=lower, scale=scale).rvs(n_traj*1*length)
+        dt = dt.reshape((n_traj, 1, length))
+
+    bm = (np.sqrt(2*D*dt)*np.random.randn(n_traj, dim, length)).cumsum(-1)
+    dt = dt.cumsum(-1)
+
+    if return_intervals:
+        return bm - bm[:, :, 0, None], dt - dt[:, :, 0, None]
+    else:
+        return bm - bm[:, :, 0, None]
 
 #GeelsForGeeks script: https://www.geeksforgeeks.org/check-if-two-given-line-segments-intersect/
 def both_segments_intersect(segment_one, segment_two):
