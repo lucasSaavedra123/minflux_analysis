@@ -52,7 +52,8 @@ def get_ids_of_trayectories_under_betha_limits(filter_query, betha_min, betha_ma
     list_of_list = [str(document['_id']) for document in Trajectory._get_collection().find(filter_query, {f'_id':1})]
     return list_of_list
 
-def irregular_brownian_motion(n_traj, length, D, dim=1, dt=None, lower=100e-6, upper=50e-3, scale=500e-6):
+def irregular_brownian_motion(length, D, dim=1, dt=None, lower=100e-6, upper=50e-3, scale=500e-6):
+    n_traj = 1
     assert lower < scale < upper, f"{lower } < {scale} < {upper}"
     return_intervals = False
 
@@ -65,9 +66,45 @@ def irregular_brownian_motion(n_traj, length, D, dim=1, dt=None, lower=100e-6, u
     dt = dt.cumsum(-1)
 
     if return_intervals:
-        return bm - bm[:, :, 0, None], dt - dt[:, :, 0, None]
+        return bm - bm[0, :, 0, None], dt - dt[0, :, 0, None]
     else:
-        return bm - bm[:, :, 0, None]
+        return bm - bm[0, :, 0, None]
+
+def irregular_fractional_brownian_motion(n_traj, length, alpha, dim=1, dt=None, lower=100e-6, upper=50e-3, scale=500e-6):
+    assert lower < scale < upper, f"{lower } < {scale} < {upper}"
+    return_intervals = False
+
+    if dt is None:
+        ts = np.cumsum(scipy.stats.truncexpon(b=(upper-lower)/scale, loc=lower, scale=scale).rvs(1*1*length))
+        return_intervals = True
+    else:
+        ts = np.linspace(0,dt,length)
+
+    gamma = np.sqrt(np.pi)
+    number_of_steps = len(ts)
+    H = alpha/2
+    wxs = np.zeros((number_of_steps))
+    increments = np.zeros((dim, number_of_steps))
+
+    for i in range(dim):
+        phases = np.random.uniform(0, np.pi*2, size=48+8+1)
+
+        for t_index, t in enumerate(ts):
+            tStar = 2*np.pi*t/np.max(ts) #Check this line
+            wx = 0
+
+            for n in range(-8, 48+1):
+                phasex = phases[n+np.abs(8)]
+                wx += (np.cos(phasex)-np.cos(np.power(gamma, n) * tStar + phasex))/np.power(gamma, n*H)
+
+            prevwx = wxs[t_index-2] if t_index-2>=0 else 0
+            wxs[t_index-1] = wx
+            increments[i, t_index-1] = wxs[t_index-1]-prevwx; 
+
+    if return_intervals:
+        return increments.cumsum(-1), ts
+    else:
+        return increments.cumsum(-1)
 
 #GeelsForGeeks script: https://www.geeksforgeeks.org/check-if-two-given-line-segments-intersect/
 def both_segments_intersect(segment_one, segment_two):

@@ -149,7 +149,7 @@ class Trajectory(Document):
 
     @classmethod
     def ensamble_average_mean_square_displacement(cls, trajectories, number_of_points_for_msd=50, alpha=0.95):
-        trajectories = [trajectory for trajectory in trajectories if trajectory.length > number_of_points_for_msd + 1]
+        trajectories = [trajectory for trajectory in trajectories if trajectory.length > number_of_points_for_msd + 2]
         #print("len average ->", np.mean([t.length for t in trajectories]))
         ea_msd = np.zeros((len(trajectories), number_of_points_for_msd))
         mu_t = np.zeros((len(trajectories), number_of_points_for_msd))
@@ -160,8 +160,8 @@ class Trajectory(Document):
             positions[:,1] = trajectory.get_noisy_y()
 
             for index in range(0, number_of_points_for_msd):
-                ea_msd[j_index, index] = np.linalg.norm(positions[index+1]-positions[0]) ** 2
-                mu_t[j_index, index] = np.linalg.norm(positions[index+1]-positions[0])
+                ea_msd[j_index, index] = np.sum(np.abs((positions[1+index] - positions[0]) ** 2))
+                mu_t[j_index, index] = np.sum(np.abs((positions[1+index] - positions[0])))
 
         ea_msd = np.mean(ea_msd, axis=0)
         mu_t = np.mean(mu_t, axis=0)
@@ -530,7 +530,7 @@ class Trajectory(Document):
 
     def temporal_average_mean_squared_displacement(self, non_linear=True, log_log_fit_limit=50, with_noise=True):
         """
-        Code Obtained from https://github.com/Eggeling-Lab-Microscope-Software/TRAIT2D/blob/b51498b730140ffac5c0abfc5494ebfca25b445e/trait2d/tracker.py#L22
+        Code Obtained from https://github.com/Eggeling-Lab-Microscope-Software/TRAIT2D/blob/b51498b730140ffac5c0abfc5494ebfca25b445e/trait2d/analysis/__init__.py#L1061
         """
         def real_func(t, betha, k):
             return k * (t ** betha)
