@@ -70,7 +70,7 @@ def irregular_brownian_motion(length, D, dim=1, dt=None, lower=100e-6, upper=50e
     else:
         return bm - bm[0, :, 0, None]
 
-def irregular_fractional_brownian_motion(n_traj, length, alpha, dim=1, dt=None, lower=100e-6, upper=50e-3, scale=500e-6):
+def irregular_fractional_brownian_motion(length, alpha, dim=1, dt=None, lower=100e-6, upper=50e-3, scale=500e-6):
     assert lower < scale < upper, f"{lower } < {scale} < {upper}"
     return_intervals = False
 
