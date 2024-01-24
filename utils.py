@@ -66,9 +66,9 @@ def irregular_brownian_motion(length, D, dim=1, dt=None, lower=100e-6, upper=50e
     dt = dt.cumsum(-1)
 
     if return_intervals:
-        return bm - bm[0, :, 0, None], dt - dt[0, :, 0, None]
+        return (bm - bm[0, :, 0, None])[0], (dt - dt[0, :, 0, None])[0]
     else:
-        return bm - bm[0, :, 0, None]
+        return (bm - bm[0, :, 0, None])[0]
 
 def irregular_fractional_brownian_motion(length, alpha, dim=1, dt=None, lower=100e-6, upper=50e-3, scale=500e-6):
     assert lower < scale < upper, f"{lower } < {scale} < {upper}"
