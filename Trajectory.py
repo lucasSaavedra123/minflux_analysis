@@ -563,8 +563,8 @@ class Trajectory(Document):
         t_vec, msd = aux[:,0], aux[:,1]
 
         #plt.plot(t_vec, t_vec)
-        plt.plot(t_vec, msd)
-        plt.show()
+        #plt.plot(t_vec, msd)
+        #plt.show()
         assert len(t_vec) == len(msd)
         msd_fit = msd[0:log_log_fit_limit]
         t_vec_fit = t_vec[0:log_log_fit_limit]
