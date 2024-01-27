@@ -9,6 +9,8 @@ from sklearn.metrics import r2_score
 import ruptures as rpt
 from mongoengine import Document, FloatField, ListField, DictField, BooleanField
 from scipy.spatial import ConvexHull
+import scipy.stats as st
+from collections import defaultdict
 #Example about how to read trajectories from .mat
 """
 from scipy.io import loadmat
@@ -528,7 +530,7 @@ class Trajectory(Document):
         else:
             return states
 
-    def temporal_average_mean_squared_displacement(self, non_linear=True, log_log_fit_limit=50, with_noise=True):
+    def temporal_average_mean_squared_displacement(self, non_linear=True, log_log_fit_limit=50, with_noise=True, trunc_time_number_of_decimals=None):
         """
         Code Obtained from https://github.com/Eggeling-Lab-Microscope-Software/TRAIT2D/blob/b51498b730140ffac5c0abfc5494ebfca25b445e/trait2d/analysis/__init__.py#L1061
         """
@@ -546,19 +548,39 @@ class Trajectory(Document):
             y = self.get_y()
 
         N = len(x)
-        col_Array  = np.zeros(N-3)
-        Err_col_Array = np.zeros(N-3)
+        col_Array  = np.zeros(N-3)#[]
+        col_t_Array  = np.zeros(N-3)#[]
 
         data_tmp = np.column_stack((x, y))
 
+        if trunc_time_number_of_decimals is not None:
+            data_t_tmp = np.round(np.trunc(self.get_time()*(10**trunc_time_number_of_decimals))/(10**trunc_time_number_of_decimals), trunc_time_number_of_decimals)
+            data_t_diff = np.round(np.diff(data_t_tmp), trunc_time_number_of_decimals)
+        else:
+            data_t_tmp = self.get_time()
+            data_t_diff = np.diff(data_t_tmp)
+
+        deltas_dict = defaultdict(lambda:[])
+
         for i in range(1,N-2):
+            #calc_t_tmp = np.round(np.abs(data_t_tmp[1+i:N] - data_t_tmp[1:N - i]), trunc_time_number_of_decimals)
+            calc_t_tmp = np.abs(data_t_tmp[1+i:N] - data_t_tmp[1:N - i])
             calc_tmp = np.sum(np.abs((data_tmp[1+i:N,:] - data_tmp[1:N - i,:]) ** 2), axis=1)
             col_Array[i-1] = np.mean(calc_tmp)
-            Err_col_Array[i-1] = np.std(calc_tmp)
+            col_t_Array[i-1] = np.mean(calc_t_tmp)
+            """
+            for d,t in zip(calc_tmp, calc_t_tmp):
+                deltas_dict[t].append(d)
+            """
+        
+        #aux = np.array(sorted(list(zip(deltas_dict.keys(), [np.mean(v) for v in deltas_dict.values()])), key=lambda x: x[0]))
+        aux = np.array(sorted(list(zip(col_t_Array, col_Array)), key=lambda x: x[0]))
+        t_vec, msd = aux[:,0], aux[:,1]
 
-        msd = col_Array
-
-        t_vec = self.get_time()[1:-2]-self.get_time().min()
+        #t_vec = self.get_time()[1:-2]-self.get_time().min()
+        #plt.plot(t_vec, t_vec)
+        #plt.plot(t_vec, msd)
+        #plt.show()
         assert len(t_vec) == len(msd)
         msd_fit = msd[0:log_log_fit_limit]
         t_vec_fit = t_vec[0:log_log_fit_limit]
