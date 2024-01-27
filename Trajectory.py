@@ -550,37 +550,21 @@ class Trajectory(Document):
         N = len(x)
         col_Array  = np.zeros(N-3)#[]
         col_t_Array  = np.zeros(N-3)#[]
-
         data_tmp = np.column_stack((x, y))
 
-        if trunc_time_number_of_decimals is not None:
-            data_t_tmp = np.round(np.trunc(self.get_time()*(10**trunc_time_number_of_decimals))/(10**trunc_time_number_of_decimals), trunc_time_number_of_decimals)
-            data_t_diff = np.round(np.diff(data_t_tmp), trunc_time_number_of_decimals)
-        else:
-            data_t_tmp = self.get_time()
-            data_t_diff = np.diff(data_t_tmp)
-
-        deltas_dict = defaultdict(lambda:[])
+        delta = np.min(np.diff(self.get_time()))
 
         for i in range(1,N-2):
-            #calc_t_tmp = np.round(np.abs(data_t_tmp[1+i:N] - data_t_tmp[1:N - i]), trunc_time_number_of_decimals)
-            calc_t_tmp = np.abs(data_t_tmp[1+i:N] - data_t_tmp[1:N - i])
             calc_tmp = np.sum(np.abs((data_tmp[1+i:N,:] - data_tmp[1:N - i,:]) ** 2), axis=1)
             col_Array[i-1] = np.mean(calc_tmp)
-            col_t_Array[i-1] = np.mean(calc_t_tmp)
-            """
-            for d,t in zip(calc_tmp, calc_t_tmp):
-                deltas_dict[t].append(d)
-            """
-        
-        #aux = np.array(sorted(list(zip(deltas_dict.keys(), [np.mean(v) for v in deltas_dict.values()])), key=lambda x: x[0]))
+            col_t_Array[i-1] = i * delta
+
         aux = np.array(sorted(list(zip(col_t_Array, col_Array)), key=lambda x: x[0]))
         t_vec, msd = aux[:,0], aux[:,1]
 
-        #t_vec = self.get_time()[1:-2]-self.get_time().min()
         #plt.plot(t_vec, t_vec)
-        #plt.plot(t_vec, msd)
-        #plt.show()
+        plt.plot(t_vec, msd)
+        plt.show()
         assert len(t_vec) == len(msd)
         msd_fit = msd[0:log_log_fit_limit]
         t_vec_fit = t_vec[0:log_log_fit_limit]
