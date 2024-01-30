@@ -606,8 +606,8 @@ class Trajectory(Document):
         msd_fit = msd[2:4+1]
         t_vec_fit = t_vec[2:4+1]
 
-        popt, _ = curve_fit(linear_func, t_vec_fit, msd_fit, bounds=((0, np.inf), (0, np.inf)), maxfev=2000)
-        goodness_of_fit = r2_score(np.log(msd_fit), linear_func(t_vec_fit, popt[0], popt[1]))
+        popt, _ = curve_fit(linear_func, t_vec_fit, msd_fit, bounds=((0, 0), (np.inf, np.inf)), maxfev=2000)
+        goodness_of_fit = r2_score(msd_fit, linear_func(t_vec_fit, popt[0], popt[1]))
 
         return t_vec, msd, popt[0], popt[1], goodness_of_fit
 
