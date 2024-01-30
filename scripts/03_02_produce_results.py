@@ -36,6 +36,8 @@ for index, dataset in enumerate(new_datasets_list):
         pd.DataFrame({'k': get_list_of_values_of_analysis_field(filter_query, 'k')}).to_excel(writer, sheet_name='k', index=False)
         pd.DataFrame({'betha': get_list_of_values_of_analysis_field(filter_query, 'betha')}).to_excel(writer, sheet_name='betha', index=False)
         pd.DataFrame({'dc': get_list_of_values_of_analysis_field(filter_query, 'directional_coefficient')}).to_excel(writer, sheet_name='directional_coefficient', index=False)
+        pd.DataFrame({'d_2_4': get_list_of_values_of_analysis_field(filter_query, 'd_2_4')}).to_excel(writer, sheet_name='d_2_4', index=False)
+        pd.DataFrame({'localization_precision': get_list_of_values_of_analysis_field(filter_query, 'localization_precision')}).to_excel(writer, sheet_name='localization_precision', index=False)
 
         residence_times = get_list_of_values_of_analysis_field(filter_query, 'residence_time')
         residence_times = [residence_time for residence_time in residence_times if residence_time != 0]
