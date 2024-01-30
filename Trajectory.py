@@ -555,12 +555,9 @@ class Trajectory(Document):
 
         if trunc_time_number_of_decimals is not None:
             data_t_tmp = np.round(np.trunc(self.get_time()*(10**trunc_time_number_of_decimals))/(10**trunc_time_number_of_decimals), trunc_time_number_of_decimals)
-            data_t_diff = np.round(np.diff(data_t_tmp), trunc_time_number_of_decimals)
         else:
             data_t_tmp = self.get_time()
-            data_t_diff = np.diff(data_t_tmp)
 
-        deltas_dict = defaultdict(lambda:[])
 
         for i in range(1,N-2):
             #calc_t_tmp = np.round(np.abs(data_t_tmp[1+i:N] - data_t_tmp[1:N - i]), trunc_time_number_of_decimals)
