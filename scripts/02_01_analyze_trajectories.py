@@ -134,7 +134,7 @@ def analyze_trajectory(trajectory_id):
     
     reconstructed_trajectory = trajectory.reconstructed_trajectory(selected_delta_t)
 
-    if reconstructed_trajectory.length > NUMBER_OF_POINTS_FOR_MSD + 1:
+    if reconstructed_trajectory.length > NUMBER_OF_POINTS_FOR_MSD + 2:
         _,_,betha,k,goodness_of_fit = reconstructed_trajectory.temporal_average_mean_squared_displacement(log_log_fit_limit=NUMBER_OF_POINTS_FOR_MSD)
         trajectory.info['analysis']['betha'] = betha
         trajectory.info['analysis']['k'] = k
@@ -165,7 +165,7 @@ def analyze_trajectory(trajectory_id):
                     trajectory.info['analysis']['confinement-e'].append(e)
 
                     reconstructed_sub_trajectory = sub_trajectory.reconstructed_trajectory(selected_delta_t)
-                    if reconstructed_sub_trajectory.length > NUMBER_OF_POINTS_FOR_SUB_MSD + 1:
+                    if reconstructed_sub_trajectory.length > NUMBER_OF_POINTS_FOR_SUB_MSD + 2:
                         _,_,betha,k,goodness_of_fit = reconstructed_sub_trajectory.temporal_average_mean_squared_displacement(log_log_fit_limit=NUMBER_OF_POINTS_FOR_SUB_MSD)
                         trajectory.info['analysis']['confinement-k'].append(k)
                         trajectory.info['analysis']['confinement-betha'].append(betha)
@@ -176,7 +176,7 @@ def analyze_trajectory(trajectory_id):
             else:
                 trajectory.info['analysis']['non-confinement-steps'].append(sub_trajectory.length)
                 reconstructed_sub_trajectory = sub_trajectory.reconstructed_trajectory(selected_delta_t)
-                if reconstructed_sub_trajectory.length > NUMBER_OF_POINTS_FOR_SUB_MSD + 1:
+                if reconstructed_sub_trajectory.length > NUMBER_OF_POINTS_FOR_SUB_MSD + 2:
                     _,_,betha,k,goodness_of_fit = reconstructed_sub_trajectory.temporal_average_mean_squared_displacement(log_log_fit_limit=NUMBER_OF_POINTS_FOR_SUB_MSD)
                     trajectory.info['analysis']['non-confinement-k'].append(k)
                     trajectory.info['analysis']['non-confinement-betha'].append(betha)
