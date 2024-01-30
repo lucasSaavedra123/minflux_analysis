@@ -603,9 +603,10 @@ class Trajectory(Document):
         #plt.plot(t_vec, t_vec)
         #plt.plot(t_vec, msd)
         #plt.show()
-        msd_fit = msd[2:4+1]
-        t_vec_fit = t_vec[2:4+1]
-
+        msd_fit = msd[1:4]
+        t_vec_fit = t_vec[1:4]
+        assert len(msd_fit) == 3
+        assert len(t_vec_fit) == 3
         popt, _ = curve_fit(linear_func, t_vec_fit, msd_fit, bounds=((0, 0), (np.inf, np.inf)), maxfev=2000)
         goodness_of_fit = r2_score(msd_fit, linear_func(t_vec_fit, popt[0], popt[1]))
 
