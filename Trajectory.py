@@ -575,6 +575,42 @@ class Trajectory(Document):
 
         return t_vec, msd, popt[0], popt[1], goodness_of_fit
 
+    def short_range_diffusion_coefficient_msd(self, with_noise=True):
+        def linear_func(t, d, sigma):
+            return (4 * t * d) + (sigma**2)
+
+        if with_noise:
+            x = self.get_noisy_x()
+            y = self.get_noisy_y()
+        else:
+            x = self.get_x()
+            y = self.get_y()
+
+        N = len(x)
+        col_Array  = np.zeros(N-3)#[]
+        col_t_Array  = np.zeros(N-3)#[]
+        data_tmp = np.column_stack((x, y))
+        delta = np.min(np.diff(self.get_time()))
+
+        for i in range(1,N-2):
+            calc_tmp = np.sum(np.abs((data_tmp[1+i:N,:] - data_tmp[1:N - i,:]) ** 2), axis=1)
+            col_Array[i-1] = np.mean(calc_tmp)
+            col_t_Array[i-1] = i * delta
+
+        aux = np.array(sorted(list(zip(col_t_Array, col_Array)), key=lambda x: x[0]))
+        t_vec, msd = aux[:,0], aux[:,1]
+
+        #plt.plot(t_vec, t_vec)
+        #plt.plot(t_vec, msd)
+        #plt.show()
+        msd_fit = msd[2:4+1]
+        t_vec_fit = t_vec[2:4+1]
+
+        popt, _ = curve_fit(linear_func, t_vec_fit, msd_fit, bounds=((0, np.inf), (0, np.inf)), maxfev=2000)
+        goodness_of_fit = r2_score(np.log(msd_fit), linear_func(t_vec_fit, popt[0], popt[1]))
+
+        return t_vec, msd, popt[0], popt[1], goodness_of_fit
+
     def turning_angles(self,steps_lag=1, normalized=False):
         return turning_angles(
             self.length,
