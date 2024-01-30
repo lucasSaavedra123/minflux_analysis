@@ -134,6 +134,10 @@ def analyze_trajectory(trajectory_id):
     
     reconstructed_trajectory = trajectory.reconstructed_trajectory(selected_delta_t)
 
+    _,_,d_2_4,localization_precision,_= reconstructed_trajectory.short_range_diffusion_coefficient_msd()
+    trajectory.info['analysis']['d_2_4'] = d_2_4
+    trajectory.info['analysis']['localization_precision'] = localization_precision
+
     if reconstructed_trajectory.length > NUMBER_OF_POINTS_FOR_MSD + 2:
         _,_,betha,k,goodness_of_fit = reconstructed_trajectory.temporal_average_mean_squared_displacement(log_log_fit_limit=NUMBER_OF_POINTS_FOR_MSD)
         trajectory.info['analysis']['betha'] = betha
