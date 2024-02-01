@@ -20,9 +20,9 @@ from utils import both_trajectories_intersect
 
 DatabaseHandler.connect_over_network(None, None, IP_ADDRESS, COLLECTION_NAME)
 
-#files = Trajectory.objects(info__dataset='Cholesterol and btx').distinct(field='info.file')
+files = Trajectory.objects().distinct(field='info.file')
 
-files = [
+btx_and_chol_files = [
     '231013-105211_mbm test.txt',
     '231013-105628_mbm test-pow8pc.txt',
     '231013-110430_mbm test-pow8pc.txt',
@@ -70,38 +70,56 @@ for file in tqdm.tqdm(files):
     trajectories = Trajectory.objects(info__file=file)
     trajectories_by_condition = defaultdict(lambda: [])
 
-    for trajectory in trajectories:
-        trajectories_by_condition[trajectory.info['classified_experimental_condition']].append(trajectory)
+    if file in btx_and_chol_files:
+        for trajectory in trajectories:
+            trajectories_by_condition[trajectory.info['classified_experimental_condition']].append(trajectory)
 
-    for btx_trajectory in tqdm.tqdm(trajectories_by_condition[BTX_NOMENCLATURE]):
-        btx_trajectory.info[f'{CHOL_NOMENCLATURE}_single_intersections'] = np.zeros(btx_trajectory.length).tolist()
-        btx_trajectory.info[f'{CHOL_NOMENCLATURE}_intersections'] = []
-        for chol_trajectory in trajectories_by_condition[CHOL_NOMENCLATURE]:
-            overlap, intersections = both_trajectories_intersect(btx_trajectory, chol_trajectory, via='kd-tree', radius_threshold=0.03, return_kd_tree_intersections=True)
+        for btx_trajectory in tqdm.tqdm(trajectories_by_condition[BTX_NOMENCLATURE]):
+            btx_trajectory.info[f'{CHOL_NOMENCLATURE}_single_intersections'] = np.zeros(btx_trajectory.length).tolist()
+            btx_trajectory.info[f'{CHOL_NOMENCLATURE}_intersections'] = []
+            for chol_trajectory in trajectories_by_condition[CHOL_NOMENCLATURE]:
+                overlap, intersections = both_trajectories_intersect(btx_trajectory, chol_trajectory, via='kd-tree', radius_threshold=0.03, return_kd_tree_intersections=True)
 
-            if overlap:
-                btx_trajectory.info[f'{CHOL_NOMENCLATURE}_intersections'].append(chol_trajectory.id)
+                if overlap:
+                    btx_trajectory.info[f'{CHOL_NOMENCLATURE}_intersections'].append(chol_trajectory.id)
 
-                for index, intersection in enumerate(intersections):
-                    if len(intersection) != 0:
-                        btx_trajectory.info[f'{CHOL_NOMENCLATURE}_single_intersections'][index] = 1
+                    for index, intersection in enumerate(intersections):
+                        if len(intersection) != 0:
+                            btx_trajectory.info[f'{CHOL_NOMENCLATURE}_single_intersections'][index] = 1
 
-        btx_trajectory.save()
+            btx_trajectory.save()
 
-    for chol_trajectory in tqdm.tqdm(trajectories_by_condition[CHOL_NOMENCLATURE]):
-        chol_trajectory.info[f'{BTX_NOMENCLATURE}_single_intersections'] = np.zeros(chol_trajectory.length).tolist()
-        chol_trajectory.info[f'{BTX_NOMENCLATURE}_intersections'] = []
-        for btx_trajectory in trajectories_by_condition[BTX_NOMENCLATURE]:
-            overlap, intersections = both_trajectories_intersect(chol_trajectory, btx_trajectory, via='kd-tree', radius_threshold=0.03, return_kd_tree_intersections=True)
-            
-            if overlap:
-                chol_trajectory.info[f'{BTX_NOMENCLATURE}_intersections'].append(btx_trajectory.id)
+        for chol_trajectory in tqdm.tqdm(trajectories_by_condition[CHOL_NOMENCLATURE]):
+            chol_trajectory.info[f'{BTX_NOMENCLATURE}_single_intersections'] = np.zeros(chol_trajectory.length).tolist()
+            chol_trajectory.info[f'{BTX_NOMENCLATURE}_intersections'] = []
+            for btx_trajectory in trajectories_by_condition[BTX_NOMENCLATURE]:
+                overlap, intersections = both_trajectories_intersect(chol_trajectory, btx_trajectory, via='kd-tree', radius_threshold=0.03, return_kd_tree_intersections=True)
+                
+                if overlap:
+                    chol_trajectory.info[f'{BTX_NOMENCLATURE}_intersections'].append(btx_trajectory.id)
 
-                for index, intersection in enumerate(intersections):
-                    if len(intersection) != 0:
-                        chol_trajectory.info[f'{BTX_NOMENCLATURE}_single_intersections'][index] = 1
+                    for index, intersection in enumerate(intersections):
+                        if len(intersection) != 0:
+                            chol_trajectory.info[f'{BTX_NOMENCLATURE}_single_intersections'][index] = 1
 
-        chol_trajectory.save()
+            chol_trajectory.save()
+    else:
+        trajectories = list(trajectories)
+        for trajectory_index, trajectory in tqdm.tqdm(enumerate(trajectories)):
+            trajectory.info[f'single_intersections_with_others'] = np.zeros(trajectory.length).tolist()
+            trajectory.info[f'intersections_with_others'] = []
+            for other_trajectory in trajectories[:trajectory_index] + trajectories[trajectory_index+1:]:
+                overlap, intersections = both_trajectories_intersect(trajectory, other_trajectory, via='kd-tree', radius_threshold=0.03, return_kd_tree_intersections=True)
+
+                if overlap:
+                    trajectory.info[f'intersections_with_others'].append(other_trajectory.id)
+
+                    for index, intersection in enumerate(intersections):
+                        if len(intersection) != 0:
+                            trajectory.info[f'single_intersections_with_others'][index] = 1
+
+            trajectory.save()
+
 
 DatabaseHandler.disconnect()
 
