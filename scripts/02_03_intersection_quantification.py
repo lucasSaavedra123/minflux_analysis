@@ -113,8 +113,10 @@ for index, id_batch in tqdm.tqdm(list(enumerate(list(batch(chol_trajectories_ids
     ray.get([analyze_chol_trajectory.remote(an_id) for an_id in id_batch])
 analyzed_ids += chol_trajectories_ids
 
+DatabaseHandler.connect_over_network(None, None, IP_ADDRESS, COLLECTION_NAME)
 all_ids = list(Trajectory._get_collection().find({}, {f'id':1}))
+DatabaseHandler.disconnect()
 
 for index, id_batch in tqdm.tqdm(list(enumerate(list(batch(all_ids, n=1000))))):
-    new_id_batch = [id_id for id_id in id_batch if id_id not in all_ids]
+    new_id_batch = [id_id for id_id in id_batch if id_id not in analyzed_ids]
     ray.get([analyze_trajectory.remote(an_id) for an_id in new_id_batch])
