@@ -74,7 +74,7 @@ for index, dataset in enumerate(new_datasets_list):
     plt.savefig(f"{index}_{dataset}_msd.png", dpi=300)
     plt.clf()
 
-    ea_msd, intervals = Trajectory.ensamble_average_mean_square_displacement(reconstructed_trajectories_results, number_of_points_for_msd=NUMBER_OF_POINTS_FOR_MSD)
+    ea_msd, intervals = Trajectory.ensemble_average_mean_square_displacement(reconstructed_trajectories_results, number_of_points_for_msd=NUMBER_OF_POINTS_FOR_MSD)
 
     plt.plot(t_lag,ea_ta_msd,color='red')
     plt.plot(t_lag,intervals[0],color='blue', linestyle='dashed')
