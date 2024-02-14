@@ -150,7 +150,7 @@ class Trajectory(Document):
         return trajectories
 
     @classmethod
-    def ensamble_average_mean_square_displacement(cls, trajectories, number_of_points_for_msd=50, alpha=0.95):
+    def ensemble_average_mean_square_displacement(cls, trajectories, number_of_points_for_msd=50, alpha=0.95):
         trajectories = [trajectory for trajectory in trajectories if trajectory.length > number_of_points_for_msd + 2]
         #print("len average ->", np.mean([t.length for t in trajectories]))
         ea_msd = np.zeros((len(trajectories), number_of_points_for_msd))
