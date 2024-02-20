@@ -6,7 +6,15 @@ DATASETS_LIST = [
     'CDx',
     'BTX680R',
     'CholesterolPEGKK114',
-    'Cholesterol and btx'
+    'Cholesterol and btx',
+    'CK666-BTX680',
+    'CK666-CHOL',
+    'CK666-BTX680-CHOL',
+    'BTX640-CHOL-50-nM',
+    'BTX640-CHOL-50-nM-LOW-DENSITY',
+    'BTX680-fPEG-CHOL-50-nM',
+    'BTX680-fPEG-CHOL-100-nM',
+    'BTX680-fPEG-CHOL-WITH-CK666'
 ]
 
 DATASET_TO_COLOR = {
