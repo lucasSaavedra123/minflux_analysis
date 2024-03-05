@@ -530,16 +530,10 @@ class Trajectory(Document):
         else:
             return states
 
-    def temporal_average_mean_squared_displacement(self, non_linear=True, log_log_fit_limit=50, with_noise=True):
+    def calculate_msd_curve(self, with_noise=True, bin_width=None):
         """
         Code Obtained from https://github.com/Eggeling-Lab-Microscope-Software/TRAIT2D/blob/b51498b730140ffac5c0abfc5494ebfca25b445e/trait2d/analysis/__init__.py#L1061
         """
-        def real_func(t, betha, k):
-            return k * (t ** betha)
-
-        def linear_func(t, betha, k):
-            return np.log(k) + (np.log(t) * betha)
-
         if with_noise:
             x = self.get_noisy_x()
             y = self.get_noisy_y()
@@ -548,23 +542,45 @@ class Trajectory(Document):
             y = self.get_y()
 
         N = len(x)
-        col_Array  = np.zeros(N-3)#[]
-        col_t_Array  = np.zeros(N-3)#[]
+        assert N-3 > 0
+        col_Array  = np.zeros(N-3)
+        col_t_Array  = np.zeros(N-3)
         data_tmp = np.column_stack((x, y))
-        delta = np.min(np.diff(self.get_time()))
+        data_t_tmp = self.get_time()
+
+        msd_dict = defaultdict(lambda: [])
+
+        delta = np.min(np.diff(self.get_time())) if bin_width is None else bin_width
 
         for i in range(1,N-2):
             calc_tmp = np.sum(np.abs((data_tmp[1+i:N,:] - data_tmp[1:N - i,:]) ** 2), axis=1)
+            calc_t_tmp = data_t_tmp[1+i:N] - data_t_tmp[1:N - i]
+
+            for interval, square_displacement in zip(calc_t_tmp, calc_tmp):
+                msd_dict[int(interval/delta)].append(square_displacement)
+
             col_Array[i-1] = np.mean(calc_tmp)
             col_t_Array[i-1] = i * delta
 
-        aux = np.array(sorted(list(zip(col_t_Array, col_Array)), key=lambda x: x[0]))
-        t_vec, msd = aux[:,0], aux[:,1]
+        for i in msd_dict:
+            msd_dict[i] = np.mean(msd_dict[i])
 
-        #plt.plot(t_vec, t_vec)
-        #plt.plot(t_vec, msd)
-        #plt.show()
+        aux = np.array(sorted(list(zip(list(msd_dict.keys()), list(msd_dict.values()))), key=lambda x: x[0]))
+        t_vec, msd = (aux[:,0] * delta) + delta, aux[:,1]
+
         assert len(t_vec) == len(msd)
+
+        return t_vec, msd
+
+    def temporal_average_mean_squared_displacement(self, non_linear=True, log_log_fit_limit=50, with_noise=True, bin_width=None):
+        def real_func(t, betha, k):
+            return k * (t ** betha)
+
+        def linear_func(t, betha, k):
+            return np.log(k) + (np.log(t) * betha)
+
+        t_vec, msd = self.calculate_msd_curve(with_noise=with_noise, bin_width=bin_width)
+
         msd_fit = msd[0:log_log_fit_limit]
         t_vec_fit = t_vec[0:log_log_fit_limit]
         assert len(t_vec_fit) == log_log_fit_limit
@@ -573,9 +589,13 @@ class Trajectory(Document):
         popt, _ = curve_fit(linear_func, t_vec_fit, np.log(msd_fit), bounds=((0, 0), (2, np.inf)), maxfev=2000)
         goodness_of_fit = r2_score(np.log(msd_fit), linear_func(t_vec_fit, popt[0], popt[1]))
 
+        #plt.title(f"betha={np.round(popt[0], 2)}, k={popt[1]}")
+        #plt.plot(t_vec_fit, t_vec_fit * popt[1])
+        #plt.plot(t_vec_fit, msd_fit)
+        #plt.show()
         return t_vec, msd, popt[0], popt[1], goodness_of_fit
 
-    def short_range_diffusion_coefficient_msd(self, with_noise=True):
+    def short_range_diffusion_coefficient_msd(self, with_noise=True, bin_width=None):
         def linear_func(t, d, sigma):
             return (4 * t * d) + (sigma**2)
 
@@ -586,23 +606,8 @@ class Trajectory(Document):
             x = self.get_x()
             y = self.get_y()
 
-        N = len(x)
-        col_Array  = np.zeros(N-3)#[]
-        col_t_Array  = np.zeros(N-3)#[]
-        data_tmp = np.column_stack((x, y))
-        delta = np.min(np.diff(self.get_time()))
+        t_vec, msd = self.calculate_msd_curve(with_noise=with_noise, bin_width=bin_width)
 
-        for i in range(1,N-2):
-            calc_tmp = np.sum(np.abs((data_tmp[1+i:N,:] - data_tmp[1:N - i,:]) ** 2), axis=1)
-            col_Array[i-1] = np.mean(calc_tmp)
-            col_t_Array[i-1] = i * delta
-
-        aux = np.array(sorted(list(zip(col_t_Array, col_Array)), key=lambda x: x[0]))
-        t_vec, msd = aux[:,0], aux[:,1]
-
-        #plt.plot(t_vec, t_vec)
-        #plt.plot(t_vec, msd)
-        #plt.show()
         msd_fit = msd[1:4]
         t_vec_fit = t_vec[1:4]
         assert len(msd_fit) == 3

@@ -63,8 +63,7 @@ def analyze_trajectory(trajectory_id):
     assert len(trajectories) == 1
     trajectory = trajectories[0]
 
-    #if 'analysis' in trajectory.info or trajectory.length == 1:
-    if trajectory.length == 1:
+    if 'analysis' in trajectory.info or trajectory.length == 1:
         return None
     else:
         trajectory.info['analysis'] = {}
@@ -127,23 +126,30 @@ def analyze_trajectory(trajectory_id):
     trajectory.info['analysis']['inverse_residence_time'] = trajectory.duration - trajectory.info['analysis']['residence_time']
     trajectory.info['analysis']['confinement-states'] = states.tolist()
 
+    """
     if trajectory.info['dataset'] != 'Cholesterol and btx':
         selected_delta_t = DATASET_TO_DELTA_T[trajectory.info['dataset']]
     else:
         selected_delta_t = DATASET_TO_DELTA_T[DATASETS_LIST[2]] if trajectory.info['classified_experimental_condition'] == BTX_NOMENCLATURE else DATASET_TO_DELTA_T[DATASETS_LIST[3]]
+    """
+    selected_delta_t = 0.001
+    #reconstructed_trajectory = trajectory.reconstructed_trajectory(selected_delta_t)
+    reconstructed_trajectory = trajectory
 
-    reconstructed_trajectory = trajectory.reconstructed_trajectory(selected_delta_t)
-
-    if trajectory.length > 6:
-        _,_,d_2_4,localization_precision,_= reconstructed_trajectory.short_range_diffusion_coefficient_msd()
+    try:
+        _,_,d_2_4,localization_precision,_= reconstructed_trajectory.short_range_diffusion_coefficient_msd(bin_width=selected_delta_t)
         trajectory.info['analysis']['d_2_4'] = d_2_4
         trajectory.info['analysis']['localization_precision'] = localization_precision
+    except AssertionError:
+        pass
 
-    if reconstructed_trajectory.length > NUMBER_OF_POINTS_FOR_MSD + 2:
-        _,_,betha,k,goodness_of_fit = reconstructed_trajectory.temporal_average_mean_squared_displacement(log_log_fit_limit=NUMBER_OF_POINTS_FOR_MSD)
+    try:
+        _,_,betha,k,goodness_of_fit = reconstructed_trajectory.temporal_average_mean_squared_displacement(log_log_fit_limit=NUMBER_OF_POINTS_FOR_MSD, bin_width=selected_delta_t)
         trajectory.info['analysis']['betha'] = betha
         trajectory.info['analysis']['k'] = k
         trajectory.info['analysis']['goodness_of_fit'] = goodness_of_fit
+    except AssertionError:
+        pass
 
     for angle in trajectory.info['analysis']['angles_analysis']:
         trajectory.info['analysis']['angles_analysis'][angle] = trajectory.turning_angles(steps_lag=int(angle))
@@ -169,23 +175,28 @@ def analyze_trajectory(trajectory_id):
                     trajectory.info['analysis']['confinement-b'].append(b)
                     trajectory.info['analysis']['confinement-e'].append(e)
 
-                    reconstructed_sub_trajectory = sub_trajectory.reconstructed_trajectory(selected_delta_t)
-                    if reconstructed_sub_trajectory.length > NUMBER_OF_POINTS_FOR_SUB_MSD + 2:
-                        _,_,betha,k,goodness_of_fit = reconstructed_sub_trajectory.temporal_average_mean_squared_displacement(log_log_fit_limit=NUMBER_OF_POINTS_FOR_SUB_MSD)
+                    #reconstructed_sub_trajectory = sub_trajectory.reconstructed_trajectory(selected_delta_t)
+                    reconstructed_sub_trajectory = sub_trajectory
+                    try:
+                        _,_,betha,k,goodness_of_fit = reconstructed_sub_trajectory.temporal_average_mean_squared_displacement(log_log_fit_limit=NUMBER_OF_POINTS_FOR_SUB_MSD, bin_width=selected_delta_t)
                         trajectory.info['analysis']['confinement-k'].append(k)
                         trajectory.info['analysis']['confinement-betha'].append(betha)
                         trajectory.info['analysis']['confinement-goodness_of_fit'].append(goodness_of_fit)
-
+                    except AssertionError:
+                        pass
                 except QhullError:
                     pass
             else:
                 trajectory.info['analysis']['non-confinement-steps'].append(sub_trajectory.length)
-                reconstructed_sub_trajectory = sub_trajectory.reconstructed_trajectory(selected_delta_t)
-                if reconstructed_sub_trajectory.length > NUMBER_OF_POINTS_FOR_SUB_MSD + 2:
-                    _,_,betha,k,goodness_of_fit = reconstructed_sub_trajectory.temporal_average_mean_squared_displacement(log_log_fit_limit=NUMBER_OF_POINTS_FOR_SUB_MSD)
+                #reconstructed_sub_trajectory = sub_trajectory.reconstructed_trajectory(selected_delta_t)
+                reconstructed_sub_trajectory = sub_trajectory
+                try:
+                    _,_,betha,k,goodness_of_fit = reconstructed_sub_trajectory.temporal_average_mean_squared_displacement(log_log_fit_limit=NUMBER_OF_POINTS_FOR_SUB_MSD, bin_width=selected_delta_t)
                     trajectory.info['analysis']['non-confinement-k'].append(k)
                     trajectory.info['analysis']['non-confinement-betha'].append(betha)
                     trajectory.info['analysis']['non-confinement-goodness_of_fit'].append(goodness_of_fit)
+                except AssertionError:
+                    pass
 
             for angle in trajectory.info['analysis']['angles_by_state'][str(state)]['angles']:
                 trajectory.info['analysis']['angles_by_state'][str(state)]['angles'][angle] += sub_trajectory.turning_angles(steps_lag=int(angle))
