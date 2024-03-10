@@ -91,8 +91,6 @@ def extract_dataframes_from_file(dataset_directory, a_file):
             initial_row = row_index
             current_id = dataset.iloc[row_index]['track_id']
 
-
-
     extraction_result.append((
         dataset.iloc[initial_row:row_index].copy().sort_values('t', ascending=True),
         int(current_id),
