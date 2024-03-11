@@ -33,6 +33,8 @@ def analyze_dcr(datasets_one, datasets_two, datasets_combined, dataset_one_label
 
     sns.set(font_scale=3.5)
     sns.histplot(data=dcr_dataframe, x='Track detection channel ratio (tDCR)', hue='Experimental condition', kde=True)
+    plt.xlim([0,1])
+    plt.xticks([0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1.0])
     plt.show()
 
     DatabaseHandler.connect_over_network(None, None, IP_ADDRESS, COLLECTION_NAME)
@@ -49,6 +51,8 @@ def analyze_dcr(datasets_one, datasets_two, datasets_combined, dataset_one_label
 
     sns.set(font_scale=3.5)
     sns.histplot(data=dcr_dataframe, x='Track detection channel ratio (tDCR)', color='#805380', edgecolor='#634163', kde=True)
+    plt.xlim([0,1])
+    plt.xticks([0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1.0])
     plt.show()
 
     DatabaseHandler.disconnect()
