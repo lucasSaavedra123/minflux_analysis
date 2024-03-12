@@ -1,12 +1,8 @@
 """
 This script upload all trajectories to the MongoDB database.
 """
-import os
-from collections import defaultdict
-
 from matplotlib import pyplot as plt
 import pandas as pd
-import tqdm
 from roipoly import RoiPoly
 from shapely.geometry import Polygon, Point
 
@@ -19,7 +15,7 @@ DatabaseHandler.connect_over_network(None, None, IP_ADDRESS, 'MINFLUX_DATA')
 
 files = Trajectory.objects().distinct(field="info.file")
 
-Trajectory._get_collection().update_many({}, {"$unset": {'info.roi':""}})
+#Trajectory._get_collection().update_many({}, {"$unset": {'info.roi':""}})
 
 for file in files:
     roi_index = 0
@@ -28,7 +24,8 @@ for file in files:
     p = {
         'x':1,
         'y':1,
-        'info.trajectory_id':1
+        'info.trajectory_id':1,
+        'info.roi':1
     }
     
     trajectories_infos = list(Trajectory._get_collection().find(q, p))
@@ -36,7 +33,8 @@ for file in files:
     raw_dataframe = {
         'x': [],
         'y': [],
-        'trajectory_id': []
+        'trajectory_id': [],
+        'roi': []
     }
 
     for sub_info in trajectories_infos:
@@ -44,7 +42,18 @@ for file in files:
         raw_dataframe['y'] += sub_info['y']
         raw_dataframe['trajectory_id'] += [sub_info['info']['trajectory_id']] * len(sub_info['x'])
 
+        if 'roi' in sub_info['info']:
+            raw_dataframe['roi'] += [sub_info['info']['roi']] * len(sub_info['x'])
+        else:
+            raw_dataframe['roi'] += [None] * len(sub_info['x'])
+
     dataframe = pd.DataFrame(raw_dataframe)
+
+    plt.scatter(dataframe['x'], dataframe['y'], s=1)
+    plt.title('PREVIEW')
+    plt.show()
+
+    dataframe = dataframe[dataframe['roi'].isnull()]
 
     while len(dataframe) != 0:
         plt.scatter(dataframe['x'], dataframe['y'], s=1)
