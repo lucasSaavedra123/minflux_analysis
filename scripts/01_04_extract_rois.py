@@ -24,6 +24,7 @@ for file in files:
     p = {
         'x':1,
         'y':1,
+        't':1,
         'info.trajectory_id':1,
         'info.roi':1
     }
@@ -33,6 +34,7 @@ for file in files:
     raw_dataframe = {
         'x': [],
         'y': [],
+        't': [],
         'trajectory_id': [],
         'roi': []
     }
@@ -40,6 +42,7 @@ for file in files:
     for sub_info in trajectories_infos:
         raw_dataframe['x'] += sub_info['x']
         raw_dataframe['y'] += sub_info['y']
+        raw_dataframe['t'] += sub_info['t']
         raw_dataframe['trajectory_id'] += [sub_info['info']['trajectory_id']] * len(sub_info['x'])
 
         if 'roi' in sub_info['info']:
@@ -49,11 +52,12 @@ for file in files:
 
     dataframe = pd.DataFrame(raw_dataframe)
 
-    plt.scatter(dataframe['x'], dataframe['y'], s=1)
-    plt.title('PREVIEW')
-    plt.show()
-
     dataframe = dataframe[dataframe['roi'].isnull()]
+
+    if len(dataframe) != 0:
+        plt.scatter(dataframe['x'], dataframe['y'], s=1)
+        plt.title('PREVIEW')
+        plt.show()
 
     while len(dataframe) != 0:
         plt.scatter(dataframe['x'], dataframe['y'], s=1)
