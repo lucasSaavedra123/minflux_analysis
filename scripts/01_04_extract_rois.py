@@ -2,6 +2,7 @@
 This script upload all trajectories to the MongoDB database.
 """
 from matplotlib import pyplot as plt
+import tqdm
 import pandas as pd
 from roipoly import RoiPoly
 from shapely.geometry import Polygon, Point
@@ -17,7 +18,7 @@ files = Trajectory.objects().distinct(field="info.file")
 
 #Trajectory._get_collection().update_many({}, {"$unset": {'info.roi':""}})
 
-for file in files:
+for file in tqdm.tqdm(files):
     roi_index = 0
     q = {'info.file': file}
 
