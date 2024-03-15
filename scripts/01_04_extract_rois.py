@@ -19,6 +19,7 @@ files = Trajectory.objects().distinct(field="info.file")
 #Trajectory._get_collection().update_many({}, {"$unset": {'info.roi':""}})
 
 for file in tqdm.tqdm(files):
+
     roi_index = 0
     q = {'info.file': file}
 
@@ -47,6 +48,7 @@ for file in tqdm.tqdm(files):
         raw_dataframe['trajectory_id'] += [sub_info['info']['trajectory_id']] * len(sub_info['x'])
 
         if 'roi' in sub_info['info']:
+            roi_index = max(roi_index, sub_info['info']['roi']+1)
             raw_dataframe['roi'] += [sub_info['info']['roi']] * len(sub_info['x'])
         else:
             raw_dataframe['roi'] += [None] * len(sub_info['x'])
