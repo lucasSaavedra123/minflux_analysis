@@ -36,7 +36,7 @@ COMBINED_DATASETS = [
 ]
 
 DatabaseHandler.connect_over_network(None, None, IP_ADDRESS, COLLECTION_NAME)
-file = open('./preliminary_results.txt', 'w')
+file = open('./Results/preliminary_results.txt', 'w')
 
 file.write("PERCENTAGE OF IMMOBILIZED TRAJECTORIES\n")
 for dataset in tqdm.tqdm(INDIVIDUAL_DATASETS):
