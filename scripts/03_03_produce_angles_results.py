@@ -20,22 +20,31 @@ APPLY_GS_CRITERIA = True
 
 DatabaseHandler.connect_over_network(None, None, IP_ADDRESS, COLLECTION_NAME)
 
-new_datasets_list = DATASETS_LIST.copy()[:-3]
-new_datasets_list.append(BTX_NOMENCLATURE)
-new_datasets_list.append(CHOL_NOMENCLATURE)
+INDIVIDUAL_DATASETS = [
+    'Control',
+    'CDx',
+    'BTX680R',
+    'CholesterolPEGKK114',
+    'CK666-BTX680',
+    'CK666-CHOL',
+    'BTX640-CHOL-50-nM',
+    'BTX640-CHOL-50-nM-LOW-DENSITY',
+]
+
+new_datasets_list = INDIVIDUAL_DATASETS.copy()
+
+for combined_dataset in [
+    'Cholesterol and btx',
+    'CK666-BTX680-CHOL',
+    'BTX680-fPEG-CHOL-50-nM',
+    'BTX680-fPEG-CHOL-100-nM',
+]:
+    new_datasets_list.append((combined_dataset, BTX_NOMENCLATURE))
+    new_datasets_list.append((combined_dataset, CHOL_NOMENCLATURE))
 
 for index, dataset in enumerate(new_datasets_list):
     print(dataset)
-
-    if dataset not in [BTX_NOMENCLATURE, CHOL_NOMENCLATURE]:
-        filter_query = {'info.dataset': dataset, 'info.immobile': False} if APPLY_GS_CRITERIA else {'info.dataset': dataset}
-    else:
-        filter_query = {'$or': [{'info.classified_experimental_condition': dataset, 'info.immobile': False} if APPLY_GS_CRITERIA else {'info.classified_experimental_condition': dataset}]}
-
-        if dataset == BTX_NOMENCLATURE:
-            filter_query['$or'].append({'info.dataset': 'BTX680R', 'info.immobile': False} if APPLY_GS_CRITERIA else {'info.dataset': 'BTX680R'})
-        else:
-            filter_query['$or'].append({'info.dataset': 'CholesterolPEGKK114', 'info.immobile': False} if APPLY_GS_CRITERIA else {'info.dataset': 'CholesterolPEGKK114'})
+    filter_query = {'info.dataset': dataset, 'info.immobile': True} if index < len(INDIVIDUAL_DATASETS) else {'info.dataset': dataset[0], 'info.classified_experimental_condition':dataset[1], 'info.immobile': True}
 
     with pd.ExcelWriter(f"./Results/{dataset}_{index}_gs_{APPLY_GS_CRITERIA}_angles_information.xlsx") as writer:
         all_angles = default_angles()
