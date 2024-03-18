@@ -3,7 +3,7 @@ import math
 import numpy as np
 import scipy
 import matplotlib.pyplot as plt
-from scipy.stats import chi2
+from scipy.stats import chi2, bootstrap
 from scipy.optimize import curve_fit
 from sklearn.metrics import r2_score
 import ruptures as rpt
@@ -196,13 +196,18 @@ class Trajectory(Document):
                 displacement = np.sum(np.abs((positions[index] - positions[0]) ** 2))
                 ea_msd[int(interval/delta)].append(displacement)
 
+        intervals = [[], []]
+
         for i in ea_msd:
+            res = bootstrap(ea_msd[i], np.mean, n_resamples=len(trajectories), confidence_level=alpha, method='percentile')
             ea_msd[i] = np.mean(ea_msd[i])
+            intervals[0].append(res.confidence_interval.low)
+            intervals[1].append(res.confidence_interval.high)
 
         aux = np.array(sorted(list(zip(list(ea_msd.keys()), list(ea_msd.values()))), key=lambda x: x[0]))
         t_vec, ea_msd = (aux[:,0] * delta) + delta, aux[:,1]
 
-        return t_vec, ea_msd, [ea_msd, ea_msd]
+        return t_vec, ea_msd, [np.array(intervals[0]), np.array(intervals[1])]
 
     def __init__(self, x, y=None, z=None, model_category=None, noise_x=None, noise_y=None, noise_z=None, noisy=False, t=None, exponent=None, exponent_type='anomalous', info={}, **kwargs):
 
