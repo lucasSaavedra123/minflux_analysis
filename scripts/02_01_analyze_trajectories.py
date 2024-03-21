@@ -68,7 +68,7 @@ def analyze_trajectory(trajectory_id):
     else:
         trajectory.info['analysis'] = {}
 
-    trajectory.info['immobile'] = trajectory.is_immobile(4.397)
+    trajectory.info['immobile'] = trajectory.is_immobile(GS_THRESHOLD)
     trajectory.info['ratio'] = trajectory.normalized_ratio
 
     """
