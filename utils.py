@@ -357,9 +357,8 @@ def ischange(xn, method='variance', threshold=0, window_size=1):
         raise ValueError(f"Method '{method}' is not valid.")
 
 def transform_traj_into_features(array):
-    expected_q = 1+(49*(array.shape[-1]-1))
+    expected_q = 1+(60*(array.shape[-1]-1))
     features = np.zeros((array.shape[0], expected_q))
-    delta = 3
 
     for trajectory_index in range(array.shape[0]):
         T_max = array.shape[1]
@@ -371,19 +370,21 @@ def transform_traj_into_features(array):
         q += 1
         
         for dimension_index in range(array.shape[-1]-1):
-            xn = array[trajectory_index, :, dimension_index]#normalize_vector(array[trajectory_index, :, dimension_index])
+            xn = normalize_vector(array[trajectory_index, :, dimension_index])
 
             #Displacements
             v = np.diff(xn)
             Mf, MDf, SDf, Sf, Kf, Rf = average_statistics(v)
-            new_statistics = [Mf, MDf, Sf, Kf]
+            assert not np.any(np.isnan([Mf, MDf, SDf, Sf, Kf, Rf]))
+            new_statistics = [Mf, MDf, SDf, Sf, Kf, Rf]
             features[trajectory_index, q:q+len(new_statistics)] = new_statistics
             q += len(new_statistics)
 
             #Absolute displacements
             f = np.abs(v)
             Mf, MDf, SDf, Sf, Kf, Rf = average_statistics(f)
-            new_statistics = [Mf, MDf, SDf, Sf, Kf]
+            assert not np.any(np.isnan([Mf, MDf, SDf, Sf, Kf, Rf]))
+            new_statistics = [Mf, MDf, SDf, Sf, Kf, Rf]
             features[trajectory_index, q:q+len(new_statistics)] = new_statistics
             q += len(new_statistics)
 
@@ -391,11 +392,8 @@ def transform_traj_into_features(array):
             for step_offset in [2,3,4,5,6,7,8,9]:
                 v_i = np.abs(xn[step_offset:] - xn[:-step_offset])
                 Mf, MDf, SDf, Sf, Kf, Rf = average_statistics(v_i)
-
-                if step_offset < 8:
-                    new_statistics = [Mf, MDf, SDf, Sf, Kf]
-                else:
-                    new_statistics = [Mf, MDf, SDf, Sf, Kf]
+                assert not np.any(np.isnan([Mf, MDf, SDf, Sf, Kf, Rf]))
+                new_statistics = [Mf, MDf, SDf, Sf, Kf, Rf]
 
                 features[trajectory_index, q:q+len(new_statistics)] = new_statistics
                 q += len(new_statistics)

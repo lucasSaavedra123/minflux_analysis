@@ -33,7 +33,7 @@ if CREATE_DATA:
     else:
         table = pd.read_csv(DATASET_PATH)
 
-        RAW_ARRAY = np.zeros((len(table['id'].unique()), 1+(49*2)+len(CLASS_LABELS)))
+        RAW_ARRAY = np.zeros((len(table['id'].unique()), 1+(60*2)+len(CLASS_LABELS)))
 
         for i, id in tqdm.tqdm(enumerate(table['id'].unique())):
             trajectory_df = table[table['id'] == id].sort_values('t')
@@ -42,7 +42,11 @@ if CREATE_DATA:
             new_array[0,:,1] = trajectory_df['y']
             new_array[0,:,2] = trajectory_df['t']
 
-            RAW_ARRAY[i, :-len(CLASS_LABELS)] = transform_traj_into_features(new_array)[0]
+            try:
+                RAW_ARRAY[i, :-len(CLASS_LABELS)] = transform_traj_into_features(new_array)[0]
+            except AssertionError:
+                RAW_ARRAY[i, :-len(CLASS_LABELS)] = np.nan
+
             label = trajectory_df['label'].values[0].upper()
 
             try:
@@ -65,13 +69,14 @@ else:
         print("dataset.npy does not exist")
         exit()
 
-X = RAW_ARRAY[:, :-len(CLASS_LABELS)]
-Y = RAW_ARRAY[:, -len(CLASS_LABELS):]
+X = RAW_ARRAY[~np.any(np.isnan(RAW_ARRAY), axis=1), :-len(CLASS_LABELS)]
+Y = RAW_ARRAY[~np.any(np.isnan(RAW_ARRAY), axis=1), -len(CLASS_LABELS):]
+
 print("Data shape", X.shape, Y.shape)
 model = keras.Sequential(
     [   
-        keras.Input(shape=(1+(49*2),)),
-        layers.Dense(20, activation="sigmoid"),
+        keras.Input(shape=(1+(60*2),)),
+        #layers.Dense(20, activation="sigmoid"),
         layers.Dense(20, activation="sigmoid"),
         layers.Dense(len(CLASS_LABELS), activation="softmax"),
     ]
