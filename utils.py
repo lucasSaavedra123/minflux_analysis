@@ -321,17 +321,9 @@ def average_statistics(vector):
     SDf = np.std(vector)
     Sf = scipy.stats.skew(vector)
     Kf = scipy.stats.kurtosis(vector)
-    """
-    if len(vector) > 2:
-        Ap, Phi = EH.ApEn(vector, 2, 1)
-        Ef = Ap[-1]
-    else:
-        Ef = 0
-    """
-    Ef = 0
     Rf = np.sqrt(np.mean(vector**2))
 
-    return [Mf, MDf, SDf, Sf, Kf, Ef, Rf]
+    return [Mf, MDf, SDf, Sf, Kf, Rf]
 
 def normalize_vector(vector):
     vectorn = vector - np.mean(vector)
@@ -365,7 +357,7 @@ def ischange(xn, method='variance', threshold=0, window_size=1):
         raise ValueError(f"Method '{method}' is not valid.")
 
 def transform_traj_into_features(array):
-    expected_q = 1+(57*(array.shape[-1]-1))
+    expected_q = 1+(49*(array.shape[-1]-1))
     features = np.zeros((array.shape[0], expected_q))
     delta = 3
 
@@ -383,118 +375,30 @@ def transform_traj_into_features(array):
 
             #Displacements
             v = np.diff(xn)
-            Mf, MDf, SDf, Sf, Kf, Ef, Rf = average_statistics(v)
-            new_statistics = [Mf, MDf, Sf, Kf, Ef]
+            Mf, MDf, SDf, Sf, Kf, Rf = average_statistics(v)
+            new_statistics = [Mf, MDf, Sf, Kf]
             features[trajectory_index, q:q+len(new_statistics)] = new_statistics
             q += len(new_statistics)
 
             #Absolute displacements
             f = np.abs(v)
-            Mf, MDf, SDf, Sf, Kf, Ef, Rf = average_statistics(f)
-            new_statistics = [Mf, MDf, SDf, Sf, Kf, Ef]
+            Mf, MDf, SDf, Sf, Kf, Rf = average_statistics(f)
+            new_statistics = [Mf, MDf, SDf, Sf, Kf]
             features[trajectory_index, q:q+len(new_statistics)] = new_statistics
             q += len(new_statistics)
 
             #Absolute displacements -> Sampled every step_offset time steps
             for step_offset in [2,3,4,5,6,7,8,9]:
                 v_i = np.abs(xn[step_offset:] - xn[:-step_offset])
-                Mf, MDf, SDf, Sf, Kf, Ef, Rf = average_statistics(v_i)
+                Mf, MDf, SDf, Sf, Kf, Rf = average_statistics(v_i)
 
                 if step_offset < 8:
-                    new_statistics = [Mf, MDf, SDf, Sf, Kf, Ef]
+                    new_statistics = [Mf, MDf, SDf, Sf, Kf]
                 else:
                     new_statistics = [Mf, MDf, SDf, Sf, Kf]
 
                 features[trajectory_index, q:q+len(new_statistics)] = new_statistics
                 q += len(new_statistics)
-
-            """
-            #Displacement relative change
-            f = v[1:]/v[:-1]
-            Mf, MDf, SDf, Sf, Kf, Ef, Rf = average_statistics(f)
-            new_statistics = [MDf]
-            features[trajectory_index, q:q+len(new_statistics)] = new_statistics
-            q += len(new_statistics)
-
-            #Fourier Transform
-            fv = np.abs(np.fft.fftshift(np.fft.fft(v)))
-            f = fv[int(np.ceil(T_max/2)):] / T_max
-            Mf, MDf, SDf, Sf, Kf, Ef, Rf = average_statistics(f)
-            new_statistics = [Mf, MDf, SDf, Sf, Kf, Ef]
-            features[trajectory_index, q:q+len(new_statistics)] = new_statistics
-            q += len(new_statistics)
-
-            #Normalized power spectral density (PSD)
-            f = (fv[int(np.ceil(T_max/2)):]**2) / (T_max**2)
-            h = np.ones(len(f))
-            h[:int(np.round(T_max/4))] = -1
-            f = f * h
-            Pf = np.sum(f)
-            new_statistics = [Pf]
-            features[trajectory_index, q:q+len(new_statistics)] = new_statistics
-            q += len(new_statistics)
-
-            Pt = np.zeros(int(np.ceil(T_max/delta))-1)
-            for m in range(0, len(Pt)):
-                index = m*delta
-                f = v[int(index):int(index+delta)]
-                fv_time = np.abs(np.fft.fftshift(np.fft.fft(f)))
-                fv_time = (fv_time[int(np.ceil(delta/2))-1:]**2) / (delta**2)
-                Pt[m] = np.sum(fv_time)
-
-            h = np.ones_like(Pt)
-            h[:int(np.round(Pt.shape[0]/2))] = -1
-            dPf = np.sum(Pt * h)
-            new_statistics = [dPf]
-            features[trajectory_index, q:q+len(new_statistics)] = new_statistics
-            q += len(new_statistics)
-
-            f = np.abs(Pt)
-            Mf, MDf, SDf, Sf, Kf, Ef, Rf = average_statistics(f)
-            new_statistics = [Mf, MDf, SDf, Sf, Kf, Ef]
-            features[trajectory_index, q:q+len(new_statistics)] = new_statistics
-            q += len(new_statistics)
-
-            #Signal rate of variation
-            LT = ischange(xn, 'variance', threshold=20, window_size=3)
-            LT = np.sum(LT==0) / T_max
-            new_statistics = [LT]
-            features[trajectory_index, q:q+len(new_statistics)] = new_statistics
-            q += 1
-
-            MSD = np.zeros(int(np.floor(T_max/2)))
-            for n in range(0, len(MSD)):
-                MSD[n] = np.mean((xn[1+n:] - xn[:-1-n])**2)
-
-            t = np.arange(1, np.floor(T_max/2).astype(int))
-            v2 = (MSD[1:] - MSD[:-1])/t
-            f = np.abs(v2)
-            Mf, MDf, SDf, Sf, Kf, Ef, Rf = average_statistics(f)
-            new_statistics = [Mf, MDf, SDf, Sf, Kf, Ef]
-            features[trajectory_index, q:q+len(new_statistics)] = new_statistics
-            q += len(new_statistics)
-
-            #Autocorrelation function of the displacement 
-            rv = np.correlate(v, v, mode='full') / T_max
-            new_statistics = [np.sum(rv[T_max - 1 + np.arange(delta)])]
-            features[trajectory_index, q:q+len(new_statistics)] = new_statistics
-            q += len(new_statistics)
-
-            #Wavelet transform
-            wt = scipy.signal.cwt(v, scipy.signal.morlet, widths=np.arange(1, 3))
-
-            f = np.abs(wt[0])
-            Mf, MDf, SDf, Sf, Kf, Ef, Rf = average_statistics(f)
-            new_statistics = [Mf, MDf, SDf, Sf, Kf, Ef]
-            features[trajectory_index, q:q+len(new_statistics)] = new_statistics
-            q += len(new_statistics)
-
-            f = np.abs(wt[1])
-            Mf, MDf, SDf, Sf, Kf, Ef, Rf = average_statistics(f)
-            new_statistics = [Mf, MDf, SDf, Sf, Kf, Ef]
-            features[trajectory_index, q:q+len(new_statistics)] = new_statistics
-            q += len(new_statistics)
-            """
 
         assert q == expected_q, f"{q} == {expected_q}"
 

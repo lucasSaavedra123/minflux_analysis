@@ -16,8 +16,8 @@ import os
 from Trajectory import Trajectory
 from collections import Counter
 
-APPEND_MORE_DATA = True
-CREATE_DATA = False
+APPEND_MORE_DATA = False
+CREATE_DATA = True
 LOAD_MODEL = False
 PLOT_STATS = True
 
@@ -33,7 +33,7 @@ if CREATE_DATA:
     else:
         table = pd.read_csv(DATASET_PATH)
 
-        RAW_ARRAY = np.zeros((len(table['id'].unique()), 1+(57*2)+len(CLASS_LABELS)))
+        RAW_ARRAY = np.zeros((len(table['id'].unique()), 1+(49*2)+len(CLASS_LABELS)))
 
         for i, id in tqdm.tqdm(enumerate(table['id'].unique())):
             trajectory_df = table[table['id'] == id].sort_values('t')
@@ -70,7 +70,7 @@ Y = RAW_ARRAY[:, -len(CLASS_LABELS):]
 print("Data shape", X.shape, Y.shape)
 model = keras.Sequential(
     [   
-        keras.Input(shape=(1+(57*2),)),
+        keras.Input(shape=(1+(49*2),)),
         layers.Dense(20, activation="sigmoid"),
         layers.Dense(20, activation="sigmoid"),
         layers.Dense(len(CLASS_LABELS), activation="softmax"),
@@ -90,7 +90,7 @@ if LOAD_MODEL:
         print("LOAD_MODEL=True cannot be executed because files are measing. Please, set LOAD_MODEL=False")
 else:
     X_train, X_val, Y_train, Y_val = train_test_split(X, Y, test_size=0.20)
-    history_dict = model.fit(X_train, Y_train, validation_data=[X_val, Y_val], epochs=35, batch_size=8).history
+    history_dict = model.fit(X_train, Y_train, validation_data=[X_val, Y_val], epochs=50, batch_size=8).history
     json.dump(history_dict, open('training_history_do_not_delete.json', 'w'))
     model.save('model.keras')
     np.save('X_val_do_not_delete.npy', X_val)
