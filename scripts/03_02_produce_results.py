@@ -151,13 +151,13 @@ for index, dataset in enumerate(new_datasets_list):
         list_of_ks = list(itertools.chain.from_iterable(list_of_ks))
         pd.DataFrame({'confinement-k': list_of_ks}).to_excel(writer, sheet_name='confinement-k', index=False)
 
-        list_of_ks = get_list_of_values_of_analysis_field(filter_query, 'non-confinement-d_2_4')
-        list_of_ks = list(itertools.chain.from_iterable(list_of_ks))
-        pd.DataFrame({'non-confinement-d_2_4': list_of_ks}).to_excel(writer, sheet_name='non-confinement-d_2_4', index=False)
+        list_of_ds = get_list_of_values_of_analysis_field(filter_query, 'non-confinement-d_2_4')
+        list_of_ds = list(itertools.chain.from_iterable(list_of_ds))
+        pd.DataFrame({'non-confinement-d_2_4': list_of_ds}).to_excel(writer, sheet_name='non-confinement-d_2_4', index=False)
 
-        list_of_ks = get_list_of_values_of_analysis_field(filter_query, 'confinement-d_2_4')
-        list_of_ks = list(itertools.chain.from_iterable(list_of_ks))
-        pd.DataFrame({'confinement-d_2_4': list_of_ks}).to_excel(writer, sheet_name='confinement-d_2_4', index=False)
+        list_of_ds = get_list_of_values_of_analysis_field(filter_query, 'confinement-d_2_4')
+        list_of_ds = list(itertools.chain.from_iterable(list_of_ds))
+        pd.DataFrame({'confinement-d_2_4': list_of_ds}).to_excel(writer, sheet_name='confinement-d_2_4', index=False)
 
         list_of_confinement_areas_centroids = get_list_of_values_of_analysis_field(filter_query, 'confinement_areas_centroids')
         list_of_confinement_areas_centroids = list(itertools.chain.from_iterable([pdist(np.array(confinement_areas_centroids) * 1e3).tolist() for confinement_areas_centroids in list_of_confinement_areas_centroids if len(confinement_areas_centroids) >= 2]))
