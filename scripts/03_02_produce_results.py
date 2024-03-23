@@ -55,8 +55,8 @@ for index, dataset in enumerate(new_datasets_list):
         pd.DataFrame({'k': get_list_of_values_of_analysis_field(filter_query, 'k')}).to_excel(writer, sheet_name='k', index=False)
         pd.DataFrame({'betha': get_list_of_values_of_analysis_field(filter_query, 'betha')}).to_excel(writer, sheet_name='betha', index=False)
         #pd.DataFrame({'dc': get_list_of_values_of_analysis_field(filter_query, 'directional_coefficient')}).to_excel(writer, sheet_name='directional_coefficient', index=False)
-        #pd.DataFrame({'d_2_4': get_list_of_values_of_analysis_field(filter_query, 'd_2_4')}).to_excel(writer, sheet_name='d_2_4', index=False)
-        #pd.DataFrame({'localization_precision': get_list_of_values_of_analysis_field(filter_query, 'localization_precision')}).to_excel(writer, sheet_name='localization_precision', index=False)
+        pd.DataFrame({'d_2_4': get_list_of_values_of_analysis_field(filter_query, 'd_2_4')}).to_excel(writer, sheet_name='d_2_4', index=False)
+        pd.DataFrame({'localization_precision': get_list_of_values_of_analysis_field(filter_query, 'localization_precision')}).to_excel(writer, sheet_name='localization_precision', index=False)
 
         residence_times = get_list_of_values_of_analysis_field(filter_query, 'residence_time')
         residence_times = [residence_time for residence_time in residence_times if residence_time != 0]
@@ -150,6 +150,14 @@ for index, dataset in enumerate(new_datasets_list):
         list_of_ks = get_list_of_values_of_analysis_field(filter_query, 'confinement-k')
         list_of_ks = list(itertools.chain.from_iterable(list_of_ks))
         pd.DataFrame({'confinement-k': list_of_ks}).to_excel(writer, sheet_name='confinement-k', index=False)
+
+        list_of_ks = get_list_of_values_of_analysis_field(filter_query, 'non-confinement-d_2_4')
+        list_of_ks = list(itertools.chain.from_iterable(list_of_ks))
+        pd.DataFrame({'non-confinement-d_2_4': list_of_ks}).to_excel(writer, sheet_name='non-confinement-d_2_4', index=False)
+
+        list_of_ks = get_list_of_values_of_analysis_field(filter_query, 'confinement-d_2_4')
+        list_of_ks = list(itertools.chain.from_iterable(list_of_ks))
+        pd.DataFrame({'confinement-d_2_4': list_of_ks}).to_excel(writer, sheet_name='confinement-d_2_4', index=False)
 
         list_of_confinement_areas_centroids = get_list_of_values_of_analysis_field(filter_query, 'confinement_areas_centroids')
         list_of_confinement_areas_centroids = list(itertools.chain.from_iterable([pdist(np.array(confinement_areas_centroids) * 1e3).tolist() for confinement_areas_centroids in list_of_confinement_areas_centroids if len(confinement_areas_centroids) >= 2]))
