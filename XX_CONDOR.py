@@ -60,7 +60,7 @@ if CREATE_DATA:
                 RAW_ARRAY = np.append(OLD_DATA, RAW_ARRAY, axis=0)
             else:
                 print("WARNING: Data is not appended because dataset.npy it does not exist")
-
+        np.random.shuffle(RAW_ARRAY)
         np.save(RAW_DATA_PATH, RAW_ARRAY)
 else:
     if os.path.exists(RAW_DATA_PATH):
@@ -94,7 +94,7 @@ if LOAD_MODEL:
     except FileNotFoundError:
         print("LOAD_MODEL=True cannot be executed because files are measing. Please, set LOAD_MODEL=False")
 else:
-    X_train, X_val, Y_train, Y_val = train_test_split(X, Y, test_size=0.20, shuffle=True)
+    X_train, X_val, Y_train, Y_val = train_test_split(X, Y, test_size=0.20)
     history_dict = model.fit(X_train, Y_train, validation_data=[X_val, Y_val], epochs=10, batch_size=8).history
     json.dump(history_dict, open('training_history_do_not_delete.json', 'w'))
     model.save('model.keras')
