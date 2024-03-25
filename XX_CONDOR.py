@@ -17,11 +17,11 @@ from Trajectory import Trajectory
 from collections import Counter
 
 APPEND_MORE_DATA = False
-CREATE_DATA = True
+CREATE_DATA = False
 LOAD_MODEL = False
 PLOT_STATS = True
 
-DATASET_PATH = 'D:\GitHub Repositories\wavenet_tcn_andi\data.csv'
+DATASET_PATH = 'D:\GitHub Repositories\wavenet_tcn_andi\simulations\data.csv'
 RAW_DATA_PATH = './dataset.npy'
 
 CLASS_LABELS = ['BM', 'HD', 'TD']
@@ -76,7 +76,7 @@ print("Data shape", X.shape, Y.shape)
 model = keras.Sequential(
     [   
         keras.Input(shape=(1+(60*2),)),
-        #layers.Dense(20, activation="sigmoid"),
+        layers.Dense(20, activation="sigmoid"),
         layers.Dense(20, activation="sigmoid"),
         layers.Dense(len(CLASS_LABELS), activation="softmax"),
     ]
@@ -94,8 +94,8 @@ if LOAD_MODEL:
     except FileNotFoundError:
         print("LOAD_MODEL=True cannot be executed because files are measing. Please, set LOAD_MODEL=False")
 else:
-    X_train, X_val, Y_train, Y_val = train_test_split(X, Y, test_size=0.20)
-    history_dict = model.fit(X_train, Y_train, validation_data=[X_val, Y_val], epochs=50, batch_size=8).history
+    X_train, X_val, Y_train, Y_val = train_test_split(X, Y, test_size=0.20, shuffle=True)
+    history_dict = model.fit(X_train, Y_train, validation_data=[X_val, Y_val], epochs=10, batch_size=8).history
     json.dump(history_dict, open('training_history_do_not_delete.json', 'w'))
     model.save('model.keras')
     np.save('X_val_do_not_delete.npy', X_val)
@@ -138,8 +138,8 @@ DatabaseHandler.connect_over_network(None, None, IP_ADDRESS, COLLECTION_NAME)
 
 results = []
 
-for t in  tqdm.tqdm(Trajectory.objects(info__dataset='Control')):
-    INPUT = np.zeros((1, 1+(57*2)))
+for t in  tqdm.tqdm(Trajectory.objects(info__dataset='Control', info__immobile=False)):
+    INPUT = np.zeros((1, 1+(60*2)))
 
     new_array = np.zeros((1, t.length, 3))
 
@@ -147,18 +147,18 @@ for t in  tqdm.tqdm(Trajectory.objects(info__dataset='Control')):
     new_array[0,:,1] = t.get_noisy_y() * 1000
     new_array[0,:,2] = t.get_time()
 
-    INPUT[0] = transform_traj_into_features(new_array)[0]
+    try:
+        INPUT[0] = transform_traj_into_features(new_array)[0]
+    except AssertionError:
+        continue
 
     prediction = np.argmax(model.predict(INPUT, verbose=False))
-    
-    print(CLASS_LABELS[prediction])
-    t.plot()
 
     results.append(CLASS_LABELS[prediction])
 
-    #if prediction == 0:
-    #    plt.plot(t.get_noisy_x() * 1000, t.get_noisy_y() * 1000)
-    #    plt.show()
+    #plt.title(CLASS_LABELS[prediction])
+    #plt.plot(t.get_noisy_x() * 1000, t.get_noisy_y() * 1000)
+    #plt.show()
 
     print(Counter(results))
 
