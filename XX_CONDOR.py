@@ -14,11 +14,11 @@ from DatabaseHandler import DatabaseHandler
 from sklearn.model_selection import train_test_split
 import os
 from Trajectory import Trajectory
-from collections import Counter
+from collections import defaultdict
 
 APPEND_MORE_DATA = False
 CREATE_DATA = False
-LOAD_MODEL = False
+LOAD_MODEL = True
 PLOT_STATS = True
 
 DATASET_PATH = 'D:\GitHub Repositories\wavenet_tcn_andi\simulations\data.csv'
@@ -95,7 +95,7 @@ if LOAD_MODEL:
         print("LOAD_MODEL=True cannot be executed because files are measing. Please, set LOAD_MODEL=False")
 else:
     X_train, X_val, Y_train, Y_val = train_test_split(X, Y, test_size=0.20)
-    history_dict = model.fit(X_train, Y_train, validation_data=[X_val, Y_val], epochs=10, batch_size=8).history
+    history_dict = model.fit(X_train, Y_train, validation_data=[X_val, Y_val], epochs=25, batch_size=8).history
     json.dump(history_dict, open('training_history_do_not_delete.json', 'w'))
     model.save('model.keras')
     np.save('X_val_do_not_delete.npy', X_val)
@@ -138,14 +138,19 @@ DatabaseHandler.connect_over_network(None, None, IP_ADDRESS, COLLECTION_NAME)
 
 results = []
 
-for t in  tqdm.tqdm(Trajectory.objects(info__dataset='Control', info__immobile=False)):
+def new_dict():
+    return {label: 0 for label in CLASS_LABELS}
+
+counter = defaultdict(new_dict)
+
+for t in tqdm.tqdm(Trajectory._get_collection().find({'info.immobile': False}, {'x':1,'y':1, 't': 1, 'info.dataset': 1, 'info.classified_experimental_condition': 1})):
     INPUT = np.zeros((1, 1+(60*2)))
 
-    new_array = np.zeros((1, t.length, 3))
+    new_array = np.zeros((1, len(t['x']), 3))
 
-    new_array[0,:,0] = t.get_noisy_x() * 1000
-    new_array[0,:,1] = t.get_noisy_y() * 1000
-    new_array[0,:,2] = t.get_time()
+    new_array[0,:,0] = np.array(t['x']) * 1000
+    new_array[0,:,1] = np.array(t['y']) * 1000
+    new_array[0,:,2] = np.array(t['t'])
 
     try:
         INPUT[0] = transform_traj_into_features(new_array)[0]
@@ -154,12 +159,24 @@ for t in  tqdm.tqdm(Trajectory.objects(info__dataset='Control', info__immobile=F
 
     prediction = np.argmax(model.predict(INPUT, verbose=False))
 
-    results.append(CLASS_LABELS[prediction])
+    if 'classified_experimental_condition' in t['info']:
+        counter[t['info']['dataset']+'_'+t['info']['classified_experimental_condition']][CLASS_LABELS[prediction]] += 1
+    else:
+        counter[t['info']['dataset']][CLASS_LABELS[prediction]] += 1
 
     #plt.title(CLASS_LABELS[prediction])
     #plt.plot(t.get_noisy_x() * 1000, t.get_noisy_y() * 1000)
     #plt.show()
 
-    print(Counter(results))
+    dics = {label: [] for label in CLASS_LABELS}
+    dics['dataset'] = []
+
+    for dataset in counter:
+        dics['dataset'].append(dataset)
+
+        for label in counter[dataset]:
+            dics[label].append(counter[dataset][label])
+
+    pd.DataFrame(dics).to_csv('classification_result.csv', index=False)
 
 DatabaseHandler.disconnect()
