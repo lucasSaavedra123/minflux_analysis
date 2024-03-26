@@ -75,7 +75,7 @@ Y = RAW_ARRAY[~np.any(np.isnan(RAW_ARRAY), axis=1), -len(CLASS_LABELS):]
 print("Data shape", X.shape, Y.shape)
 model = keras.Sequential(
     [   
-        keras.Input(shape=(1+(60*2),)),
+        keras.Input(shape=(X.shape[1],)),
         layers.Dense(20, activation="sigmoid"),
         layers.Dense(20, activation="sigmoid"),
         layers.Dense(len(CLASS_LABELS), activation="softmax"),
