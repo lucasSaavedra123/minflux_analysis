@@ -357,7 +357,7 @@ def ischange(xn, method='variance', threshold=0, window_size=1):
         raise ValueError(f"Method '{method}' is not valid.")
 
 def transform_traj_into_features(array):
-    expected_q = 1+(60*(array.shape[-1]-1))
+    expected_q = 60*(array.shape[-1]-1)
     features = np.zeros((array.shape[0], expected_q))
 
     for trajectory_index in range(array.shape[0]):
@@ -365,9 +365,9 @@ def transform_traj_into_features(array):
 
         q = 0
 
-        features[trajectory_index, q] = np.log(T_max)
+        #features[trajectory_index, q] = np.log(T_max)
 
-        q += 1
+        #q += 1
         
         for dimension_index in range(array.shape[-1]-1):
             xn = normalize_vector(array[trajectory_index, :, dimension_index])

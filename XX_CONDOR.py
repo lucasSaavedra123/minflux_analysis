@@ -15,16 +15,18 @@ from sklearn.model_selection import train_test_split
 import os
 from Trajectory import Trajectory
 from collections import defaultdict
+import pickle
+
 
 APPEND_MORE_DATA = False
-CREATE_DATA = False
-LOAD_MODEL = True
+CREATE_DATA = True
+LOAD_MODEL = False
 PLOT_STATS = True
 
 DATASET_PATH = 'D:\GitHub Repositories\wavenet_tcn_andi\simulations\data.csv'
 RAW_DATA_PATH = './dataset.npy'
 
-CLASS_LABELS = ['BM', 'HD', 'TD']
+CLASS_LABELS = ['HD', 'TD']
 
 if CREATE_DATA:
     if not os.path.exists(DATASET_PATH):
@@ -33,7 +35,7 @@ if CREATE_DATA:
     else:
         table = pd.read_csv(DATASET_PATH)
 
-        RAW_ARRAY = np.zeros((len(table['id'].unique()), 1+(60*2)+len(CLASS_LABELS)))
+        RAW_ARRAY = np.zeros((len(table['id'].unique()), (60*2)+len(CLASS_LABELS)))
 
         for i, id in tqdm.tqdm(enumerate(table['id'].unique())):
             trajectory_df = table[table['id'] == id].sort_values('t')
@@ -95,7 +97,7 @@ if LOAD_MODEL:
         print("LOAD_MODEL=True cannot be executed because files are measing. Please, set LOAD_MODEL=False")
 else:
     X_train, X_val, Y_train, Y_val = train_test_split(X, Y, test_size=0.20)
-    history_dict = model.fit(X_train, Y_train, validation_data=[X_val, Y_val], epochs=25, batch_size=8).history
+    history_dict = model.fit(X_train, Y_train, validation_data=[X_val, Y_val], epochs=30, batch_size=8).history
     json.dump(history_dict, open('training_history_do_not_delete.json', 'w'))
     model.save('model.keras')
     np.save('X_val_do_not_delete.npy', X_val)
@@ -142,8 +144,12 @@ def new_dict():
     return {label: 0 for label in CLASS_LABELS}
 
 counter = defaultdict(new_dict)
+traces, labels = [], []
 
-for t in tqdm.tqdm(Trajectory._get_collection().find({'info.immobile': False}, {'x':1,'y':1, 't': 1, 'info.dataset': 1, 'info.classified_experimental_condition': 1})):
+for t in tqdm.tqdm(Trajectory._get_collection().find({'info.immobile': False}, {'x':1,'y':1, 't': 1, 'info.dataset': 1, 'info.classified_experimental_condition': 1, 'info.analysis.betha': 1})):
+    if 'analysis' not in t['info'] or 'betha' not in t['info']['analysis'] or t['info']['analysis']['betha'] > 0.9:
+        continue
+
     INPUT = np.zeros((1, 1+(60*2)))
 
     new_array = np.zeros((1, len(t['x']), 3))
@@ -157,7 +163,10 @@ for t in tqdm.tqdm(Trajectory._get_collection().find({'info.immobile': False}, {
     except AssertionError:
         continue
 
-    prediction = np.argmax(model.predict(INPUT, verbose=False))
+    prediction = np.argmax(model.predict(INPUT[:, 1:], verbose=False))
+
+    traces.append(new_array[0,:,0:2])
+    labels.append(int(prediction))
 
     if 'classified_experimental_condition' in t['info']:
         counter[t['info']['dataset']+'_'+t['info']['classified_experimental_condition']][CLASS_LABELS[prediction]] += 1
@@ -178,5 +187,10 @@ for t in tqdm.tqdm(Trajectory._get_collection().find({'info.immobile': False}, {
             dics[label].append(counter[dataset][label])
 
     pd.DataFrame(dics).to_csv('classification_result.csv', index=False)
+
+with open("X.pkl", "wb") as f:
+    pickle.dump(traces, f)
+with open("y.pkl", "wb") as f:
+    pickle.dump(labels, f)
 
 DatabaseHandler.disconnect()
