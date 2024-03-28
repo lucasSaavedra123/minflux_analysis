@@ -19,8 +19,8 @@ import pickle
 
 
 APPEND_MORE_DATA = False
-CREATE_DATA = True
-LOAD_MODEL = False
+CREATE_DATA = False
+LOAD_MODEL = True
 PLOT_STATS = True
 
 DATASET_PATH = 'D:\GitHub Repositories\wavenet_tcn_andi\simulations\data.csv'
@@ -146,11 +146,20 @@ def new_dict():
 counter = defaultdict(new_dict)
 traces, labels = [], []
 
-for t in tqdm.tqdm(Trajectory._get_collection().find({'info.immobile': False}, {'x':1,'y':1, 't': 1, 'info.dataset': 1, 'info.classified_experimental_condition': 1, 'info.analysis.betha': 1})):
+p = {
+    'x':1,
+    'y':1,
+    't': 1,
+    'info.dataset': 1,
+    'info.classified_experimental_condition': 1,
+    'info.analysis.betha': 1,
+}
+
+for t in tqdm.tqdm(Trajectory._get_collection().find({'info.immobile': False}, p)):
     if 'analysis' not in t['info'] or 'betha' not in t['info']['analysis'] or t['info']['analysis']['betha'] > 0.9:
         continue
 
-    INPUT = np.zeros((1, 1+(60*2)))
+    INPUT = np.zeros((1, (60*2)))
 
     new_array = np.zeros((1, len(t['x']), 3))
 
@@ -163,10 +172,10 @@ for t in tqdm.tqdm(Trajectory._get_collection().find({'info.immobile': False}, {
     except AssertionError:
         continue
 
-    prediction = np.argmax(model.predict(INPUT[:, 1:], verbose=False))
+    prediction = int(np.argmax(model.predict(INPUT, verbose=False)))
 
     traces.append(new_array[0,:,0:2])
-    labels.append(int(prediction))
+    labels.append(prediction)
 
     if 'classified_experimental_condition' in t['info']:
         counter[t['info']['dataset']+'_'+t['info']['classified_experimental_condition']][CLASS_LABELS[prediction]] += 1
@@ -174,7 +183,7 @@ for t in tqdm.tqdm(Trajectory._get_collection().find({'info.immobile': False}, {
         counter[t['info']['dataset']][CLASS_LABELS[prediction]] += 1
 
     #plt.title(CLASS_LABELS[prediction])
-    #plt.plot(t.get_noisy_x() * 1000, t.get_noisy_y() * 1000)
+    #plt.plot(t['x'] * 1000, t['y'] * 1000)
     #plt.show()
 
     dics = {label: [] for label in CLASS_LABELS}
