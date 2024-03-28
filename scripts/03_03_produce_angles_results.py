@@ -44,7 +44,7 @@ for combined_dataset in [
 
 for index, dataset in enumerate(new_datasets_list):
     print(dataset)
-    filter_query = {'info.dataset': dataset, 'info.immobile': True} if index < len(INDIVIDUAL_DATASETS) else {'info.dataset': dataset[0], 'info.classified_experimental_condition':dataset[1], 'info.immobile': True}
+    filter_query = {'info.dataset': dataset, 'info.immobile': False} if index < len(INDIVIDUAL_DATASETS) else {'info.dataset': dataset[0], 'info.classified_experimental_condition':dataset[1], 'info.immobile': False}
 
     with pd.ExcelWriter(f"./Results/{dataset}_{index}_gs_{APPLY_GS_CRITERIA}_angles_information.xlsx") as writer:
         all_angles = default_angles()
