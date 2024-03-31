@@ -21,7 +21,7 @@ import pickle
 APPEND_MORE_DATA = False
 CREATE_DATA = False
 LOAD_MODEL = True
-PLOT_STATS = True
+PLOT_STATS = False
 
 DATASET_PATH = 'D:\GitHub Repositories\wavenet_tcn_andi\simulations\data.csv'
 RAW_DATA_PATH = './dataset.npy'
@@ -43,6 +43,10 @@ if CREATE_DATA:
             new_array[0,:,0] = trajectory_df['x']
             new_array[0,:,1] = trajectory_df['y']
             new_array[0,:,2] = trajectory_df['t']
+
+            #plt.plot(trajectory_df['x'], trajectory_df['y'])
+            #plt.title(trajectory_df['label'].values[0].upper())
+            #plt.show()
 
             try:
                 RAW_ARRAY[i, :-len(CLASS_LABELS)] = transform_traj_into_features(new_array)[0]
@@ -97,7 +101,7 @@ if LOAD_MODEL:
         print("LOAD_MODEL=True cannot be executed because files are measing. Please, set LOAD_MODEL=False")
 else:
     X_train, X_val, Y_train, Y_val = train_test_split(X, Y, test_size=0.20)
-    history_dict = model.fit(X_train, Y_train, validation_data=[X_val, Y_val], epochs=30, batch_size=8).history
+    history_dict = model.fit(X_train, Y_train, validation_data=[X_val, Y_val], epochs=5, batch_size=8).history
     json.dump(history_dict, open('training_history_do_not_delete.json', 'w'))
     model.save('model.keras')
     np.save('X_val_do_not_delete.npy', X_val)
@@ -155,47 +159,55 @@ p = {
     'info.analysis.betha': 1,
 }
 
-for t in tqdm.tqdm(Trajectory._get_collection().find({'info.immobile': False}, p)):
+for t in Trajectory.objects(info__immobile=False):
     if 'analysis' not in t['info'] or 'betha' not in t['info']['analysis'] or t['info']['analysis']['betha'] > 0.9:
         continue
 
     INPUT = np.zeros((1, (60*2)))
 
-    new_array = np.zeros((1, len(t['x']), 3))
+    #t.plot_confinement_states(v_th=33)
 
-    new_array[0,:,0] = np.array(t['x']) * 1000
-    new_array[0,:,1] = np.array(t['y']) * 1000
-    new_array[0,:,2] = np.array(t['t'])
+    for sub_t in t.sub_trajectories_trajectories_from_confinement_states(v_th=33)[1]:
 
-    try:
-        INPUT[0] = transform_traj_into_features(new_array)[0]
-    except AssertionError:
-        continue
+        new_array = np.zeros((1, sub_t.length, 3))
 
-    prediction = int(np.argmax(model.predict(INPUT, verbose=False)))
+        new_array[0,:,0] = np.array(sub_t.get_noisy_x()) * 1000
+        new_array[0,:,1] = np.array(sub_t.get_noisy_y()) * 1000
+        new_array[0,:,2] = np.array(sub_t.get_time())
 
-    traces.append(new_array[0,:,0:2])
-    labels.append(prediction)
+        try:
+            INPUT[0] = transform_traj_into_features(new_array)[0]
+        except AssertionError:
+            continue
 
-    if 'classified_experimental_condition' in t['info']:
-        counter[t['info']['dataset']+'_'+t['info']['classified_experimental_condition']][CLASS_LABELS[prediction]] += 1
-    else:
-        counter[t['info']['dataset']][CLASS_LABELS[prediction]] += 1
+        prediction = int(np.argmax(model.predict(INPUT, verbose=False)))
 
-    #plt.title(CLASS_LABELS[prediction])
-    #plt.plot(t['x'] * 1000, t['y'] * 1000)
-    #plt.show()
+        traces.append(new_array[0,:,0:2])
+        labels.append(prediction)
 
-    dics = {label: [] for label in CLASS_LABELS}
-    dics['dataset'] = []
+        if 'classified_experimental_condition' in t['info']:
+            counter[t['info']['dataset']+'_'+t['info']['classified_experimental_condition']][CLASS_LABELS[prediction]] += 1
+        else:
+            counter[t['info']['dataset']][CLASS_LABELS[prediction]] += 1
 
-    for dataset in counter:
-        dics['dataset'].append(dataset)
+        #plt.title(CLASS_LABELS[prediction])
+        #plt.plot(t['x'] * 1000, t['y'] * 1000)
+        #plt.show()
 
-        for label in counter[dataset]:
-            dics[label].append(counter[dataset][label])
+        #plt.title(CLASS_LABELS[prediction])
+        #plt.plot(sub_t.get_noisy_x() * 1000, sub_t.get_noisy_y() * 1000)
+        #plt.show()        
 
-    pd.DataFrame(dics).to_csv('classification_result.csv', index=False)
+        dics = {label: [] for label in CLASS_LABELS}
+        dics['dataset'] = []
+
+        for dataset in counter:
+            dics['dataset'].append(dataset)
+
+            for label in counter[dataset]:
+                dics[label].append(counter[dataset][label])
+
+        pd.DataFrame(dics).to_csv('classification_result.csv', index=False)
 
 with open("X.pkl", "wb") as f:
     pickle.dump(traces, f)
