@@ -196,7 +196,7 @@ for t in Trajectory.objects(info__immobile=False):
 
         #plt.title(CLASS_LABELS[prediction])
         #plt.plot(sub_t.get_noisy_x() * 1000, sub_t.get_noisy_y() * 1000)
-        #plt.show()        
+        #plt.show()
 
         dics = {label: [] for label in CLASS_LABELS}
         dics['dataset'] = []
