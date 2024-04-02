@@ -4,6 +4,9 @@ from matplotlib import pyplot as plt
 from tensorflow.keras.optimizers import Adam
 from sklearn.metrics import confusion_matrix, f1_score, mean_absolute_error
 import seaborn as sns
+import matplotlib.pyplot as plt
+from matplotlib.animation import FuncAnimation
+import numpy as np
 import json
 import pandas as pd
 import numpy as np
@@ -159,15 +162,12 @@ p = {
     'info.analysis.betha': 1,
 }
 
-for t in Trajectory.objects(info__immobile=False):
-    if 'analysis' not in t['info'] or 'betha' not in t['info']['analysis'] or t['info']['analysis']['betha'] > 0.9:
-        continue
 
+for t_info in Trajectory._get_collection().find({'info.immobile':False}, {f'id':1}):
     INPUT = np.zeros((1, (60*2)))
+    t = Trajectory.objects(id=t_info['_id'])[0]
 
-    #t.plot_confinement_states(v_th=33)
-
-    for sub_t in t.sub_trajectories_trajectories_from_confinement_states(v_th=33)[1]:
+    for sub_t in t.sub_trajectories_trajectories_from_confinement_states(v_th=33, use_info=True)[1]:
 
         new_array = np.zeros((1, sub_t.length, 3))
 
@@ -190,13 +190,23 @@ for t in Trajectory.objects(info__immobile=False):
         else:
             counter[t['info']['dataset']][CLASS_LABELS[prediction]] += 1
 
-        #plt.title(CLASS_LABELS[prediction])
-        #plt.plot(t['x'] * 1000, t['y'] * 1000)
-        #plt.show()
+        """
+        x_trj = new_array[0,:,0:2]
 
-        #plt.title(CLASS_LABELS[prediction])
-        #plt.plot(sub_t.get_noisy_x() * 1000, sub_t.get_noisy_y() * 1000)
-        #plt.show()
+        fig = plt.figure()
+        ax = plt.axes(xlim=(x_trj[:,0].min(), x_trj[:,0].max()), ylim=(x_trj[:,1].min(), x_trj[:,1].max()))
+        line, = ax.plot([], [], lw=2)
+
+        def animate(n):
+            line.set_xdata(x_trj[:n, 0])
+            line.set_ydata(x_trj[:n, 1])
+            return line,
+
+        anim = FuncAnimation(fig, animate, frames=x_trj.shape[0], interval=100)
+        #anim.save('test_trajectory_animation.gif')
+        plt.title(CLASS_LABELS[prediction])
+        plt.show()
+        """
 
         dics = {label: [] for label in CLASS_LABELS}
         dics['dataset'] = []
