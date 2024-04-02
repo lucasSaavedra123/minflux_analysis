@@ -160,3 +160,11 @@ cython_debug/
 #.idea/
 
 .vscode/
+
+#Project files
+*.gif
+*.csv
+*.json
+*.npy
+*.h5
+*.keras
