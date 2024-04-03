@@ -42,6 +42,8 @@ for combined_dataset in [
     new_datasets_list.append((combined_dataset, BTX_NOMENCLATURE))
     new_datasets_list.append((combined_dataset, CHOL_NOMENCLATURE))
 
+bin_width = 20
+
 for index, dataset in enumerate(new_datasets_list):
     print(dataset)
     filter_query = {'info.dataset': dataset, 'info.immobile': False} if index < len(INDIVIDUAL_DATASETS) else {'info.dataset': dataset[0], 'info.classified_experimental_condition':dataset[1], 'info.immobile': False}
@@ -69,7 +71,7 @@ for index, dataset in enumerate(new_datasets_list):
                     all_angles[angle] += angle_info['info']['analysis']['angles_analysis'][angle]
 
             for angle in label_angle_information:
-                frequency, bin_edges = custom_histogram(np.array(label_angle_information[angle]), 0, 180, 10)
+                frequency, bin_edges = custom_histogram(np.array(label_angle_information[angle]), 0, 180, bin_width)
                 probability = frequency / np.sum(frequency)
 
                 x_mid = []
@@ -92,7 +94,7 @@ for index, dataset in enumerate(new_datasets_list):
             new_angle_information.to_excel(writer, sheet_name=label, index=False)
 
         for angle in all_angles:
-            frequency, bin_edges = custom_histogram(np.array(all_angles[angle]), 0, 180, 10)
+            frequency, bin_edges = custom_histogram(np.array(all_angles[angle]), 0, 180, bin_width)
             probability = frequency / np.sum(frequency)
 
             x_mid = []
@@ -126,8 +128,8 @@ for index, dataset in enumerate(new_datasets_list):
                     for angle in angle_info['info']['analysis']['angles_by_state'][str(numeric_label)]['angles']:
                         label_angle_information[angle] += angle_info['info']['analysis']['angles_by_state'][str(numeric_label)]['angles'][angle]
 
-            for angle in label_angle_information:
-                frequency, bin_edges = custom_histogram(np.array(label_angle_information[angle]), 0, 180, 10)
+            for angle_index, angle in enumerate(label_angle_information):
+                frequency, bin_edges = custom_histogram(np.array(label_angle_information[angle]), 0, 180, bin_width)
                 probability = frequency / np.sum(frequency)
 
                 x_mid = []
