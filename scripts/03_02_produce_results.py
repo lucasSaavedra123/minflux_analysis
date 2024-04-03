@@ -177,6 +177,7 @@ for combined_dataset in [
         if 'number_of_confinement_zones' in btx_trajectory.info and btx_trajectory.info['number_of_confinement_zones'] != 0:
             fractions.append(btx_trajectory.info[f'number_of_confinement_zones_with_{CHOL_NOMENCLATURE}']/btx_trajectory.info['number_of_confinement_zones'])
 
+    np.savetxt(f'./Results/{combined_dataset}-{BTX_NOMENCLATURE}_fraction.txt', fractions, fmt='%f')
     basic_info_file.write(f"{combined_dataset}-{BTX_NOMENCLATURE} Fraction: {np.mean(fractions)}, S.E.M: {sem(fractions)}s\n")
 
     fractions = []
@@ -184,7 +185,8 @@ for combined_dataset in [
         chol_trajectory = Trajectory.objects(id=chol_id['_id'])[0]
         if 'number_of_confinement_zones' in chol_trajectory.info and chol_trajectory.info['number_of_confinement_zones'] != 0:
             fractions.append(chol_trajectory.info[f'number_of_confinement_zones_with_{BTX_NOMENCLATURE}']/chol_trajectory.info['number_of_confinement_zones'])
-
+    
+    np.savetxt(f'./Results/{combined_dataset}-{CHOL_NOMENCLATURE}_fraction.txt', fractions, fmt='%f')
     basic_info_file.write(f"{combined_dataset}-{CHOL_NOMENCLATURE} Fraction: {np.mean(fractions)}, S.E.M: {sem(fractions)}s\n")
 
 basic_info_file.close()
