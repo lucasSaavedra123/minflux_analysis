@@ -77,6 +77,17 @@ for index, dataset in enumerate(new_datasets_list):
         residence_times_and_durations = [value for value in residence_times_and_durations if value is not None]
         pd.DataFrame({'residence_times_and_durations': residence_times_and_durations}).to_excel(writer, sheet_name='residence_ratios', index=False)
 
+        def measure_rate(state_array, time_array):
+            if state_array is None or time_array is None:
+                return None
+            else:
+                return np.abs(np.diff(state_array)!=0).sum() / (time_array[-1] - time_array[0])
+
+        confinement_rates = [document for document in Trajectory._get_collection().find(filter_query, {f'info.analysis.confinement-states':1, f't': 1})]
+        confinement_rates = [measure_rate(document.get('info', {}).get('analysis', {}).get('confinement-states'), document.get('t')) for document in confinement_rates]
+        confinement_rates = [value for value in confinement_rates if value is not None]
+        pd.DataFrame({'change_rates': confinement_rates}).to_excel(writer, sheet_name='change_rates', index=False)
+
         list_of_semi_major_axis = get_list_of_values_of_analysis_field(filter_query, 'confinement-a')
         list_of_semi_major_axis = list(itertools.chain.from_iterable(list_of_semi_major_axis))
         pd.DataFrame({'semi_major_axis': list_of_semi_major_axis}).to_excel(writer, sheet_name='semi_major_axis', index=False)
