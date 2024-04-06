@@ -32,10 +32,17 @@ DATASET_TO_DELTA_T = {
     DATASETS_LIST[4]: None,
 }
 
+"""
 DIFFUSION_BEHAVIOURS_INFORMATION = {
     'Subdiffusive I': {'range_0': float('-inf'), 'range_1': 0.5},
     'Subdiffusive II': {'range_0': 0.5,'range_1': 0.7},
     'Subdiffusive III': {'range_0': 0.7, 'range_1': 0.9},
+    'Brownian': {'range_0': 0.9,'range_1': 1.1},
+    'Superdiffusive': {'range_0': 1.1,'range_1': float('inf')},
+}
+"""
+DIFFUSION_BEHAVIOURS_INFORMATION = {
+    'Subdiffusive': {'range_0': float('-inf'), 'range_1': 0.9},
     'Brownian': {'range_0': 0.9,'range_1': 1.1},
     'Superdiffusive': {'range_0': 1.1,'range_1': float('inf')},
 }
