@@ -498,6 +498,14 @@ class Trajectory(Document):
             new_trajectory.info['dcr'] = self.info['dcr'][initial_index:final_index]
         if 'intensity' in self.info:
             new_trajectory.info['intensity'] = self.info['intensity'][initial_index:final_index]
+        if 'dataset' in self.info:
+            new_trajectory.info['dataset'] = self.info['dataset']
+        if 'roi' in self.info:
+            new_trajectory.info['roi'] = self.info['roi']
+        if 'file' in self.info:
+            new_trajectory.info['file'] = self.info['file']
+        if 'classified_experimental_condition' in self.info:
+            new_trajectory.info['classified_experimental_condition'] = self.info['classified_experimental_condition']
 
         return new_trajectory
 
