@@ -17,6 +17,7 @@ from Trajectory import Trajectory
 from CONSTANTS import *
 from utils import both_trajectories_intersect
 
+RADIUS_THRESHOLD = 0.01
 
 DatabaseHandler.connect_over_network(None, None, IP_ADDRESS, COLLECTION_NAME)
 
@@ -33,7 +34,7 @@ for file in tqdm.tqdm(btx_and_chol_files):
         btx_trajectory.info[f'{CHOL_NOMENCLATURE}_single_intersections'] = np.zeros(btx_trajectory.length).tolist()
         btx_trajectory.info[f'{CHOL_NOMENCLATURE}_intersections'] = []
         for chol_trajectory in trajectories_by_condition[CHOL_NOMENCLATURE]:
-            overlap, intersections = both_trajectories_intersect(btx_trajectory, chol_trajectory, via='kd-tree', radius_threshold=0.03, return_kd_tree_intersections=True)
+            overlap, intersections = both_trajectories_intersect(btx_trajectory, chol_trajectory, via='kd-tree', radius_threshold=RADIUS_THRESHOLD, return_kd_tree_intersections=True)
 
             if overlap:
                 btx_trajectory.info[f'{CHOL_NOMENCLATURE}_intersections'].append(chol_trajectory.id)
@@ -48,8 +49,8 @@ for file in tqdm.tqdm(btx_and_chol_files):
         chol_trajectory.info[f'{BTX_NOMENCLATURE}_single_intersections'] = np.zeros(chol_trajectory.length).tolist()
         chol_trajectory.info[f'{BTX_NOMENCLATURE}_intersections'] = []
         for btx_trajectory in trajectories_by_condition[BTX_NOMENCLATURE]:
-            overlap, intersections = both_trajectories_intersect(chol_trajectory, btx_trajectory, via='kd-tree', radius_threshold=0.03, return_kd_tree_intersections=True)
-            
+            overlap, intersections = both_trajectories_intersect(chol_trajectory, btx_trajectory, via='kd-tree', radius_threshold=RADIUS_THRESHOLD, return_kd_tree_intersections=True)
+
             if overlap:
                 chol_trajectory.info[f'{BTX_NOMENCLATURE}_intersections'].append(btx_trajectory.id)
 
