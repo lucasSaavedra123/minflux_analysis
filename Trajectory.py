@@ -494,6 +494,9 @@ class Trajectory(Document):
                     noisy=noisy
                 )
         
+        BTX_NOMENCLATURE = 'BTX680R'
+        CHOL_NOMENCLATURE = 'fPEG-Chol'
+
         if 'dcr' in self.info:
             new_trajectory.info['dcr'] = self.info['dcr'][initial_index:final_index]
         if 'intensity' in self.info:
@@ -506,6 +509,10 @@ class Trajectory(Document):
             new_trajectory.info['file'] = self.info['file']
         if 'classified_experimental_condition' in self.info:
             new_trajectory.info['classified_experimental_condition'] = self.info['classified_experimental_condition']
+        if f'{BTX_NOMENCLATURE}_single_intersections' in self.info:
+            new_trajectory.info[f'{BTX_NOMENCLATURE}_single_intersections'] = self.info[f'{BTX_NOMENCLATURE}_single_intersections'][initial_index:final_index]
+        if f'{CHOL_NOMENCLATURE}_single_intersections' in self.info:
+            new_trajectory.info[f'{CHOL_NOMENCLATURE}_single_intersections'] = self.info[f'{CHOL_NOMENCLATURE}_single_intersections'][initial_index:final_index]
 
         return new_trajectory
 
