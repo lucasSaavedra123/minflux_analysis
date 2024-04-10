@@ -1,5 +1,5 @@
 import pandas as pd
-import matplotlib.pyplot as plt
+import matplotlib.path as mplPath
 import os
 import tqdm
 import numpy as np
@@ -8,9 +8,11 @@ from matplotlib.path import Path
 from collections import defaultdict
 
 from CONSTANTS import *
+from utils import *
+import ray
 from DatabaseHandler import DatabaseHandler
 from Trajectory import Trajectory
-from IPython import embed
+
 
 DatabaseHandler.connect_over_network(None, None, IP_ADDRESS, COLLECTION_NAME)
 
@@ -50,19 +52,20 @@ else:
         file_id_and_roi_list.append([line[0], int(line[1])])
     a_file.close()
 
-counter_dict = defaultdict(lambda: [])
-
 def t_is_inside_hull(t, hull_path):
     for point in  zip(t.get_noisy_x(), t.get_noisy_y()):
         if hull_path.contains_point((point[0],point[1])):
             return True
-    
     return False
 
-for i, file_id_and_roi in tqdm.tqdm(list(enumerate(file_id_and_roi_list))):
-    trajectories = list(Trajectory.objects(info__roi=file_id_and_roi[1], info__file=file_id_and_roi[0]))
+@ray.remote
+def analyze(file_id, roi):
+    DatabaseHandler.connect_over_network(None, None, IP_ADDRESS, COLLECTION_NAME)
 
-    for trajectory in tqdm.tqdm(trajectories):
+    counter_dict = defaultdict(lambda: [])
+    trajectories = list(Trajectory.objects(info__roi=roi, info__file=file_id))
+
+    for trajectory in trajectories:
         if 'analysis' not in trajectory.info:
             continue
         other_trajectories = [t for t in trajectories if t != trajectory]
@@ -74,7 +77,7 @@ for i, file_id_and_roi in tqdm.tqdm(list(enumerate(file_id_and_roi_list))):
                 points[:,0] = confined_portion.get_noisy_x()
                 points[:,1] = confined_portion.get_noisy_y()
 
-                hull_path = Path(points[ConvexHull(points).vertices])
+                hull_path = mplPath.Path(points[ConvexHull(points).vertices])
 
                 for other_trajectory in other_trajectories:
                     if t_is_inside_hull(other_trajectory, hull_path):
@@ -86,12 +89,18 @@ for i, file_id_and_roi in tqdm.tqdm(list(enumerate(file_id_and_roi_list))):
                     counter_dict[confined_portion['info']['dataset']].append(counter)
             except QhullError:
                 pass
+    
+    DatabaseHandler.disconnect()
+    return counter_dict
 
-for label in counter_dict:
-    counter_dict[label] = np.mean(counter_dict[label])
+results = ray.get([analyze.remote(p[0], p[1]) for p in file_id_and_roi_list])
+
+counter_dict = defaultdict(lambda: [])
+
+for r in results:
+    for l in r:
+        counter_dict[l] += r[l]
 
 import json
 with open("tracks_per_confinement.json", "w") as outfile: 
     json.dump(counter_dict, outfile)
-
-DatabaseHandler.disconnect()
