@@ -10,6 +10,7 @@ import ruptures as rpt
 from mongoengine import Document, FloatField, ListField, DictField, BooleanField
 from scipy.spatial import ConvexHull
 import scipy.stats as st
+import matplotlib.animation as animation
 from collections import defaultdict
 #Example about how to read trajectories from .mat
 """
@@ -390,6 +391,32 @@ class Trajectory(Document):
 
         plt.show()
 
+    def animate_plot(self):
+        fig, ax = plt.subplots()
+
+        line = ax.plot(self.get_noisy_x()[0], self.get_noisy_y()[0])[0]
+        ax.set(xlim=[np.min(self.get_noisy_x()), np.max(self.get_noisy_x())], ylim=[np.min(self.get_noisy_y()), np.max(self.get_noisy_y())], xlabel='X', ylabel='Y')
+
+        def update(frame):
+            # for each frame, update the data stored on each artist.
+            x_f = self.get_noisy_x()[:frame]
+            y_f = self.get_noisy_y()[:frame]
+
+            if self.t is not None:
+                time = (self.get_time() - self.get_time()[0])[frame]
+                time = np.round(time, 6)
+                ax.set_title(f'{time}s')
+
+            # update the scatter plot:
+            #data = np.stack([x, y]).T
+            # update the line plot:
+            line.set_xdata(x_f[:frame])
+            line.set_ydata(y_f[:frame])
+            return (line)
+
+        ani = animation.FuncAnimation(fig=fig, func=update, frames=self.length, interval=1)
+        plt.show()
+
     def plot_confinement_states(
         self,
         v_th=11,
@@ -494,6 +521,9 @@ class Trajectory(Document):
                     noisy=noisy
                 )
         
+        BTX_NOMENCLATURE = 'BTX680R'
+        CHOL_NOMENCLATURE = 'fPEG-Chol'
+
         if 'dcr' in self.info:
             new_trajectory.info['dcr'] = self.info['dcr'][initial_index:final_index]
         if 'intensity' in self.info:
@@ -506,6 +536,10 @@ class Trajectory(Document):
             new_trajectory.info['file'] = self.info['file']
         if 'classified_experimental_condition' in self.info:
             new_trajectory.info['classified_experimental_condition'] = self.info['classified_experimental_condition']
+        if f'{BTX_NOMENCLATURE}_single_intersections' in self.info:
+            new_trajectory.info[f'{BTX_NOMENCLATURE}_single_intersections'] = self.info[f'{BTX_NOMENCLATURE}_single_intersections'][initial_index:final_index]
+        if f'{CHOL_NOMENCLATURE}_single_intersections' in self.info:
+            new_trajectory.info[f'{CHOL_NOMENCLATURE}_single_intersections'] = self.info[f'{CHOL_NOMENCLATURE}_single_intersections'][initial_index:final_index]
 
         return new_trajectory
 
