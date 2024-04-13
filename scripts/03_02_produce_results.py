@@ -126,6 +126,9 @@ for index, dataset in enumerate(new_datasets_list):
         filter_query = basic_query_dict.copy()
         filter_query.update({'info.immobile': False})
 
+        list_of_number_of_trajectories_per_overlap = get_list_of_values_of_analysis_field(filter_query, 'number_of_trajectories_per_overlap')
+        pd.DataFrame({'number_of_trajectories_per_overlap': list_of_number_of_trajectories_per_overlap}).to_excel(writer, sheet_name='number_of_trajectories_per_overlap', index=False)
+
         list_of_semi_major_axis = get_list_of_values_of_analysis_field(filter_query, 'confinement-a')
         list_of_semi_major_axis = list(itertools.chain.from_iterable(list_of_semi_major_axis))
         pd.DataFrame({'semi_major_axis': list_of_semi_major_axis}).to_excel(writer, sheet_name='semi_major_axis', index=False)
