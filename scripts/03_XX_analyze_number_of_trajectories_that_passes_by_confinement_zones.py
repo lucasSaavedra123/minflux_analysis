@@ -62,13 +62,13 @@ def t_is_inside_hull(t, hull_path):
 def analyze(file_id, roi):
     DatabaseHandler.connect_over_network(None, None, IP_ADDRESS, COLLECTION_NAME)
 
-    counter_dict = defaultdict(lambda: [])
     trajectories = list(Trajectory.objects(info__roi=roi, info__file=file_id))
 
     for trajectory in trajectories:
-        if 'analysis' not in trajectory.info:
+        if 'analysis' not in trajectory.info or 'number_of_trajectories_per_overlap' in trajectory.info['analysis']:
             continue
         other_trajectories = [t for t in trajectories if t != trajectory]
+        trajectory.info['analysis']['number_of_trajectories_per_overlap'] = []
 
         for confined_portion in trajectory.sub_trajectories_trajectories_from_confinement_states(v_th=33, use_info=True)[1]:
             try:
@@ -83,24 +83,13 @@ def analyze(file_id, roi):
                     if t_is_inside_hull(other_trajectory, hull_path):
                         counter += 1
 
-                if 'classified_experimental_condition' in confined_portion['info']:
-                    counter_dict[confined_portion['info']['dataset']+'_'+confined_portion['info']['classified_experimental_condition']].append(counter)
-                else:
-                    counter_dict[confined_portion['info']['dataset']].append(counter)
+                trajectory.info['analysis']['number_of_trajectories_per_overlap'].append(counter)
+
             except QhullError:
                 pass
     
+        trajectory.save()
+
     DatabaseHandler.disconnect()
-    return counter_dict
 
 results = ray.get([analyze.remote(p[0], p[1]) for p in file_id_and_roi_list])
-
-counter_dict = defaultdict(lambda: [])
-
-for r in results:
-    for l in r:
-        counter_dict[l] += r[l]
-
-import json
-with open("tracks_per_confinement.json", "w") as outfile: 
-    json.dump(counter_dict, outfile)
