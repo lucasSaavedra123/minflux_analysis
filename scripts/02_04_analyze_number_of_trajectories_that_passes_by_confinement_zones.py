@@ -73,6 +73,8 @@ def analyze(file_id, roi):
         for confined_portion in trajectory.sub_trajectories_trajectories_from_confinement_states(v_th=33, use_info=True)[1]:
             try:
                 counter = 0
+                counter_btx = 0
+                counter_chol = 0
                 points = np.zeros((confined_portion.length, 2))
                 points[:,0] = confined_portion.get_noisy_x()
                 points[:,1] = confined_portion.get_noisy_y()
@@ -82,8 +84,15 @@ def analyze(file_id, roi):
                 for other_trajectory in other_trajectories:
                     if t_is_inside_hull(other_trajectory, hull_path):
                         counter += 1
+                        if 'classified_experimental_condition' in other_trajectory.info:
+                            if other_trajectory.info['classified_experimental_condition'] == CHOL_NOMENCLATURE:
+                                counter_chol += 1
+                            else:
+                                counter_btx += 1
 
                 trajectory.info['analysis']['number_of_trajectories_per_overlap'].append(counter)
+                trajectory.info['analysis']['number_of_btx_trajectories_per_overlap'].append(counter_btx)
+                trajectory.info['analysis']['number_of_chol_trajectories_per_overlap'].append(counter_chol)
 
             except QhullError:
                 pass
