@@ -69,6 +69,8 @@ def analyze(file_id, roi):
             continue
         other_trajectories = [t for t in trajectories if t != trajectory]
         trajectory.info['analysis']['number_of_trajectories_per_overlap'] = []
+        trajectory.info['analysis']['number_of_btx_trajectories_per_overlap'] = []
+        trajectory.info['analysis']['number_of_chol_trajectories_per_overlap'] = []
 
         for confined_portion in trajectory.sub_trajectories_trajectories_from_confinement_states(v_th=33, use_info=True)[1]:
             try:
