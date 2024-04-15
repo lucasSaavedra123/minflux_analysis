@@ -10,7 +10,8 @@ import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 import tqdm
 import moviepy.editor as mp
-
+from moviepy.video.fx.all import crop
+from moviepy.editor import *
 
 APPLY_GS_CRITERIA = True
 
@@ -244,10 +245,18 @@ for file in tqdm.tqdm(files):
                             anim_one = animation.FuncAnimation(fig=fig, func=update_one, frames=frames, interval=100)
                             anim_two = animation.FuncAnimation(fig=fig, func=update_two, frames=frames, interval=100)
                             anim_three = animation.FuncAnimation(fig=fig, func=update_three, frames=frames, interval=100)
-
+                            clips = []
                             for i, anim in enumerate([anim_one, anim_two, anim_three]):
-                                anim.save(f'animation.gif', writer=animation.PillowWriter(fps=60), dpi=300)
-                                mp.VideoFileClip(f'animation.gif').write_videofile(f'./animations/{file}_{plot_counter}_animation_{i}.mp4')
+                                anim.save(f'animation.gif', writer=animation.PillowWriter(fps=30), dpi=300)
+
+                                clip = mp.VideoFileClip(f'animation.gif')
+                                (w, h) = clip.size
+                                clip = crop(clip, width=h, height=h, x_center=w/2, y_center=h/2)
+                                clip.write_videofile(f'./animations/{file}_{plot_counter}_animation_{i}.mp4')
+                                clips.append(clip)
+
+                            combined_clip = clips_array([clips[::-1]])
+                            combined_clip.write_videofile(f'./animations/{file}_{plot_counter}_animation.mp4')
 
                             plot_counter += 1
 
