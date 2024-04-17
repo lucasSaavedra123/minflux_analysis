@@ -148,7 +148,7 @@ DatabaseHandler.connect_over_network(None, None, IP_ADDRESS, COLLECTION_NAME)
 results = []
 
 def new_dict():
-    return {label: 0 for label in CLASS_LABELS}
+    return {label: 0 for label in ['00', '01', '10', '11']}
 
 counter = defaultdict(new_dict)
 traces, labels = [], []
@@ -161,67 +161,29 @@ p = {
     'info.classified_experimental_condition': 1,
     'info.analysis.betha': 1,
 }
-
-
+        
 for t_info in Trajectory._get_collection().find({'info.immobile':False}, {f'id':1}):
-    INPUT = np.zeros((1, (60*2)))
     t = Trajectory.objects(id=t_info['_id'])[0]
+    states = t.info['analysis']['confinement-states']
 
-    for sub_t in t.sub_trajectories_trajectories_from_confinement_states(v_th=33, use_info=True)[1]:
-
-        new_array = np.zeros((1, sub_t.length, 3))
-
-        new_array[0,:,0] = np.array(sub_t.get_noisy_x()) * 1000
-        new_array[0,:,1] = np.array(sub_t.get_noisy_y()) * 1000
-        new_array[0,:,2] = np.array(sub_t.get_time())
-
-        try:
-            INPUT[0] = transform_traj_into_features(new_array)[0]
-        except AssertionError:
-            continue
-
-        prediction = int(np.argmax(model.predict(INPUT, verbose=False)))
-
-        traces.append(new_array[0,:,0:2])
-        labels.append(prediction)
+    for s_i in range(1, len(states)):
+        s_0 = str(states[s_i-1])
+        s_1 = str(states[s_i])
 
         if 'classified_experimental_condition' in t['info']:
-            counter[t['info']['dataset']+'_'+t['info']['classified_experimental_condition']][CLASS_LABELS[prediction]] += 1
+            counter[t['info']['dataset']+'_'+t['info']['classified_experimental_condition']][s_0+s_1] += 1
         else:
-            counter[t['info']['dataset']][CLASS_LABELS[prediction]] += 1
+            counter[t['info']['dataset']][s_0+s_1] += 1
 
-        """
-        x_trj = new_array[0,:,0:2]
+    dics = {label: [] for label in ['00', '01', '10', '11']}
+    dics['dataset'] = []
 
-        fig = plt.figure()
-        ax = plt.axes(xlim=(x_trj[:,0].min(), x_trj[:,0].max()), ylim=(x_trj[:,1].min(), x_trj[:,1].max()))
-        line, = ax.plot([], [], lw=2)
+    for dataset in counter:
+        dics['dataset'].append(dataset)
 
-        def animate(n):
-            line.set_xdata(x_trj[:n, 0])
-            line.set_ydata(x_trj[:n, 1])
-            return line,
+        for label in counter[dataset]:
+            dics[label].append(counter[dataset][label])
 
-        anim = FuncAnimation(fig, animate, frames=x_trj.shape[0], interval=100)
-        #anim.save('test_trajectory_animation.gif')
-        plt.title(CLASS_LABELS[prediction])
-        plt.show()
-        """
-
-        dics = {label: [] for label in CLASS_LABELS}
-        dics['dataset'] = []
-
-        for dataset in counter:
-            dics['dataset'].append(dataset)
-
-            for label in counter[dataset]:
-                dics[label].append(counter[dataset][label])
-
-        pd.DataFrame(dics).to_csv('classification_result.csv', index=False)
-
-with open("X.pkl", "wb") as f:
-    pickle.dump(traces, f)
-with open("y.pkl", "wb") as f:
-    pickle.dump(labels, f)
+    pd.DataFrame(dics).to_csv('classification_result.csv', index=False)
 
 DatabaseHandler.disconnect()

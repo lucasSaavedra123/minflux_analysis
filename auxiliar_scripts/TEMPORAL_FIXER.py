@@ -2,15 +2,11 @@
 ALL trajectories are analyzed.
 """
 
-import ray
-import tqdm
 from DatabaseHandler import DatabaseHandler
 from Trajectory import Trajectory
 from CONSTANTS import *
 
-ray.init()
 
-@ray.remote
 def analyze_trajectory(trajectory_id):
     DatabaseHandler.connect_over_network(None, None, IP_ADDRESS, COLLECTION_NAME)
 
@@ -40,11 +36,10 @@ def analyze_trajectory(trajectory_id):
 
     trajectory.save()
 
-    DatabaseHandler.disconnect()
 
 DatabaseHandler.connect_over_network(None, None, IP_ADDRESS, COLLECTION_NAME)
-uploaded_trajectories_ids = [str(trajectory_result['_id']) for trajectory_result in Trajectory._get_collection().find({}, {'_id':1})]
-DatabaseHandler.disconnect()
 
-for id_batch in tqdm.tqdm(list(batch(uploaded_trajectories_ids, n=1000))):
-    ray.get([analyze_trajectory.remote(an_id) for an_id in id_batch])
+for trajectory_result in Trajectory._get_collection().find({}, {'_id':1}):
+    analyze_trajectory(str(trajectory_result['_id']))
+
+DatabaseHandler.disconnect()
