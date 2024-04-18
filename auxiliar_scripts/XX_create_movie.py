@@ -99,7 +99,7 @@ for file in tqdm.tqdm(files):
                             fig, ax = plt.subplots()
                             ax.set_aspect('equal', adjustable='box')
                             receptor_trajectory_line_dict = {}
-                            receptor_trajectory_line_dict['line'] = ax.plot(trajectory.get_noisy_x()[0], trajectory.get_noisy_y()[0], color='green')[0]
+                            receptor_trajectory_line_dict['line'] = ax.plot(trajectory.get_noisy_x()[0], trajectory.get_noisy_y()[0], color='green', linewidth=4)[0]
 
                             receptor_trajectory_line_dict['dataframe'] = pd.DataFrame({
                                 'x': trajectory.get_noisy_x(),
@@ -108,7 +108,7 @@ for file in tqdm.tqdm(files):
                             })
 
                             chol_trajectory_line_dict = {}
-                            chol_trajectory_line_dict['line'] = ax.plot(aux_t.get_noisy_x()[0], aux_t.get_noisy_y()[0], color='red')[0]
+                            chol_trajectory_line_dict['line'] = ax.plot(aux_t.get_noisy_x()[0], aux_t.get_noisy_y()[0], color='red', linewidth=4)[0]
 
                             chol_trajectory_line_dict['dataframe'] = pd.DataFrame({
                                 'x': aux_t.get_noisy_x(),
@@ -137,10 +137,14 @@ for file in tqdm.tqdm(files):
                                 ylim=[
                                     intersection_centroid[1] - edge_offset, intersection_centroid[1]+edge_offset
                                 ],
-                                xlabel='X',
-                                ylabel='Y'
+                                #xlabel='X [μm]',
+                                #ylabel='Y [μm]'
                             )
 
+                            ax.get_xaxis().set_visible(False)
+                            ax.get_yaxis().set_visible(False)
+                            #ax.get_xaxis().set_ticklabels([])
+                            #ax.get_yaxis().set_ticklabels([])
                             frames = np.unique((sorted(chol_trajectory_line_dict['dataframe']['t'].tolist() + receptor_trajectory_line_dict['dataframe']['t'].tolist())))
 
                             def update_one(time):
@@ -187,8 +191,8 @@ for file in tqdm.tqdm(files):
                                                 ylim=[
                                                     dataframe['y'].tolist()[-1] - edge_offset, dataframe['y'].tolist()[-1]+edge_offset
                                                 ],
-                                                xlabel='X [μm]',
-                                                ylabel='Y [μm]'
+                                                #xlabel='X [μm]',
+                                                #ylabel='Y [μm]'
                                             )
 
                                         x_f = dataframe['x'].tolist()
@@ -224,8 +228,8 @@ for file in tqdm.tqdm(files):
                                                 ylim=[
                                                     dataframe['y'].tolist()[-1] - edge_offset, dataframe['y'].tolist()[-1]+edge_offset
                                                 ],
-                                                xlabel='X [μm]',
-                                                ylabel='Y [μm]'
+                                                #xlabel='X [μm]',
+                                                #ylabel='Y [μm]'
                                             )
 
                                         x_f = dataframe['x'].tolist()
@@ -245,16 +249,14 @@ for file in tqdm.tqdm(files):
                             anim_one = animation.FuncAnimation(fig=fig, func=update_one, frames=frames)
                             anim_two = animation.FuncAnimation(fig=fig, func=update_two, frames=frames)
                             anim_three = animation.FuncAnimation(fig=fig, func=update_three, frames=frames)
-                            clips = []
+
                             for i, anim in enumerate([anim_one, anim_two, anim_three]):
-                                continue
                                 anim.save(f'animation.gif', writer=animation.PillowWriter(fps=30), dpi=300)
 
                                 clip = mp.VideoFileClip(f'animation.gif')
                                 (w, h) = clip.size
                                 clip = crop(clip, width=h, height=h, x_center=w/2, y_center=h/2)
                                 clip.write_videofile(f'./animations/{file}_{plot_counter}_animation_{i}.mp4')
-                                clips.append(clip)
 
                             combined_clip = clips_array([[
                                 mp.VideoFileClip(f'./animations/{file}_{plot_counter}_animation_0.mp4'),
