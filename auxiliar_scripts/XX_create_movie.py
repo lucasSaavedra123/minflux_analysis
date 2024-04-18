@@ -242,11 +242,12 @@ for file in tqdm.tqdm(files):
                                     marker='+')
                                 ]
 
-                            anim_one = animation.FuncAnimation(fig=fig, func=update_one, frames=frames, interval=100)
-                            anim_two = animation.FuncAnimation(fig=fig, func=update_two, frames=frames, interval=100)
-                            anim_three = animation.FuncAnimation(fig=fig, func=update_three, frames=frames, interval=100)
+                            anim_one = animation.FuncAnimation(fig=fig, func=update_one, frames=frames)
+                            anim_two = animation.FuncAnimation(fig=fig, func=update_two, frames=frames)
+                            anim_three = animation.FuncAnimation(fig=fig, func=update_three, frames=frames)
                             clips = []
                             for i, anim in enumerate([anim_one, anim_two, anim_three]):
+                                continue
                                 anim.save(f'animation.gif', writer=animation.PillowWriter(fps=30), dpi=300)
 
                                 clip = mp.VideoFileClip(f'animation.gif')
@@ -255,9 +256,13 @@ for file in tqdm.tqdm(files):
                                 clip.write_videofile(f'./animations/{file}_{plot_counter}_animation_{i}.mp4')
                                 clips.append(clip)
 
-                            combined_clip = clips_array([clips[::-1]])
-                            combined_clip.write_videofile(f'./animations/{file}_{plot_counter}_animation.mp4')
+                            combined_clip = clips_array([[
+                                mp.VideoFileClip(f'./animations/{file}_{plot_counter}_animation_0.mp4'),
+                                mp.VideoFileClip(f'./animations/{file}_{plot_counter}_animation_1.mp4'),
+                                mp.VideoFileClip(f'./animations/{file}_{plot_counter}_animation_2.mp4'),
+                            ]])
 
+                            combined_clip.write_videofile(f'./animations/{file}_{plot_counter}_animation.mp4')
                             plot_counter += 1
 
 DatabaseHandler.disconnect()
