@@ -12,6 +12,8 @@ import tqdm
 import moviepy.editor as mp
 from moviepy.video.fx.all import crop
 from moviepy.editor import *
+import numpy as np
+from scipy import interpolate
 
 APPLY_GS_CRITERIA = True
 
@@ -66,6 +68,19 @@ for file in tqdm.tqdm(files):
     trajectories = Trajectory.objects(info__file=file)
     for index, trajectory in enumerate(trajectories):
         if trajectory.info['classified_experimental_condition'] == BTX_NOMENCLATURE and trajectory.info['number_of_confinement_zones'] != 0 and 0.30 <= trajectory.info[f'number_of_confinement_zones_with_{CHOL_NOMENCLATURE}']/trajectory.info['number_of_confinement_zones'] <= 0.40:
+            """
+            x, y = trajectory.get_noisy_x(), trajectory.get_noisy_y()
+            tck,u = interpolate.splprep([x,y], s=20)
+            u=np.linspace(0,1,num=trajectory.length,endpoint=True)
+            out = interpolate.splev(u,tck)
+            plt.figure()
+            plt.plot(x, y, 'ro', out[0], out[1], 'b')
+            plt.legend(['Points', 'Interpolated B-spline', 'True'],loc='best')
+            plt.axis([min(x)-1, max(x)+1, min(y)-1, max(y)+1])
+            plt.title('B-Spline interpolation')
+            plt.show()
+            exit()
+            """
             receptor_polygons = []
             for sub_t in trajectory.sub_trajectories_trajectories_from_confinement_states(v_th=33, use_info=True)[1]:
                 xx, yy = MultiPoint(list(zip(sub_t.get_noisy_x(), sub_t.get_noisy_y()))).convex_hull.exterior.coords.xy
@@ -121,7 +136,7 @@ for file in tqdm.tqdm(files):
 
                             intersection_centroid = np.mean(np.array(polygon_intersection), axis=0)
 
-                            edge_offset = 0.1
+                            edge_offset = 0.15
 
                             tiempo_min = max(chol_trajectory_line_dict['dataframe']['t'].min(), receptor_trajectory_line_dict['dataframe']['t'].min())
                             tiempo_max = min(chol_trajectory_line_dict['dataframe']['t'].max(), receptor_trajectory_line_dict['dataframe']['t'].max())
@@ -146,6 +161,26 @@ for file in tqdm.tqdm(files):
                             #ax.get_xaxis().set_ticklabels([])
                             #ax.get_yaxis().set_ticklabels([])
                             frames = np.unique((sorted(chol_trajectory_line_dict['dataframe']['t'].tolist() + receptor_trajectory_line_dict['dataframe']['t'].tolist())))
+
+                            tck,u = interpolate.splprep([receptor_trajectory_line_dict['dataframe']['x'].tolist(),receptor_trajectory_line_dict['dataframe']['y'].tolist()], s=10)
+                            u=np.linspace(0,1,num=len(frames),endpoint=True)
+                            camera_track_for_receptor = interpolate.splev(u,tck)
+
+                            tck,u = interpolate.splprep([chol_trajectory_line_dict['dataframe']['x'].tolist(),chol_trajectory_line_dict['dataframe']['y'].tolist()], s=10)
+                            u=np.linspace(0,1,num=len(frames),endpoint=True)
+                            camera_track_for_chol = interpolate.splev(u,tck)
+
+                            camera_track_for_receptor = pd.DataFrame({
+                                'x': camera_track_for_receptor[0],
+                                'y': camera_track_for_receptor[1],
+                                't': frames,
+                            })
+
+                            camera_track_for_chol = pd.DataFrame({
+                                'x': camera_track_for_chol[0],
+                                'y': camera_track_for_chol[1],
+                                't': frames,
+                            })
 
                             def update_one(time):
                                 # for each frame, update the data stored on each artist.
@@ -181,15 +216,16 @@ for file in tqdm.tqdm(files):
                                     line = trajectory_line_dict['line']
 
                                     dataframe = dataframe[dataframe['t'] <= time]
+                                    camera_track = camera_track_for_receptor[camera_track_for_receptor['t'] <= time]
 
                                     if len(dataframe) != 0:
                                         if trajectory_line_dict == receptor_trajectory_line_dict:
                                             ax.set(
                                                 xlim=[
-                                                    dataframe['x'].tolist()[-1] - edge_offset, dataframe['x'].tolist()[-1]+edge_offset
+                                                    camera_track['x'].tolist()[-1] - edge_offset, camera_track['x'].tolist()[-1]+edge_offset
                                                 ], 
                                                 ylim=[
-                                                    dataframe['y'].tolist()[-1] - edge_offset, dataframe['y'].tolist()[-1]+edge_offset
+                                                    camera_track['y'].tolist()[-1] - edge_offset, camera_track['y'].tolist()[-1]+edge_offset
                                                 ],
                                                 #xlabel='X [μm]',
                                                 #ylabel='Y [μm]'
@@ -218,15 +254,16 @@ for file in tqdm.tqdm(files):
                                     line = trajectory_line_dict['line']
 
                                     dataframe = dataframe[dataframe['t'] <= time]
+                                    camera_track = camera_track_for_chol[camera_track_for_chol['t'] <= time]
 
                                     if len(dataframe) != 0:
                                         if trajectory_line_dict == chol_trajectory_line_dict:
                                             ax.set(
                                                 xlim=[
-                                                    dataframe['x'].tolist()[-1] - edge_offset, dataframe['x'].tolist()[-1]+edge_offset
+                                                    camera_track['x'].tolist()[-1] - edge_offset, camera_track['x'].tolist()[-1]+edge_offset
                                                 ], 
                                                 ylim=[
-                                                    dataframe['y'].tolist()[-1] - edge_offset, dataframe['y'].tolist()[-1]+edge_offset
+                                                    camera_track['y'].tolist()[-1] - edge_offset, camera_track['y'].tolist()[-1]+edge_offset
                                                 ],
                                                 #xlabel='X [μm]',
                                                 #ylabel='Y [μm]'
