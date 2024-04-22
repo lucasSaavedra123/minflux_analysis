@@ -19,6 +19,7 @@ import os
 from Trajectory import Trajectory
 from collections import defaultdict
 import pickle
+import glob
 
 
 APPEND_MORE_DATA = False
@@ -26,7 +27,7 @@ CREATE_DATA = False
 LOAD_MODEL = True
 PLOT_STATS = False
 
-DATASET_PATH = 'D:\GitHub Repositories\wavenet_tcn_andi\simulations\data.csv'
+DATASET_PATH = './single_simulations'
 RAW_DATA_PATH = './dataset.npy'
 
 CLASS_LABELS = ['HD', 'TD']
@@ -36,12 +37,13 @@ if CREATE_DATA:
         print(f"{DATASET_PATH} is not a valid path")
         exit()
     else:
-        table = pd.read_csv(DATASET_PATH)
+        raw_arrays = []
 
-        RAW_ARRAY = np.zeros((len(table['id'].unique()), (60*2)+len(CLASS_LABELS)))
+        for _, single_dataset_path in tqdm.tqdm(list(enumerate(glob.glob(DATASET_PATH+'/*')))):
+            table = pd.read_csv(single_dataset_path)
+            raw_arrays.append(np.zeros((1, (60*2)+len(CLASS_LABELS))))
 
-        for i, id in tqdm.tqdm(enumerate(table['id'].unique())):
-            trajectory_df = table[table['id'] == id].sort_values('t')
+            trajectory_df = table.sort_values('t')
             new_array = np.zeros((1, len(trajectory_df), 3))
             new_array[0,:,0] = trajectory_df['x']
             new_array[0,:,1] = trajectory_df['y']
@@ -52,16 +54,18 @@ if CREATE_DATA:
             #plt.show()
 
             try:
-                RAW_ARRAY[i, :-len(CLASS_LABELS)] = transform_traj_into_features(new_array)[0]
+                raw_arrays[-1][0, :-len(CLASS_LABELS)] = transform_traj_into_features(new_array)[0]
             except AssertionError:
-                RAW_ARRAY[i, :-len(CLASS_LABELS)] = np.nan
+                raw_arrays[-1][0, :-len(CLASS_LABELS)] = np.nan
 
             label = trajectory_df['label'].values[0].upper()
 
             try:
-                RAW_ARRAY[i, -len(CLASS_LABELS):] = np.eye(len(CLASS_LABELS), dtype=int)[CLASS_LABELS.index(label)]
+                raw_arrays[-1][0, -len(CLASS_LABELS):] = np.eye(len(CLASS_LABELS), dtype=int)[CLASS_LABELS.index(label)]
             except IndexError:
                 raise Exception(f'{trajectory_df["label"].values[0]} is wrong')
+
+        RAW_ARRAY = np.concatenate(raw_arrays)
 
         if APPEND_MORE_DATA:
             if os.path.exists(RAW_DATA_PATH):
@@ -148,7 +152,7 @@ DatabaseHandler.connect_over_network(None, None, IP_ADDRESS, COLLECTION_NAME)
 results = []
 
 def new_dict():
-    return {label: 0 for label in ['00', '01', '10', '11']}
+    return {label: 0 for label in CLASS_LABELS}
 
 counter = defaultdict(new_dict)
 traces, labels = [], []
@@ -161,29 +165,28 @@ p = {
     'info.classified_experimental_condition': 1,
     'info.analysis.betha': 1,
 }
-        
-for t_info in Trajectory._get_collection().find({'info.immobile':False}, {f'id':1}):
+
+for t_info in tqdm.tqdm(Trajectory._get_collection().find({'info.immobile':False}, {f'id':1})):
     t = Trajectory.objects(id=t_info['_id'])[0]
-    states = t.info['analysis']['confinement-states']
+    if 'analysis' not in t.info:
+        continue
+    t.info['analysis']['confinement-classification'] = []
+    for sub_t in t.sub_trajectories_trajectories_from_confinement_states(v_th=33, use_info=True)[1]:
+        raw_input = np.zeros((1, (60*2)))
 
-    for s_i in range(1, len(states)):
-        s_0 = str(states[s_i-1])
-        s_1 = str(states[s_i])
+        raw_sub_t = np.zeros((1, sub_t.length, 3))
+        raw_sub_t[0,:,0] = sub_t.get_noisy_x() * 1000
+        raw_sub_t[0,:,1] = sub_t.get_noisy_y() * 1000
+        raw_sub_t[0,:,2] = sub_t.get_time()
 
-        if 'classified_experimental_condition' in t['info']:
-            counter[t['info']['dataset']+'_'+t['info']['classified_experimental_condition']][s_0+s_1] += 1
-        else:
-            counter[t['info']['dataset']][s_0+s_1] += 1
+        try:
+            raw_input[0, :] = transform_traj_into_features(raw_sub_t)[0]
+        except:
+            t.info['analysis']['confinement-classification'].append(None)
+            continue
 
-    dics = {label: [] for label in ['00', '01', '10', '11']}
-    dics['dataset'] = []
+        predicted = np.argmax(model.predict(raw_input, verbose=0), axis=-1)
 
-    for dataset in counter:
-        dics['dataset'].append(dataset)
-
-        for label in counter[dataset]:
-            dics[label].append(counter[dataset][label])
-
-    pd.DataFrame(dics).to_csv('classification_result.csv', index=False)
+        t.info['analysis']['confinement-classification'].append(CLASS_LABELS[predicted[0]])
 
 DatabaseHandler.disconnect()
