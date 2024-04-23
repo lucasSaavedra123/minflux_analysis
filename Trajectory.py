@@ -740,3 +740,54 @@ class Trajectory(Document):
             min_size=min_size,
             return_break_points=return_break_points
         )
+
+    def mean_turning_angle(self):
+        """
+        This is meanDP in
+
+        Deep learning assisted single particle tracking for
+        automated correlation between diffusion and
+        function
+        """
+        normalized_angles = turning_angles(
+            self.length,
+            self.get_noisy_x(),
+            self.get_noisy_y(),
+            normalized=True,
+            steps_lag=1
+        )
+        return np.nanmean(normalized_angles)
+
+    def correlated_turning_angle(self):
+        """
+        This is corrDP in
+
+        Deep learning assisted single particle tracking for
+        automated correlation between diffusion and
+        function
+        """
+        normalized_angles = turning_angles(
+            self.length,
+            self.get_noisy_x(),
+            self.get_noisy_y(),
+            normalized=True,
+            steps_lag=1
+        )
+        return np.nanmean(np.sign(normalized_angles[1:])==np.sign(normalized_angles[:-1]))
+
+    def directional_persistance(self):
+        """
+        This is AvgSignDp in
+
+        Deep learning assisted single particle tracking for
+        automated correlation between diffusion and
+        function
+        """
+        normalized_angles = turning_angles(
+            self.length,
+            self.get_noisy_x(),
+            self.get_noisy_y(),
+            normalized=True,
+            steps_lag=1
+        )
+        return np.nanmean(np.sign(normalized_angles[1:])>0)
