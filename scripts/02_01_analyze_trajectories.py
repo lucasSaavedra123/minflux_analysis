@@ -154,6 +154,10 @@ def analyze_trajectory(trajectory_id):
     for angle in trajectory.info['analysis']['angles_analysis']:
         trajectory.info['analysis']['angles_analysis'][angle] = trajectory.turning_angles(steps_lag=int(angle))
 
+    trajectory.info['analysis']['meanDP'] = trajectory.mean_turning_angle()
+    trajectory.info['analysis']['corrDP'] = trajectory.correlated_turning_angle()
+    trajectory.info['analysis']['AvgSignD'] = trajectory.directional_persistance()
+
     sub_trajectories_by_state = trajectory.sub_trajectories_trajectories_from_confinement_states(v_th=33, use_info=True)
     for state in sub_trajectories_by_state:
         for sub_trajectory in sub_trajectories_by_state[state]:
