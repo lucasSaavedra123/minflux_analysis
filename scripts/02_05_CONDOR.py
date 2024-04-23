@@ -25,7 +25,7 @@ import glob
 APPEND_MORE_DATA = False
 CREATE_DATA = False
 LOAD_MODEL = True
-PLOT_STATS = False
+PLOT_STATS = True
 
 DATASET_PATH = './single_simulations'
 RAW_DATA_PATH = './dataset.npy'
@@ -124,7 +124,7 @@ if PLOT_STATS:
     plt.xlabel('Epoch')
     plt.legend(['Training', 'Validation'], loc='upper left')
     plt.xlim([0,epochs_list[-1]+1])
-    plt.ylim([0,1])
+    #plt.ylim([0,1])
 
     plt.show()
 
@@ -148,7 +148,7 @@ if PLOT_STATS:
     plt.show()
 
 DatabaseHandler.connect_over_network(None, None, IP_ADDRESS, COLLECTION_NAME)
-
+exit()
 results = []
 
 def new_dict():
@@ -158,35 +158,47 @@ counter = defaultdict(new_dict)
 traces, labels = [], []
 
 p = {
+    '_id': 1,
     'x':1,
     'y':1,
     't': 1,
     'info.dataset': 1,
     'info.classified_experimental_condition': 1,
     'info.analysis.betha': 1,
+    'info.analysis.confinement-classification': 1,
 }
 
-for t_info in tqdm.tqdm(Trajectory._get_collection().find({'info.immobile':False}, {f'id':1})):
-    t = Trajectory.objects(id=t_info['_id'])[0]
-    if 'analysis' not in t.info:
+for t_info in tqdm.tqdm(Trajectory._get_collection().find({'info.immobile':False}, p)):
+    #t = Trajectory.objects(id=t_info['_id'])[0]
+    if 'analysis' not in t_info['info'] or len(t_info['x']) <= 1 or 'confinement-classification' in t_info['info']['analysis']:
         continue
-    t.info['analysis']['confinement-classification'] = []
-    for sub_t in t.sub_trajectories_trajectories_from_confinement_states(v_th=33, use_info=True)[1]:
+
+    confinement_classifications = []
+
+    fake_trajectory = Trajectory(
+        x=t_info['x'],
+        y=t_info['y'],
+        t=t_info['t'],
+        noisy=True
+    )
+
+    for sub_t in fake_trajectory.sub_trajectories_trajectories_from_confinement_states(v_th=33)[1]:
         raw_input = np.zeros((1, (60*2)))
 
         raw_sub_t = np.zeros((1, sub_t.length, 3))
-        raw_sub_t[0,:,0] = sub_t.get_noisy_x() * 1000
-        raw_sub_t[0,:,1] = sub_t.get_noisy_y() * 1000
-        raw_sub_t[0,:,2] = sub_t.get_time()
+        raw_sub_t[0,:,0] = np.array(sub_t.get_noisy_x()) * 1000
+        raw_sub_t[0,:,1] = np.array(sub_t.get_noisy_y()) * 1000
+        raw_sub_t[0,:,2] = np.array(sub_t.get_time())
 
         try:
             raw_input[0, :] = transform_traj_into_features(raw_sub_t)[0]
         except:
-            t.info['analysis']['confinement-classification'].append(None)
+            confinement_classifications.append(None)
             continue
 
         predicted = np.argmax(model.predict(raw_input, verbose=0), axis=-1)
+        confinement_classifications.append(CLASS_LABELS[predicted[0]])
 
-        t.info['analysis']['confinement-classification'].append(CLASS_LABELS[predicted[0]])
+    Trajectory._get_collection().update_one({'_id':t_info['_id']}, {"$set":{"info.analysis.confinement-classification":confinement_classifications}})
 
 DatabaseHandler.disconnect()

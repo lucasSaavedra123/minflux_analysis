@@ -12,6 +12,10 @@ from scipy.spatial import ConvexHull
 import scipy.stats as st
 import matplotlib.animation as animation
 from collections import defaultdict
+import moviepy.editor as mp
+from moviepy.video.fx.all import crop
+from moviepy.editor import *
+
 #Example about how to read trajectories from .mat
 """
 from scipy.io import loadmat
@@ -391,12 +395,23 @@ class Trajectory(Document):
 
         plt.show()
 
-    def animate_plot(self):
+    def animate_plot(self, roi_size=None, save_animation=False, title='animation'):
         fig, ax = plt.subplots()
 
         line = ax.plot(self.get_noisy_x()[0], self.get_noisy_y()[0])[0]
-        ax.set(xlim=[np.min(self.get_noisy_x()), np.max(self.get_noisy_x())], ylim=[np.min(self.get_noisy_y()), np.max(self.get_noisy_y())], xlabel='X', ylabel='Y')
 
+        if roi_size is None:
+            ax.set(xlim=[np.min(self.get_noisy_x()), np.max(self.get_noisy_x())], ylim=[np.min(self.get_noisy_y()), np.max(self.get_noisy_y())], xlabel='X', ylabel='Y')
+        else:
+            xlim = [np.min(self.get_noisy_x()), np.max(self.get_noisy_x())]
+            ylim = [np.min(self.get_noisy_y()), np.max(self.get_noisy_y())]
+            x_difference = xlim[1]-xlim[0]
+            y_difference = ylim[1]-ylim[0]
+            x_offset = (roi_size - x_difference)/2
+            y_offset = (roi_size - y_difference)/2
+            xlim = [xlim[0]-x_offset, xlim[1]+x_offset]
+            ylim = [ylim[0]-y_offset, ylim[1]+y_offset]
+            ax.set(xlim=xlim, ylim=ylim, xlabel='X', ylabel='Y')
         def update(frame):
             # for each frame, update the data stored on each artist.
             x_f = self.get_noisy_x()[:frame]
@@ -412,10 +427,17 @@ class Trajectory(Document):
             # update the line plot:
             line.set_xdata(x_f[:frame])
             line.set_ydata(y_f[:frame])
+            plt.tight_layout()
             return (line)
 
         ani = animation.FuncAnimation(fig=fig, func=update, frames=self.length, interval=1)
-        plt.show()
+
+        if not save_animation:
+            plt.show()
+        else:
+            ani.save(f'DELETE.gif', writer=animation.PillowWriter(fps=30), dpi=300)
+            clip = mp.VideoFileClip(f'DELETE.gif')
+            clip.write_videofile(f'./animations_plus/{title}.mp4')
 
     def plot_confinement_states(
         self,
