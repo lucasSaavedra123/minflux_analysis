@@ -148,7 +148,7 @@ if PLOT_STATS:
     plt.show()
 
 DatabaseHandler.connect_over_network(None, None, IP_ADDRESS, COLLECTION_NAME)
-exit()
+
 results = []
 
 def new_dict():
