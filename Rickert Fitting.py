@@ -5,7 +5,7 @@ from scipy.optimize import minimize
 from Trajectory import Trajectory
 from DatabaseHandler import DatabaseHandler
 from CONSTANTS import *
-
+from scipy.stats import sem
 import matplotlib.pyplot as plt
 
 DELTA_T = 0.001
@@ -58,108 +58,112 @@ def hop_fitting(X,Y):
 
     return min(res_eq_9s, key=lambda r: r.fun)
 
-msd_results = []
-
-classification = {'hop': [], 'free': []}
+datasets = [
+    'Control', 'CholesterolPEGKK114'
+]
 
 DatabaseHandler.connect_over_network(None, None, IP_ADDRESS, COLLECTION_NAME)
-i = 0
-for t in tqdm.tqdm(Trajectory._get_collection().find({'info.immobile':False, 'info.dataset': 'Control'}, {'_id':1, 'x':1, 'y':1, 't':1})):
-    if i > 100:
-        break
+for dataset in datasets:
+    msd_results = []
 
-    trajectory = Trajectory(
-        x=np.array(t['x'])*1000,
-        y=np.array(t['y'])*1000,
-        t=np.append(0,np.cumsum(np.round(np.diff(t['t']),4))),
-        noisy=True
-    )
+    classification = {'hop': [], 'free': []}
+    alphas = {'hop': [], 'free': []}
 
-    if trajectory.length < 100:
-        continue
-    else:
-        i+=1
+    for t in tqdm.tqdm(Trajectory._get_collection().find({'info.immobile':False, 'info.dataset': dataset}, {'_id':1, 'x':1, 'y':1, 't':1,'info.analysis.betha':1})):
+        trajectory = Trajectory(
+            x=np.array(t['x'])*1000,
+            y=np.array(t['y'])*1000,
+            t=np.append(0,np.cumsum(np.round(np.diff(t['t']),4))),
+            noisy=True
+        )
 
-    _, msd = trajectory.calculate_msd_curve(bin_width=DELTA_T)
-    msd = msd[:25]
-    Y = np.array(msd)
-    msd_results.append(Y)
-    X = np.array(range(1,len(Y)+1))
+        if trajectory.length < 100 or 'betha' not in t['info']['analysis']:
+            continue
 
-    n = len(Y)
+        _, msd = trajectory.calculate_msd_curve(bin_width=DELTA_T)
+        msd = msd[:25]
+        Y = np.array(msd)
+        msd_results.append(Y)
+        X = np.array(range(1,len(Y)+1))
+
+        n = len(Y)
+        
+        res_eq_4 = free_fitting(X,Y)
+        res_eq_9 = hop_fitting(X,Y)
+
+        BIC_4 = n * np.log(res_eq_4.fun/n) + 2 * np.log(n)
+        BIC_9 = n * np.log(res_eq_9.fun/n) + 4 * np.log(n)
+        
+        label = 'hop' if BIC_9 < BIC_4 else 'free'
+
+        #plt.title(label)
+        #plt.plot(X,Y,color='black')
+        #plt.plot(X,equation_free(X,*res_eq_4.x), color='blue')
+        #plt.plot(X,equation_hop(X,*res_eq_9.x), color='green')
+        #plt.show()
+        #print(label)
+        #trajectory.animate_plot()
+
+        classification[label].append(Y)
+        alphas[label].append(t['info']['analysis']['betha'])
+
+    print('HOP:', len(classification['hop'])/(len(classification['hop'])+len(classification['free'])))
+    print('FREE:', len(classification['free'])/(len(classification['hop'])+len(classification['free'])))
     
-    res_eq_4 = free_fitting(X,Y)
-    res_eq_9 = hop_fitting(X,Y)
+    print('HOP:', np.mean(alphas['hop']), sem(alphas['hop']))
+    print('FREE:', np.mean(alphas['free']), sem(alphas['free']))
 
-    BIC_4 = n * np.log(res_eq_4.fun/n) + 2 * np.log(n)
-    BIC_9 = n * np.log(res_eq_9.fun/n) + 4 * np.log(n)
-    
-    label = 'hop' if BIC_9 < BIC_4 else 'free'
+    min_hop_msd = np.min([len(y) for y in classification['hop']])
+    classification['hop'] = [msd[:min_hop_msd] for msd in classification['hop']]
 
-    #plt.title(label)
-    #plt.plot(X,Y,color='black')
-    #plt.plot(X,equation_free(X,*res_eq_4.x), color='blue')
-    #plt.plot(X,equation_hop(X,*res_eq_9.x), color='green')
-    #plt.show()
-    #print(label)
-    #trajectory.animate_plot()
+    min_free_msd = np.min([len(y) for y in classification['free']])
+    classification['free'] = [msd[:min_free_msd] for msd in classification['free']]
 
-    classification[label].append(Y)
+    hop_mean_msd = np.mean(classification['hop'], axis=0)
+    free_mean_msd = np.mean(classification['free'], axis=0)
 
-print('HOP:', len(classification['hop'])/(len(classification['hop'])+len(classification['free'])))
-print('FREE:', len(classification['free'])/(len(classification['hop'])+len(classification['free'])))
+    X_HOP = np.array(range(1,len(hop_mean_msd)+1))
+    X_FREE = np.array(range(1,len(free_mean_msd)+1))
 
-min_hop_msd = np.min([len(y) for y in classification['hop']])
-classification['hop'] = [msd[:min_hop_msd] for msd in classification['hop']]
+    dm, du, delta, lhop = hop_fitting(X_HOP, hop_mean_msd).x
+    d, delta_f = free_fitting(X_FREE, free_mean_msd).x
 
-min_free_msd = np.min([len(y) for y in classification['free']])
-classification['free'] = [msd[:min_free_msd] for msd in classification['free']]
+    yerr_hop = np.std(classification['hop'], axis=0)/np.sqrt(len(classification['hop'][0]))
+    yerr_free = np.std(classification['free'], axis=0)/np.sqrt(len(classification['free'][0]))
 
-hop_mean_msd = np.mean(classification['hop'], axis=0)
-free_mean_msd = np.mean(classification['free'], axis=0)
+    f, axarr = plt.subplots(2)
+    axarr[0].errorbar(X_FREE[:25]*DELTA_T, free_mean_msd[:25], yerr=yerr_free[:25], color='blue', linewidth=1, fmt ='o')
+    axarr[0].plot(X_FREE[:25]*DELTA_T, equation_free(X_FREE[:25], d, delta_f), color='black', linewidth=3)
+    #axarr[0].set_title('Free diffusion')
+    axarr[0].set_ylabel('MSD [nm2/s]')
 
-X_HOP = np.array(range(1,len(hop_mean_msd)+1))
-X_FREE = np.array(range(1,len(free_mean_msd)+1))
+    axarr[1].errorbar(X_HOP[:25]*DELTA_T, hop_mean_msd[:25], yerr=yerr_hop[:25], color='orange', linewidth=1, fmt ='o')
+    axarr[1].plot(X_HOP[:25]*DELTA_T, equation_hop(X_HOP[:25], dm, du, delta, lhop), color='black', linewidth=3)
+    #axarr[1].set_title('Hop diffusion')
+    axarr[1].set_xlabel('Time lag [s]')
+    axarr[1].set_ylabel('MSD [nm2/s]')
 
-dm, du, delta, lhop = hop_fitting(X_HOP, hop_mean_msd).x
-d, delta_f = free_fitting(X_FREE, free_mean_msd).x
+    """
+    limit = axarr[1].get_ylim()
 
-yerr_hop = np.std(classification['hop'], axis=0)/np.sqrt(len(classification['hop'][0]))
-yerr_free = np.std(classification['free'], axis=0)/np.sqrt(len(classification['free'][0]))
+    first_line = X_HOP * du
+    #first_line -= min(first_line)
 
-f, axarr = plt.subplots(2)
-axarr[0].errorbar(X_FREE[:25]*DELTA_T, free_mean_msd[:25], yerr=yerr_free[:25], color='blue', linewidth=1, fmt ='o')
-axarr[0].plot(X_FREE[:25]*DELTA_T, equation_free(X_FREE[:25], d, delta_f), color='black', linewidth=3)
-axarr[0].set_title('Free diffusion')
-axarr[0].set_ylabel('MSD [nm2/s]')
+    second_line = X_HOP * dm
+    #offset = second_line[-1] - hop_mean_msd[-1]
+    #second_line -= offset
 
-axarr[1].errorbar(X_HOP[:25]*DELTA_T, hop_mean_msd[:25], yerr=yerr_hop[:25], color='orange', linewidth=1, fmt ='o')
-axarr[1].plot(X_HOP[:25]*DELTA_T, equation_hop(X_HOP[:25], dm, du, delta, lhop), color='black', linewidth=3)
-axarr[1].set_title('Hop diffusion')
-axarr[1].set_xlabel('Time lag [s]')
-axarr[1].set_ylabel('MSD [nm2/s]')
+    #axarr[1].plot(second_line, 'black', linewidth=1)
+    axarr[1].set_ylim(limit)
+    """
+    du = ('{:,}'.format(int(du))) 
+    dm = ('{:,}'.format(int(dm))) 
+    d = ('{:,}'.format(int(d))) 
 
-"""
-limit = axarr[1].get_ylim()
+    axarr[0].text(15*DELTA_T, 500, '$D ='+d+' nm^2 s^-1$', fontsize = 10)
+    axarr[1].text(15*DELTA_T, 1500, '$D_{\mu} ='+du+' nm^2 s^-1$', fontsize = 10)
+    axarr[1].text(15*DELTA_T, 500, '$D_{M} ='+dm+' nm^2 s^-1$', fontsize = 10)
 
-first_line = X_HOP * du
-#first_line -= min(first_line)
-
-second_line = X_HOP * dm
-#offset = second_line[-1] - hop_mean_msd[-1]
-#second_line -= offset
-
-#axarr[1].plot(second_line, 'black', linewidth=1)
-axarr[1].set_ylim(limit)
-"""
-du = ('{:,}'.format(int(du))) 
-dm = ('{:,}'.format(int(dm))) 
-d = ('{:,}'.format(int(d))) 
-
-axarr[0].text(15*DELTA_T, 500, '$D ='+d+' nm^2 s^-1$', fontsize = 10)
-axarr[1].text(15*DELTA_T, 1500, '$D_{\mu} ='+du+' nm^2 s^-1$', fontsize = 10)
-axarr[1].text(15*DELTA_T, 500, '$D_{M} ='+dm+' nm^2 s^-1$', fontsize = 10)
-
-plt.show()
+    plt.savefig(f'rickert_{dataset}.png')
 
 DatabaseHandler.disconnect()
