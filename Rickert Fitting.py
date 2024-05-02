@@ -8,10 +8,14 @@ from CONSTANTS import *
 from scipy.stats import sem
 import matplotlib.pyplot as plt
 
+class DummyObject():
+    def __init__(self, x, fun):
+        self.fun = fun
+        self.x = x
+
 DELTA_T = 0.001
 DIMENSION = 2
-R = 1
-L = 1
+R = 1/6
 
 def equation_free(x, D, LOCALIZATION_PRECISION):
     TERM_1 = 2*DIMENSION*D*DELTA_T*(x-(2*R))
@@ -20,8 +24,8 @@ def equation_free(x, D, LOCALIZATION_PRECISION):
 
 def equation_hop(x, DM, DU, LOCALIZATION_PRECISION, L_HOP):
     TERM_1_1_1 = (DU-DM)/DU
-    TERM_1_1_2 = (0.26*(L_HOP**2))/(2*DIMENSION*x*DELTA_T)
-    TERM_1_1_3 = 1 - (np.exp(-((2*DIMENSION*x*DELTA_T*DU)/(0.52*(L**2)))))
+    TERM_1_1_2 = (L_HOP**2)/(6*DIMENSION*x*DELTA_T)
+    TERM_1_1_3 = 1 - (np.exp(-((12*x*DELTA_T*DU)/(L_HOP**2))))
 
     TERM_1_1 = DM + (TERM_1_1_1*TERM_1_1_2*TERM_1_1_3)
 
@@ -38,9 +42,9 @@ def free_fitting(X,Y):
     eq_4_obj = lambda coeffs: eq_4_obj_raw(X, Y, *coeffs)
     res_eq_4s = []
 
-    for _ in range(99):        
+    for _ in range(100):        
         x0=[np.random.uniform(100, 100000), np.random.uniform(1, 100)]
-        res_eq_4 = minimize(eq_4_obj, x0=x0, bounds=[(0, None), (0, None)])
+        res_eq_4 = minimize(eq_4_obj, x0=x0, bounds=[(100, None), (1, None)])
         res_eq_4s.append(res_eq_4)
 
     return min(res_eq_4s, key=lambda r: r.fun)
@@ -53,7 +57,7 @@ def hop_fitting(X,Y):
 
     for _ in range(99):        
         x0=[np.random.uniform(100, 100000), np.random.uniform(100, 100000), np.random.uniform(1, 100), np.random.uniform(1, 1000)]
-        res_eq_9 = minimize(eq_9_obj, x0=x0, bounds=[(0, None), (0, None), (0, None), (0, None)], constraints=[{'type':'eq', 'fun': lambda t: (t[1]/t[0]) - 5}])
+        res_eq_9 = minimize(eq_9_obj, x0=x0, bounds=[(0, None), (0, None), (0, None), (0, None)], constraints=[{'type':'eq', 'fun': lambda t: (t[1]/t[0]) - 10}])
         res_eq_9s.append(res_eq_9)
 
     return min(res_eq_9s, key=lambda r: r.fun)
@@ -65,11 +69,13 @@ datasets = [
 DatabaseHandler.connect_over_network(None, None, IP_ADDRESS, COLLECTION_NAME)
 for dataset in datasets:
     msd_results = []
-
+    i = 0
     classification = {'hop': [], 'free': []}
     alphas = {'hop': [], 'free': []}
 
     for t in tqdm.tqdm(Trajectory._get_collection().find({'info.immobile':False, 'info.dataset': dataset}, {'_id':1, 'x':1, 'y':1, 't':1,'info.analysis.betha':1})):
+        if i > 500:
+            break 
         trajectory = Trajectory(
             x=np.array(t['x'])*1000,
             y=np.array(t['y'])*1000,
@@ -77,11 +83,13 @@ for dataset in datasets:
             noisy=True
         )
 
-        if trajectory.length < 100 or 'betha' not in t['info']['analysis']:
+        if trajectory.length < 50 or 'betha' not in t['info']['analysis']:
             continue
+        else:
+            i += 1
 
         _, msd = trajectory.calculate_msd_curve(bin_width=DELTA_T)
-        msd = msd[:25]
+        msd = msd[:int(len(msd)*0.20)]
         Y = np.array(msd)
         msd_results.append(Y)
         X = np.array(range(1,len(Y)+1))
@@ -96,12 +104,11 @@ for dataset in datasets:
         
         label = 'hop' if BIC_9 < BIC_4 else 'free'
 
-        #plt.title(label)
-        #plt.plot(X,Y,color='black')
-        #plt.plot(X,equation_free(X,*res_eq_4.x), color='blue')
-        #plt.plot(X,equation_hop(X,*res_eq_9.x), color='green')
-        #plt.show()
-        #print(label)
+        plt.title(label)
+        plt.plot(X,Y,color='black')
+        plt.plot(X,equation_free(X,*res_eq_4.x), color='blue')
+        plt.plot(X,equation_hop(X,*res_eq_9.x), color='green')
+        plt.show()
         #trajectory.animate_plot()
 
         classification[label].append(Y)
