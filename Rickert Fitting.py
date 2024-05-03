@@ -18,6 +18,9 @@ DIMENSION = 2
 R = 1/6
 SEGMENT_LENGTH = 500
 
+"""
+REVISAR TODAS LAS EXPRESIONES!!!
+"""
 def equation_free(x, D, LOCALIZATION_PRECISION):
     TERM_1 = 2*DIMENSION*D*DELTA_T*(x-(2*R))
     TERM_2 = 2*DIMENSION*(LOCALIZATION_PRECISION**2)
@@ -30,8 +33,8 @@ def equation_anomalous(x, D_BETHA, BETHA, LOCALIZATION_PRECISION):
 
 def equation_hop(x, DM, DU, L_HOP, LOCALIZATION_PRECISION):
     TERM_1_1_1 = (DU-DM)/DU
-    TERM_1_1_2 = (L_HOP**2)/(6*DIMENSION*x*DELTA_T)
-    TERM_1_1_3 = 1 - (np.exp(-((12*x*DELTA_T*DU)/(L_HOP**2))))
+    TERM_1_1_2 = (0.26*(L_HOP**2))/(2*DIMENSION*x*DELTA_T)
+    TERM_1_1_3 = 1 - (np.exp(-((2*DIMENSION*x*DELTA_T*DU)/(0.52*(L_HOP**2)))))
 
     TERM_1_1 = DM + (TERM_1_1_1*TERM_1_1_2*TERM_1_1_3)
 
@@ -71,7 +74,24 @@ def hop_fitting(X,Y):
 
     for _ in range(99):        
         x0=[np.random.uniform(1000, 100000), np.random.uniform(1000, 100000), np.random.uniform(1, 1000), np.random.uniform(1, 100)]
-        res_eq_9 = minimize(eq_9_obj, x0=x0, bounds=[(1000, None), (1000, None), (1, None), (1, None)], constraints=[LinearConstraint([-5,1,0,0], lb=0, ub=np.inf)])
+        res_eq_9 = minimize(eq_9_obj, x0=x0, bounds=[(0, None), (0, None), (1, None), (1, None)], constraints=[LinearConstraint([-5,1,0,0], lb=0, ub=np.inf)])
+        res_eq_9s.append(res_eq_9)
+
+    return min(res_eq_9s, key=lambda r: r.fun)
+
+def confined_fitting(X,Y):
+    def eq_9_obj_raw(x, y, du, l, delta): return np.sum((y - equation_hop(x, 0, du, l, delta))**2)
+
+    select_indexes = np.unique(np.geomspace(1,len(X), len(X)).astype(int))-1
+    X = X[select_indexes]
+    Y = Y[select_indexes]
+
+    eq_9_obj = lambda coeffs: eq_9_obj_raw(X, Y, *coeffs)
+    res_eq_9s = []
+
+    for _ in range(99):        
+        x0=[np.random.uniform(1000, 100000), np.random.uniform(1000, 100000), np.random.uniform(1, 1000)]
+        res_eq_9 = minimize(eq_9_obj, x0=x0, bounds=[(1000, None), (1000, None), (1, None)])
         res_eq_9s.append(res_eq_9)
 
     return min(res_eq_9s, key=lambda r: r.fun)
@@ -100,19 +120,18 @@ datasets = [
 DatabaseHandler.connect_over_network(None, None, IP_ADDRESS, COLLECTION_NAME)
 for dataset in datasets:
     msd_results = []
-    classification = {'hop': [], 'free': [], 'anomalous': []}
-    alphas = {'hop': [], 'free': [], 'anomalous': []}
+    classification = {'hop': [], 'free': [], 'anomalous': [], 'confined': []}
+    alphas = {'hop': [], 'free': [], 'anomalous': [], 'confined': []}
     i = 0
     for t in tqdm.tqdm(Trajectory._get_collection().find({'info.immobile':False, 'info.dataset': dataset}, {'_id':1, 'x':1, 'y':1, 't':1,'info.analysis.betha':1})):
-        if i > 100:
-           break 
         trajectory = Trajectory(
             x=np.array(t['x'])*1000,
             y=np.array(t['y'])*1000,
             t=np.append(0,np.cumsum(np.round(np.diff(t['t']),4))),
             noisy=True
         )
-
+        if i > 500:
+            break
         if 'betha' not in t['info']['analysis']:
             continue
 
@@ -129,31 +148,34 @@ for dataset in datasets:
             X = np.array(range(1,len(Y)+1))
             T = t_msd[:len(Y)]
             n = len(Y)
-            print(n)
+
             res_eq_4 = free_fitting(X,Y)
             res_eq_9 = hop_fitting(X,Y)
             res_eq_a = anomalous_fitting(X,Y)
+            res_eq_c = confined_fitting(X,Y)
 
             BIC_4 = n * np.log(res_eq_4.fun/n) + 2 * np.log(n)
             BIC_9 = n * np.log(res_eq_9.fun/n) + 4 * np.log(n)
+            BIC_C = n * np.log(res_eq_c.fun/n) + 3 * np.log(n)
             BIC_A = n * np.log(res_eq_a.fun/n) + 3 * np.log(n)
 
-            MIN_BIC = min([BIC_4, BIC_9, BIC_A])
+            MIN_BIC = min([BIC_4, BIC_9, BIC_C, BIC_A])
 
             if MIN_BIC == BIC_4:
                 label = 'free'
             elif MIN_BIC == BIC_9:
                 label = 'hop'
 
-                plt.title(f"{label}, {res_eq_9.x[0]}, {res_eq_9.x[1]}")
-                plt.plot(X*DELTA_T,Y,color='black')
-                plt.plot(X*DELTA_T,equation_free(X,*res_eq_4.x), color='blue')
-                plt.plot(X*DELTA_T,equation_hop(X,*res_eq_9.x), color='green')
-                plt.plot(X*DELTA_T,equation_anomalous(X,*res_eq_a.x), color='red')
-
+                #plt.title(f"{label}, {res_eq_9.x[0]}, {res_eq_9.x[1]}")
+                #plt.plot(X*DELTA_T,Y,color='black')
+                #lt.plot(X*DELTA_T,equation_free(X,*res_eq_4.x), color='blue')
+                #plt.plot(X*DELTA_T,equation_hop(X,*res_eq_9.x), color='green')
+                #plt.plot(X*DELTA_T,equation_anomalous(X,*res_eq_a.x), color='red')
+                #plt.show()
+                """
                 X_DU = X*DELTA_T
-                Y_DU = X_DU*res_eq_9.x[1]
-                Y_DM = X_DU*res_eq_9.x[0]
+                Y_DU = X_DU*res_eq_9.x[0]
+                Y_DM = 2*DIMENSION*X_DU*res_eq_9.x[1]
 
                 offset = Y[-1] - Y_DU[-1]
                 Y_DU += offset
@@ -163,19 +185,21 @@ for dataset in datasets:
 
                 y_lim = plt.ylim()
 
-                plt.plot(X_DU, Y_DU, color='gray')
-                plt.plot(X_DU, Y_DM, color='yellow')
+                #plt.plot(X_DU, Y_DU, color='gray')
+                #plt.plot(X_DU, Y_DM, color='yellow')
 
                 plt.ylim(y_lim)
                 plt.show()
                 trajectory.animate_plot()
+                """
             elif MIN_BIC == BIC_A:
                 label = 'anomalous'
+            elif MIN_BIC == BIC_C:
+                label = 'confined'
 
             classification[label].append(Y)
             alphas[label].append(t['info']['analysis']['betha'])
-        i+=1
-
+        i += 1
     print('HOP:', len(classification['hop'])/(len(classification['hop'])+len(classification['free'])))
     print('FREE:', len(classification['free'])/(len(classification['hop'])+len(classification['free'])))
 
