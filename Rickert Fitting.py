@@ -80,7 +80,7 @@ def confined_fitting(X,Y):
 
     for _ in range(100):        
         x0=[np.random.uniform(100, 100000), np.random.uniform(10, 1000), np.random.uniform(1, 100)]
-        res_eq_9 = minimize(eq_9_obj, x0=x0, bounds=[(100, None), (1000, None), (1, None)])
+        res_eq_9 = minimize(eq_9_obj, x0=x0, bounds=[(100, None), (10, None), (1, None)])
         res_eq_9s.append(res_eq_9)
 
     return min(res_eq_9s, key=lambda r: r.fun)
@@ -93,7 +93,7 @@ fitting_dictionary = {
         'min_msd': None,
         'mean_msd_result': None,
         'color': 'blue',
-        'title': 'Free Diffusion'
+        'title': 'Free Diffusion',
     },
     'hop': {
         'fitting': hop_fitting,
@@ -123,6 +123,7 @@ DatabaseHandler.connect_over_network(None, None, IP_ADDRESS, COLLECTION_NAME)
 for dataset in datasets:
     for a_key in fitting_dictionary:
         fitting_dictionary[a_key]['msds'] = []
+        fitting_dictionary[a_key]['segments'] = []
     counter = 0
     limit = None
     for t in tqdm.tqdm(Trajectory._get_collection().find({'info.immobile':False, 'info.dataset': dataset}, {'_id':1, 'x':1, 'y':1, 't':1,'info.analysis.betha':1})):
@@ -160,10 +161,14 @@ for dataset in datasets:
                 fitting_cache[a_key] = fitting_dictionary[a_key]['fitting'](X,Y)
                 #plt.plot(X,fitting_dictionary[a_key]['equation'](X, *fitting_cache[a_key].x), color=fitting_dictionary[a_key]['color'])
                 fitting_cache[a_key] = n * np.log(fitting_cache[a_key].fun/n) + fitting_dictionary[a_key]['number_of_free_parameters'] * np.log(n)
-            #plt.show()
             MODEL_WITH_LESS_BIC = min(fitting_cache, key=fitting_cache.get)
+            #plt.title(MODEL_WITH_LESS_BIC)
+            #plt.show()
+
+            #segment.animate_plot()
 
             fitting_dictionary[MODEL_WITH_LESS_BIC]['msds'].append(Y)
+            fitting_dictionary[MODEL_WITH_LESS_BIC]['segments'].append(segment)
 
     msds_sum = sum([len(fitting_dictionary[a_key]['msds']) for a_key in fitting_dictionary])
     f, axarr = plt.subplots(len(fitting_dictionary.keys()))
@@ -173,11 +178,13 @@ for dataset in datasets:
         fitting_dictionary[a_key]['msds'] = [msd[:fitting_dictionary[a_key]['min_msd']] for msd in fitting_dictionary[a_key]['msds']]
         fitting_dictionary[a_key]['error_msds'] = np.std(fitting_dictionary[a_key]['msds'], axis=0)/np.sqrt(fitting_dictionary[a_key]['min_msd'])
         fitting_dictionary[a_key]['msds'] = np.mean(fitting_dictionary[a_key]['msds'], axis=0)
-        fitting_dictionary[a_key]['x_msds'] = np.array(range(1,len(fitting_dictionary[a_key]['msds'])+1))
+        fitting_dictionary[a_key]['x_msds'] = np.arange(1,len(fitting_dictionary[a_key]['msds'])+1,1)
         fitting_dictionary[a_key]['mean_msd_result'] = fitting_dictionary[a_key]['fitting'](fitting_dictionary[a_key]['x_msds'], fitting_dictionary[a_key]['msds'])
+        print(key_index, *fitting_dictionary[a_key]['mean_msd_result'].x)
+        fake_x = np.arange(1,len(fitting_dictionary[a_key]['msds'])+1,0.1)
 
-        axarr[key_index].errorbar((fitting_dictionary[a_key]['x_msds']*DELTA_T)[:25], fitting_dictionary[a_key]['x_msds'][:25], yerr=fitting_dictionary[a_key]['error_msds'][:25], color=fitting_dictionary[a_key]['color'], linewidth=1, fmt ='o')
-        axarr[key_index].plot((fitting_dictionary[a_key]['x_msds']*DELTA_T)[:25], fitting_dictionary[a_key]['equation'](fitting_dictionary[a_key]['x_msds'], *fitting_dictionary[a_key]['mean_msd_result'].x)[:25], color='black', linewidth=3)
+        axarr[key_index].errorbar((fitting_dictionary[a_key]['x_msds']*DELTA_T)[:25], fitting_dictionary[a_key]['msds'][:25], yerr=fitting_dictionary[a_key]['error_msds'][:25], color=fitting_dictionary[a_key]['color'], linewidth=1, fmt ='o')
+        axarr[key_index].plot((fake_x*DELTA_T)[:230], fitting_dictionary[a_key]['equation'](fake_x, *fitting_dictionary[a_key]['mean_msd_result'].x)[:230], color='black', linewidth=2)
         axarr[key_index].set_title(fitting_dictionary[a_key]['title'])
         axarr[key_index].set_ylabel(r'$MSD [nm^{2} s^{-1}]$')
 
@@ -206,5 +213,5 @@ for dataset in datasets:
     #axarr[1].text(15*DELTA_T, 500, '$D_{M} ='+dm+' nm^2 s^-1$', fontsize = 10)
 
     plt.savefig(f'rickert_{dataset}.png')
-    exit()
+
 DatabaseHandler.disconnect()
