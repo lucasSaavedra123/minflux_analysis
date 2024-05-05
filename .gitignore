@@ -168,3 +168,8 @@ cython_debug/
 *.npy
 *.h5
 *.keras
+*.xlsx
+*.txt
+*.pth
+*.mp4
+*.pkl
