@@ -1,4 +1,3 @@
-
 import tqdm
 import numpy as np
 from scipy.optimize import minimize, LinearConstraint
@@ -24,7 +23,7 @@ def equation_hop(x, DM, DU, L_HOP, LOCALIZATION_PRECISION):
     TERM_1_1_2 = (L_HOP**2)/(6*DIMENSION*x*DELTA_T)
     TERM_1_1_3 = 1 - (np.exp(-((12*DU*x*DELTA_T)/(L_HOP**2))))
 
-    TERM_1_1 = 2*DIMENSION*DELTA_T*x
+    TERM_1_1 = 2*DIMENSION*DELTA_T
     TERM_1_2 = DM + (TERM_1_1_1*TERM_1_1_2*TERM_1_1_3)
     TERM_1_3 = (x-(2*R))
     TERM_1 = TERM_1_1 * TERM_1_2 * TERM_1_3
