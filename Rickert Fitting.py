@@ -80,7 +80,7 @@ def confined_fitting(X,Y):
 
     for _ in range(100):        
         x0=[np.random.uniform(100, 100000), np.random.uniform(10, 1000), np.random.uniform(1, 100)]
-        res_eq_9 = minimize(eq_9_obj, x0=x0, bounds=[(1000, None), (1000, None), (1, None)])
+        res_eq_9 = minimize(eq_9_obj, x0=x0, bounds=[(100, None), (1000, None), (1, None)])
         res_eq_9s.append(res_eq_9)
 
     return min(res_eq_9s, key=lambda r: r.fun)
@@ -93,6 +93,7 @@ fitting_dictionary = {
         'min_msd': None,
         'mean_msd_result': None,
         'color': 'blue',
+        'title': 'Free Diffusion'
     },
     'hop': {
         'fitting': hop_fitting,
@@ -101,6 +102,7 @@ fitting_dictionary = {
         'min_msd': None,
         'mean_msd_result': None,
         'color': 'red',
+        'title': 'Hop Diffusion'
     },
     'confined': {
         'fitting': confined_fitting,
@@ -109,6 +111,7 @@ fitting_dictionary = {
         'min_msd': None,
         'mean_msd_result': None,
         'color': 'green',
+        'title': 'Confined Diffusion'
     }
 }
 
@@ -120,10 +123,11 @@ DatabaseHandler.connect_over_network(None, None, IP_ADDRESS, COLLECTION_NAME)
 for dataset in datasets:
     for a_key in fitting_dictionary:
         fitting_dictionary[a_key]['msds'] = []
-    i = 0
+    counter = 0
+    limit = None
     for t in tqdm.tqdm(Trajectory._get_collection().find({'info.immobile':False, 'info.dataset': dataset}, {'_id':1, 'x':1, 'y':1, 't':1,'info.analysis.betha':1})):
-        i += 1
-        if i > 100:
+        counter += 1
+        if limit is not None and counter > limit:
             break
         trajectory = Trajectory(
             x=np.array(t['x'])*1000,
@@ -150,13 +154,13 @@ for dataset in datasets:
 
             fitting_cache = {}
 
-            plt.plot(X,Y, color='black')
+            #plt.plot(X,Y, color='black')
 
             for a_key in fitting_dictionary:
                 fitting_cache[a_key] = fitting_dictionary[a_key]['fitting'](X,Y)
-                plt.plot(X,fitting_dictionary[a_key]['equation'](X, *fitting_cache[a_key].x), color=fitting_dictionary[a_key]['color'])
+                #plt.plot(X,fitting_dictionary[a_key]['equation'](X, *fitting_cache[a_key].x), color=fitting_dictionary[a_key]['color'])
                 fitting_cache[a_key] = n * np.log(fitting_cache[a_key].fun/n) + fitting_dictionary[a_key]['number_of_free_parameters'] * np.log(n)
-            plt.show()
+            #plt.show()
             MODEL_WITH_LESS_BIC = min(fitting_cache, key=fitting_cache.get)
 
             fitting_dictionary[MODEL_WITH_LESS_BIC]['msds'].append(Y)
@@ -174,7 +178,7 @@ for dataset in datasets:
 
         axarr[key_index].errorbar((fitting_dictionary[a_key]['x_msds']*DELTA_T)[:25], fitting_dictionary[a_key]['x_msds'][:25], yerr=fitting_dictionary[a_key]['error_msds'][:25], color=fitting_dictionary[a_key]['color'], linewidth=1, fmt ='o')
         axarr[key_index].plot((fitting_dictionary[a_key]['x_msds']*DELTA_T)[:25], fitting_dictionary[a_key]['equation'](fitting_dictionary[a_key]['x_msds'], *fitting_dictionary[a_key]['mean_msd_result'].x)[:25], color='black', linewidth=3)
-        axarr[key_index].set_title(fitting_dictionary[a_key]['x_msds'])
+        axarr[key_index].set_title(fitting_dictionary[a_key]['title'])
         axarr[key_index].set_ylabel(r'$MSD [nm^{2} s^{-1}]$')
 
         if key_index == len(fitting_dictionary.keys())-1:
