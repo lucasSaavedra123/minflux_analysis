@@ -143,7 +143,7 @@ for dataset in datasets:
             noisy=True
         )
 
-        if 'betha' not in t['info']['analysis'] or t['info']['analysis']['betha'] < 1.1:
+        if 'betha' not in t['info']['analysis'] or t['info']['analysis']['betha'] > 1.1:
             continue
 
         segments = [trajectory.build_noisy_subtrajectory_from_range(i, i+SEGMENT_LENGTH) for i in range(0,trajectory.length, SEGMENT_LENGTH)]
@@ -167,7 +167,7 @@ for dataset in datasets:
 
             MODEL_WITH_LESS_BIC = min(fitting_cache, key=fitting_cache.get)
 
-            fitting_dictionary[a_key]['msds'].append(Y)
+            fitting_dictionary[MODEL_WITH_LESS_BIC]['msds'].append(Y)
 
     msds_sum = sum([len(fitting_dictionary[a_key]['msds']) for a_key in fitting_dictionary])
     f, axarr = plt.subplots(len(fitting_dictionary.keys()))
