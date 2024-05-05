@@ -21,32 +21,19 @@ def equation_free(x, D, LOCALIZATION_PRECISION):
 
 def equation_hop(x, DM, DU, L_HOP, LOCALIZATION_PRECISION):
     TERM_1_1_1 = (DU-DM)/DU
-    TERM_1_1_2 = (0.26*(L_HOP**2))/(2*DIMENSION*x*DELTA_T)
-    TERM_1_1_3 = 1 - (np.exp(-((2*DIMENSION*x*DELTA_T*DU)/(0.52*(L_HOP**2)))))
+    TERM_1_1_2 = (L_HOP**2)/(6*DIMENSION*x*DELTA_T)
+    TERM_1_1_3 = 1 - (np.exp(-((12*DU*x*DELTA_T)/(L_HOP**2))))
 
-    TERM_1_1 = DM + (TERM_1_1_1*TERM_1_1_2*TERM_1_1_3)
-
-    TERM_1_2 = (x-(2*R))
-    TERM_1_3 = 2*DIMENSION*DELTA_T
+    TERM_1_1 = 2*DIMENSION*DELTA_T*x
+    TERM_1_2 = DM + (TERM_1_1_1*TERM_1_1_2*TERM_1_1_3)
+    TERM_1_3 = (x-(2*R))
     TERM_1 = TERM_1_1 * TERM_1_2 * TERM_1_3
 
     TERM_2 = 2*DIMENSION*(LOCALIZATION_PRECISION**2)
     return TERM_1 + TERM_2
 
 def equation_confined(x, DU, L_HOP, LOCALIZATION_PRECISION):
-    DM = 0
-    TERM_1_1_1 = (DU-DM)/DU
-    TERM_1_1_2 = (0.26*(L_HOP**2))/(2*DIMENSION*x*DELTA_T)
-    TERM_1_1_3 = 1 - (np.exp(-((2*DIMENSION*x*DELTA_T*DU)/(0.52*(L_HOP**2)))))
-
-    TERM_1_1 = DM + (TERM_1_1_1*TERM_1_1_2*TERM_1_1_3)
-
-    TERM_1_2 = (x-(2*R))
-    TERM_1_3 = 2*DIMENSION*DELTA_T
-    TERM_1 = TERM_1_1 * TERM_1_2 * TERM_1_3
-
-    TERM_2 = 2*DIMENSION*(LOCALIZATION_PRECISION**2)
-    return TERM_1 + TERM_2
+    return equation_hop(x, 0, DU, L_HOP, LOCALIZATION_PRECISION)
 
 def free_fitting(X,Y):
     def eq_4_obj_raw(x, y, d, delta): return np.sum((y - equation_free(x, d, delta))**2)
@@ -75,9 +62,9 @@ def hop_fitting(X,Y):
     eq_9_obj = lambda coeffs: eq_9_obj_raw(X, Y, *coeffs)
     res_eq_9s = []
 
-    for _ in range(99):        
-        x0=[np.random.uniform(1000, 100000), np.random.uniform(1000, 100000), np.random.uniform(1, 1000), np.random.uniform(1, 100)]
-        res_eq_9 = minimize(eq_9_obj, x0=x0, bounds=[(0, None), (0, None), (1, None), (1, None)], constraints=[LinearConstraint([-5,1,0,0], lb=0, ub=np.inf)])
+    for _ in range(100):        
+        x0=[np.random.uniform(100, 100000), np.random.uniform(100, 100000), np.random.uniform(10, 1000), np.random.uniform(1, 100)]
+        res_eq_9 = minimize(eq_9_obj, x0=x0, bounds=[(0, None), (0, None), (1, None), (1, None)], constraints=[LinearConstraint([-1,1,0,0], lb=0, ub=np.inf)])
         res_eq_9s.append(res_eq_9)
 
     return min(res_eq_9s, key=lambda r: r.fun)
@@ -92,8 +79,8 @@ def confined_fitting(X,Y):
     eq_9_obj = lambda coeffs: eq_9_obj_raw(X, Y, *coeffs)
     res_eq_9s = []
 
-    for _ in range(99):        
-        x0=[np.random.uniform(1000, 100000), np.random.uniform(1000, 100000), np.random.uniform(1, 1000)]
+    for _ in range(100):        
+        x0=[np.random.uniform(100, 100000), np.random.uniform(10, 1000), np.random.uniform(1, 100)]
         res_eq_9 = minimize(eq_9_obj, x0=x0, bounds=[(1000, None), (1000, None), (1, None)])
         res_eq_9s.append(res_eq_9)
 
