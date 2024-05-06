@@ -6,6 +6,7 @@ from DatabaseHandler import DatabaseHandler
 from CONSTANTS import *
 from scipy.stats import sem
 import matplotlib.pyplot as plt
+from collections import defaultdict
 
 
 DELTA_T = 0.0001
@@ -123,9 +124,10 @@ DatabaseHandler.connect_over_network(None, None, IP_ADDRESS, COLLECTION_NAME)
 for dataset in datasets:
     for a_key in fitting_dictionary:
         fitting_dictionary[a_key]['msds'] = []
+        fitting_dictionary[a_key]['t_msds'] = []
         fitting_dictionary[a_key]['segments'] = []
     counter = 0
-    limit = None
+    limit = 10
     for t in tqdm.tqdm(Trajectory._get_collection().find({'info.immobile':False, 'info.dataset': dataset}, {'_id':1, 'x':1, 'y':1, 't':1,'info.analysis.betha':1})):
         counter += 1
         if limit is not None and counter > limit:
@@ -147,11 +149,10 @@ for dataset in datasets:
                 continue
 
             t_msd, msd = segment.calculate_msd_curve(bin_width=DELTA_T)
-            msd = msd[:100]#[:int(len(msd)*0.5)]
+            msd = msd[:int(len(msd)*0.20)]
+            n = len(msd)
             Y = np.array(msd)
-            X = np.array(range(1,len(Y)+1))
-            T = t_msd[:len(Y)]
-            n = len(Y)
+            X = (np.array(t_msd[:len(Y)])/DELTA_T).astype(int)#np.array(range(1,len(Y)+1))
 
             fitting_cache = {}
 
@@ -168,6 +169,7 @@ for dataset in datasets:
             #segment.animate_plot()
 
             fitting_dictionary[MODEL_WITH_LESS_BIC]['msds'].append(Y)
+            fitting_dictionary[MODEL_WITH_LESS_BIC]['t_msds'].append(X)
             fitting_dictionary[MODEL_WITH_LESS_BIC]['segments'].append(segment)
 
     msds_sum = sum([len(fitting_dictionary[a_key]['msds']) for a_key in fitting_dictionary])
@@ -176,17 +178,37 @@ for dataset in datasets:
         percentage = 100*(len(fitting_dictionary[a_key]['msds'])/msds_sum)
         print(f'{a_key}:', round(percentage, 2))
 
-        fitting_dictionary[a_key]['min_msd'] = np.min([len(y) for y in fitting_dictionary[a_key]['msds']])
-        fitting_dictionary[a_key]['msds'] = [msd[:fitting_dictionary[a_key]['min_msd']] for msd in fitting_dictionary[a_key]['msds']]
-        fitting_dictionary[a_key]['error_msds'] = np.std(fitting_dictionary[a_key]['msds'], axis=0)/np.sqrt(fitting_dictionary[a_key]['min_msd'])
-        fitting_dictionary[a_key]['msds'] = np.mean(fitting_dictionary[a_key]['msds'], axis=0)
-        fitting_dictionary[a_key]['x_msds'] = np.arange(1,len(fitting_dictionary[a_key]['msds'])+1,1)
+        t_msds_dict = defaultdict(lambda: [])
+        t_error_msds_dict = defaultdict(lambda: [])
+
+        for t, msd in zip(fitting_dictionary[a_key]['t_msds'], fitting_dictionary[a_key]['msds']):
+            for t_i, msd_i in zip(t,msd):
+                t_msds_dict[t_i].append(msd_i)
+
+        for t_i in t_msds_dict:
+            t_error_msds_dict[t_i] = np.std(t_msds_dict[t_i])/np.sqrt(len(t_msds_dict[t_i]))
+            t_msds_dict[t_i] = np.mean(t_msds_dict[t_i])
+
+        aux = np.array(sorted(list(zip(list(t_msds_dict.keys()), list(t_msds_dict.values()))), key=lambda x: x[0]))
+        average_msd_t, average_msd = aux[:,0], aux[:,1]
+
+        aux = np.array(sorted(list(zip(list(t_error_msds_dict.keys()), list(t_error_msds_dict.values()))), key=lambda x: x[0]))
+        _, error_msd = aux[:,0], aux[:,1]
+
+        average_msd = average_msd[:int(len(average_msd)*0.20)]
+        average_msd_t = average_msd_t[:int(len(average_msd_t)*0.20)]
+        error_msd = error_msd[:int(len(error_msd)*0.20)]
+        n = len(average_msd_t)
+
+        fitting_dictionary[a_key]['error_msds'] = error_msd
+        fitting_dictionary[a_key]['msds'] = average_msd
+        fitting_dictionary[a_key]['x_msds'] = average_msd_t
         fitting_dictionary[a_key]['mean_msd_result'] = fitting_dictionary[a_key]['fitting'](fitting_dictionary[a_key]['x_msds'], fitting_dictionary[a_key]['msds'])
         print(key_index, *fitting_dictionary[a_key]['mean_msd_result'].x)
-        fake_x = np.arange(1,len(fitting_dictionary[a_key]['msds'])+1,0.1)
+        fake_x = np.arange(average_msd_t[0],average_msd_t[-1]+1,0.1)
 
-        axarr[key_index].errorbar((fitting_dictionary[a_key]['x_msds']*DELTA_T)[::5], fitting_dictionary[a_key]['msds'][::5], yerr=fitting_dictionary[a_key]['error_msds'][::5], color=fitting_dictionary[a_key]['color'], linewidth=1, fmt ='o')
-        axarr[key_index].plot((fake_x*DELTA_T)[:230], fitting_dictionary[a_key]['equation'](fake_x, *fitting_dictionary[a_key]['mean_msd_result'].x)[:230], color='black', linewidth=2)
+        axarr[key_index].errorbar((fitting_dictionary[a_key]['x_msds']*DELTA_T), fitting_dictionary[a_key]['msds'], yerr=fitting_dictionary[a_key]['error_msds'], color=fitting_dictionary[a_key]['color'], linewidth=1, fmt ='o')
+        axarr[key_index].plot((fake_x*DELTA_T), fitting_dictionary[a_key]['equation'](fake_x, *fitting_dictionary[a_key]['mean_msd_result'].x), color='black', linewidth=2)
         axarr[key_index].set_title(fitting_dictionary[a_key]['title'])
         axarr[key_index].set_ylabel(r'$MSD [nm^{2} s^{-1}]$')
 
