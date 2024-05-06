@@ -8,7 +8,7 @@ from scipy.stats import sem
 import matplotlib.pyplot as plt
 
 
-DELTA_T = 0.001
+DELTA_T = 0.0001
 DIMENSION = 2
 R = 1/6
 SEGMENT_LENGTH = 500
@@ -63,7 +63,7 @@ def hop_fitting(X,Y):
 
     for _ in range(100):        
         x0=[np.random.uniform(100, 100000), np.random.uniform(100, 100000), np.random.uniform(10, 1000), np.random.uniform(1, 100)]
-        res_eq_9 = minimize(eq_9_obj, x0=x0, bounds=[(100, None), (100, None), (10, None), (1, None)], constraints=[LinearConstraint([-1,1,0,0], lb=0, ub=np.inf)])
+        res_eq_9 = minimize(eq_9_obj, x0=x0, bounds=[(100, None), (100, None), (10, None), (1, None)], constraints=[LinearConstraint([-5,1,0,0], lb=0, ub=np.inf)])
         res_eq_9s.append(res_eq_9)
 
     return min(res_eq_9s, key=lambda r: r.fun)
@@ -147,7 +147,7 @@ for dataset in datasets:
                 continue
 
             t_msd, msd = segment.calculate_msd_curve(bin_width=DELTA_T)
-            msd = msd[:int(len(msd)*0.20)]
+            msd = msd[:100]#[:int(len(msd)*0.5)]
             Y = np.array(msd)
             X = np.array(range(1,len(Y)+1))
             T = t_msd[:len(Y)]
@@ -160,11 +160,11 @@ for dataset in datasets:
             for a_key in fitting_dictionary:
                 fitting_cache[a_key] = fitting_dictionary[a_key]['fitting'](X,Y)
                 #plt.plot(X,fitting_dictionary[a_key]['equation'](X, *fitting_cache[a_key].x), color=fitting_dictionary[a_key]['color'])
+                #print(a_key, *fitting_cache[a_key].x)
                 fitting_cache[a_key] = n * np.log(fitting_cache[a_key].fun/n) + fitting_dictionary[a_key]['number_of_free_parameters'] * np.log(n)
             MODEL_WITH_LESS_BIC = min(fitting_cache, key=fitting_cache.get)
             #plt.title(MODEL_WITH_LESS_BIC)
             #plt.show()
-
             #segment.animate_plot()
 
             fitting_dictionary[MODEL_WITH_LESS_BIC]['msds'].append(Y)
@@ -173,7 +173,9 @@ for dataset in datasets:
     msds_sum = sum([len(fitting_dictionary[a_key]['msds']) for a_key in fitting_dictionary])
     f, axarr = plt.subplots(len(fitting_dictionary.keys()))
     for key_index, a_key in enumerate(fitting_dictionary):
-        print(f'{a_key}:', int(100*(len(fitting_dictionary[a_key]['msds'])/msds_sum)))
+        percentage = 100*(len(fitting_dictionary[a_key]['msds'])/msds_sum)
+        print(f'{a_key}:', round(percentage, 2))
+
         fitting_dictionary[a_key]['min_msd'] = np.min([len(y) for y in fitting_dictionary[a_key]['msds']])
         fitting_dictionary[a_key]['msds'] = [msd[:fitting_dictionary[a_key]['min_msd']] for msd in fitting_dictionary[a_key]['msds']]
         fitting_dictionary[a_key]['error_msds'] = np.std(fitting_dictionary[a_key]['msds'], axis=0)/np.sqrt(fitting_dictionary[a_key]['min_msd'])
@@ -183,7 +185,7 @@ for dataset in datasets:
         print(key_index, *fitting_dictionary[a_key]['mean_msd_result'].x)
         fake_x = np.arange(1,len(fitting_dictionary[a_key]['msds'])+1,0.1)
 
-        axarr[key_index].errorbar((fitting_dictionary[a_key]['x_msds']*DELTA_T)[:25], fitting_dictionary[a_key]['msds'][:25], yerr=fitting_dictionary[a_key]['error_msds'][:25], color=fitting_dictionary[a_key]['color'], linewidth=1, fmt ='o')
+        axarr[key_index].errorbar((fitting_dictionary[a_key]['x_msds']*DELTA_T)[::5], fitting_dictionary[a_key]['msds'][::5], yerr=fitting_dictionary[a_key]['error_msds'][::5], color=fitting_dictionary[a_key]['color'], linewidth=1, fmt ='o')
         axarr[key_index].plot((fake_x*DELTA_T)[:230], fitting_dictionary[a_key]['equation'](fake_x, *fitting_dictionary[a_key]['mean_msd_result'].x)[:230], color='black', linewidth=2)
         axarr[key_index].set_title(fitting_dictionary[a_key]['title'])
         axarr[key_index].set_ylabel(r'$MSD [nm^{2} s^{-1}]$')
@@ -211,7 +213,7 @@ for dataset in datasets:
     #axarr[0].text(15*DELTA_T, 500, '$D ='+d+' nm^2 s^-1$', fontsize = 10)
     #axarr[1].text(15*DELTA_T, 1500, '$D_{\mu} ='+du+' nm^2 s^-1$', fontsize = 10)
     #axarr[1].text(15*DELTA_T, 500, '$D_{M} ='+dm+' nm^2 s^-1$', fontsize = 10)
-
     plt.savefig(f'rickert_{dataset}.png')
+    exit()
 
 DatabaseHandler.disconnect()
