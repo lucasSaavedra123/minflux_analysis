@@ -236,6 +236,5 @@ for dataset in datasets:
     #axarr[1].text(15*DELTA_T, 1500, '$D_{\mu} ='+du+' nm^2 s^-1$', fontsize = 10)
     #axarr[1].text(15*DELTA_T, 500, '$D_{M} ='+dm+' nm^2 s^-1$', fontsize = 10)
     plt.savefig(f'rickert_{dataset}.png')
-    exit()
 
 DatabaseHandler.disconnect()
