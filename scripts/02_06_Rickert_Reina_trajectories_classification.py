@@ -65,7 +65,7 @@ def hop_fitting(X,Y):
 
     for _ in range(100):        
         x0=[np.random.uniform(100, 100000), np.random.uniform(100, 100000), np.random.uniform(10, 1000), np.random.uniform(1, 100)]
-        res_eq_9 = minimize(eq_9_obj, x0=x0, bounds=[(100, None), (100, None), (10, None), (1, None)], constraints=[LinearConstraint([-5,1,0,0], lb=0, ub=np.inf)])
+        res_eq_9 = minimize(eq_9_obj, x0=x0, bounds=[(100, None), (100, None), (10, None), (1, None)], constraints=[LinearConstraint([-1,1,0,0], lb=0, ub=np.inf)])
         res_eq_9s.append(res_eq_9)
 
     return min(res_eq_9s, key=lambda r: r.fun)
@@ -198,7 +198,7 @@ for index, dataset in enumerate(new_datasets_list):
             fitting_dictionary[MODEL_WITH_LESS_BIC]['segments'].append(segment)
 
     msds_sum = sum([len(fitting_dictionary[a_key]['msds']) for a_key in fitting_dictionary])
-    f, axarr = plt.subplots(len(fitting_dictionary.keys()))
+    #f, axarr = plt.subplots(len(fitting_dictionary.keys()))
     percentage = {}
     for key_index, a_key in enumerate(fitting_dictionary):
         percentage[a_key] = 100*(len(fitting_dictionary[a_key]['msds'])/msds_sum)
@@ -228,7 +228,7 @@ for index, dataset in enumerate(new_datasets_list):
         fitting_dictionary[a_key]['error_msds'] = error_msd
         fitting_dictionary[a_key]['msds'] = average_msd
         fitting_dictionary[a_key]['x_msds'] = average_msd_t
-        fitting_dictionary[a_key]['mean_msd_result'] = fitting_dictionary[a_key]['fitting'](fitting_dictionary[a_key]['x_msds'][:25], fitting_dictionary[a_key]['msds'][:25])
+        fitting_dictionary[a_key]['mean_msd_result'] = fitting_dictionary[a_key]['fitting'](fitting_dictionary[a_key]['x_msds'][:int(n*0.20)], fitting_dictionary[a_key]['msds'][:int(n*0.20)])
         #print(key_index, *fitting_dictionary[a_key]['mean_msd_result'].x)
         #fake_x = np.arange(average_msd_t[0],average_msd_t[:25][-1]+1,0.1)
 
