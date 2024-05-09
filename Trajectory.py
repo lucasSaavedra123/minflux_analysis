@@ -623,7 +623,7 @@ class Trajectory(Document):
         else:
             return states
 
-    def calculate_msd_curve(self, with_noise=True, bin_width=None):
+    def calculate_msd_curve(self, with_noise=True, bin_width=None, return_variances=False):
         """
         Code Obtained from https://github.com/Eggeling-Lab-Microscope-Software/TRAIT2D/blob/b51498b730140ffac5c0abfc5494ebfca25b445e/trait2d/analysis/__init__.py#L1061
         """
@@ -642,6 +642,7 @@ class Trajectory(Document):
         data_t_tmp = self.get_time()
 
         msd_dict = defaultdict(lambda: [])
+        msd_variances_dict = defaultdict(lambda: [])
 
         delta = np.min(np.diff(self.get_time())) if bin_width is None else bin_width
 
@@ -656,14 +657,21 @@ class Trajectory(Document):
             col_t_Array[i-1] = i * delta
 
         for i in msd_dict:
+            msd_variances_dict[i] = np.var(msd_dict[i])
             msd_dict[i] = np.mean(msd_dict[i])
 
         aux = np.array(sorted(list(zip(list(msd_dict.keys()), list(msd_dict.values()))), key=lambda x: x[0]))
         t_vec, msd = (aux[:,0] * delta) + delta, aux[:,1]
 
-        assert len(t_vec) == len(msd)
+        aux = np.array(sorted(list(zip(list(msd_variances_dict.keys()), list(msd_variances_dict.values()))), key=lambda x: x[0]))
+        _, msd_var = (aux[:,0] * delta) + delta, aux[:,1]
 
-        return t_vec, msd
+        assert len(t_vec) == len(msd) == len(msd_var)
+
+        if not return_variances:
+            return t_vec, msd
+        else:
+            return t_vec, msd, msd_var
 
     def temporal_average_mean_squared_displacement(self, non_linear=True, log_log_fit_limit=50, with_noise=True, bin_width=None):
         def real_func(t, betha, k):
