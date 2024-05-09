@@ -43,11 +43,11 @@ fitting_dictionary = {
 DatabaseHandler.connect_over_network(None, None, IP_ADDRESS, COLLECTION_NAME)
 
 INDIVIDUAL_DATASETS = [
-    'Control',
     'BTX680R',
-    'CholesterolPEGKK114',
     'CK666-BTX680',
+    'CholesterolPEGKK114',
     'CK666-CHOL',
+    'Control',
     'BTX640-CHOL-50-nM',
     'BTX640-CHOL-50-nM-LOW-DENSITY',
     'CDx',
