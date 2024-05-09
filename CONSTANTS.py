@@ -1,6 +1,11 @@
 IP_ADDRESS = '192.168.0.181'
 COLLECTION_NAME = 'MINFLUX_DATA'
 
+DELTA_T = 0.0003
+DIMENSION = 2
+R = 1/6
+SEGMENT_LENGTH = 500
+
 DATASETS_LIST = [
     'Control',
     'CDx',
@@ -76,8 +81,3 @@ def batch_for_gen(generator, n=1):
             return_to_list.append(element)
     
     yield return_to_list
-
-DELTA_T = 0.0002
-DIMENSION = 2
-R = 1/6
-SEGMENT_LENGTH = 500
