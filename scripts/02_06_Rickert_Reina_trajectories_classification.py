@@ -108,7 +108,7 @@ for index, dataset in enumerate(new_datasets_list):
             #plt.plot(X_aux,Y_aux, color='black')
 
             for a_key in fitting_dictionary:
-                fitting_cache[a_key] = fitting_dictionary[a_key]['fitting'](X_aux,Y_aux, weights=lambda x: 1/msd_variance)
+                fitting_cache[a_key] = fitting_dictionary[a_key]['fitting'](X_aux,Y_aux)
                 #plt.plot(X_aux,fitting_dictionary[a_key]['equation'](X_aux, *fitting_cache[a_key].x), color=fitting_dictionary[a_key]['color'])
                 #print(a_key, *fitting_cache[a_key].x)
                 fitting_cache[a_key] = n * np.log(fitting_cache[a_key].fun/n) + fitting_dictionary[a_key]['number_of_free_parameters'] * np.log(n)
@@ -157,7 +157,7 @@ for index, dataset in enumerate(new_datasets_list):
         fitting_dictionary[a_key]['error_msds'] = error_msd
         fitting_dictionary[a_key]['msds'] = average_msd
         fitting_dictionary[a_key]['x_msds'] = average_msd_t
-        fitting_dictionary[a_key]['mean_msd_result'] = fitting_dictionary[a_key]['fitting'](fitting_dictionary[a_key]['x_msds'], fitting_dictionary[a_key]['msds'], weights=lambda x: 1/variance_msd)
+        fitting_dictionary[a_key]['mean_msd_result'] = fitting_dictionary[a_key]['fitting'](fitting_dictionary[a_key]['x_msds'], fitting_dictionary[a_key]['msds'])
 
     result_file = open(f"./Results/{dataset}_hop_vs_free_vs_confined.txt", 'w')
     with pd.ExcelWriter(f"./Results/{dataset}_hop_vs_free_vs_confined.xlsx") as writer:

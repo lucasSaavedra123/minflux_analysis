@@ -425,17 +425,12 @@ def equation_hop(x, DM, DU, L_HOP, LOCALIZATION_PRECISION):
 def equation_confined(x, DU, L_HOP, LOCALIZATION_PRECISION):
     return equation_hop(x, 0, DU, L_HOP, LOCALIZATION_PRECISION)
 
-def free_fitting(X,Y, weights=None):
-    if weights is None:
-        raw_weights = lambda x: 1/x
-    else:
-        raw_weights = weights
+def free_fitting(X,Y):
     select_indexes = np.unique(np.geomspace(1,len(X), len(X)).astype(int))-1
     X = X[select_indexes]
     Y = Y[select_indexes]
-    weights = lambda x: raw_weights(x)[select_indexes]
 
-    def eq_4_obj_raw(x, y, d, delta): return np.sum(weights(x)*(y - equation_free(x, d, delta))**2)
+    def eq_4_obj_raw(x, y, d, delta): return np.sum((y - equation_free(x, d, delta))**2)
     #def eq_4_obj_raw(x, y, d, delta): return np.sum((y - equation_free(x, d, delta))**2)
 
     eq_4_obj = lambda coeffs: eq_4_obj_raw(X, Y, *coeffs)
@@ -448,17 +443,12 @@ def free_fitting(X,Y, weights=None):
 
     return min(res_eq_4s, key=lambda r: r.fun)
 
-def hop_fitting(X,Y, weights=None):
-    if weights is None:
-        raw_weights = lambda x: 1/x
-    else:
-        raw_weights = weights
+def hop_fitting(X,Y):
     select_indexes = np.unique(np.geomspace(1,len(X), len(X)).astype(int))-1
     X = X[select_indexes]
     Y = Y[select_indexes]
-    weights = lambda x: raw_weights(x)[select_indexes]
 
-    def eq_9_obj_raw(x, y, dm, du, l_hop, delta): return np.sum(weights(x)*(y - equation_hop(x, dm, du, l_hop, delta))**2)
+    def eq_9_obj_raw(x, y, dm, du, l_hop, delta): return np.sum((y - equation_hop(x, dm, du, l_hop, delta))**2)
     eq_9_obj = lambda coeffs: eq_9_obj_raw(X, Y, *coeffs)
     res_eq_9s = []
 
@@ -469,17 +459,12 @@ def hop_fitting(X,Y, weights=None):
 
     return min(res_eq_9s, key=lambda r: r.fun)
 
-def confined_fitting(X,Y, weights=None):
-    if weights is None:
-        raw_weights = lambda x: 1/x
-    else:
-        raw_weights = weights
+def confined_fitting(X,Y):
     select_indexes = np.unique(np.geomspace(1,len(X), len(X)).astype(int))-1
     X = X[select_indexes]
     Y = Y[select_indexes]
-    weights = lambda x: raw_weights(x)[select_indexes]
 
-    def eq_9_obj_raw(x, y, du, l, delta): return np.sum(weights(x)*(y - equation_confined(x, du, l, delta))**2)
+    def eq_9_obj_raw(x, y, du, l, delta): return np.sum((y - equation_confined(x, du, l, delta))**2)
     eq_9_obj = lambda coeffs: eq_9_obj_raw(X, Y, *coeffs)
     res_eq_9s = []
 
