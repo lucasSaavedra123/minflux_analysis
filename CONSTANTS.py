@@ -76,3 +76,8 @@ def batch_for_gen(generator, n=1):
             return_to_list.append(element)
     
     yield return_to_list
+
+DELTA_T = 0.0002
+DIMENSION = 2
+R = 1/6
+SEGMENT_LENGTH = 500

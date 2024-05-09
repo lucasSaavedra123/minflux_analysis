@@ -7,6 +7,8 @@ import numpy as np
 import scipy
 import pandas as pd
 import EntropyHub as EH
+from scipy.optimize import minimize, LinearConstraint
+from CONSTANTS import *
 
 
 def custom_histogram(data, starting_x, final_x, x_step):
@@ -401,3 +403,75 @@ def transform_traj_into_features(array):
         assert q == expected_q, f"{q} == {expected_q}"
 
     return features
+
+def equation_free(x, D, LOCALIZATION_PRECISION):
+    TERM_1 = 2*DIMENSION*D*DELTA_T*(x-(2*R))
+    TERM_2 = 2*DIMENSION*(LOCALIZATION_PRECISION**2)
+    return TERM_1 + TERM_2
+
+def equation_hop(x, DM, DU, L_HOP, LOCALIZATION_PRECISION):
+    TERM_1_1_1 = (DU-DM)/DU
+    TERM_1_1_2 = (L_HOP**2)/(6*DIMENSION*x*DELTA_T)
+    TERM_1_1_3 = 1 - (np.exp(-((12*DU*x*DELTA_T)/(L_HOP**2))))
+
+    TERM_1_1 = 2*DIMENSION*DELTA_T
+    TERM_1_2 = DM + (TERM_1_1_1*TERM_1_1_2*TERM_1_1_3)
+    TERM_1_3 = (x-(2*R))
+    TERM_1 = TERM_1_1 * TERM_1_2 * TERM_1_3
+
+    TERM_2 = 2*DIMENSION*(LOCALIZATION_PRECISION**2)
+    return TERM_1 + TERM_2
+
+def equation_confined(x, DU, L_HOP, LOCALIZATION_PRECISION):
+    return equation_hop(x, 0, DU, L_HOP, LOCALIZATION_PRECISION)
+
+def free_fitting(X,Y):
+    def eq_4_obj_raw(x, y, d, delta): return np.sum((1/x)*(y - equation_free(x, d, delta))**2)
+
+    select_indexes = np.unique(np.geomspace(1,len(X), len(X)).astype(int))-1
+    X = X[select_indexes]
+    Y = Y[select_indexes]
+
+    eq_4_obj = lambda coeffs: eq_4_obj_raw(X, Y, *coeffs)
+    res_eq_4s = []
+
+    for _ in range(100):        
+        x0=[np.random.uniform(100, 100000), np.random.uniform(1, 100)]
+        res_eq_4 = minimize(eq_4_obj, x0=x0, bounds=[(100, None), (1, None)])
+        res_eq_4s.append(res_eq_4)
+
+    return min(res_eq_4s, key=lambda r: r.fun)
+
+def hop_fitting(X,Y):
+    def eq_9_obj_raw(x, y, dm, du, l_hop, delta): return np.sum((1/x)*(y - equation_hop(x, dm, du, l_hop, delta))**2)
+
+    select_indexes = np.unique(np.geomspace(1,len(X), len(X)).astype(int))-1
+    X = X[select_indexes]
+    Y = Y[select_indexes]
+
+    eq_9_obj = lambda coeffs: eq_9_obj_raw(X, Y, *coeffs)
+    res_eq_9s = []
+
+    for _ in range(100):        
+        x0=[np.random.uniform(100, 100000), np.random.uniform(100, 100000), np.random.uniform(10, 1000), np.random.uniform(1, 100)]
+        res_eq_9 = minimize(eq_9_obj, x0=x0, bounds=[(100, None), (100, None), (10, None), (1, None)], constraints=[LinearConstraint([-1,1,0,0], lb=0, ub=np.inf)])
+        res_eq_9s.append(res_eq_9)
+
+    return min(res_eq_9s, key=lambda r: r.fun)
+
+def confined_fitting(X,Y):
+    def eq_9_obj_raw(x, y, du, l, delta): return np.sum((1/x)*(y - equation_confined(x, du, l, delta))**2)
+
+    select_indexes = np.unique(np.geomspace(1,len(X), len(X)).astype(int))-1
+    X = X[select_indexes]
+    Y = Y[select_indexes]
+
+    eq_9_obj = lambda coeffs: eq_9_obj_raw(X, Y, *coeffs)
+    res_eq_9s = []
+
+    for _ in range(100):        
+        x0=[np.random.uniform(100, 100000), np.random.uniform(10, 1000), np.random.uniform(1, 100)]
+        res_eq_9 = minimize(eq_9_obj, x0=x0, bounds=[(100, None), (10, None), (1, None)])
+        res_eq_9s.append(res_eq_9)
+
+    return min(res_eq_9s, key=lambda r: r.fun)
