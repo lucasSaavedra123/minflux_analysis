@@ -73,7 +73,7 @@ for index, dataset in enumerate(new_datasets_list):
         fitting_dictionary[a_key]['segments'] = []
     counter = 0
     limit = None
-    min_msd = float('inf')
+    #min_msd = float('inf')
     for t in tqdm.tqdm(Trajectory._get_collection().find(basic_query_dict, {'_id':1, 'x':1, 'y':1, 't':1,'info.analysis.betha':1})):
         counter += 1
         if limit is not None and counter > limit:
@@ -96,23 +96,22 @@ for index, dataset in enumerate(new_datasets_list):
                 continue
 
             t_msd, msd = segment.calculate_msd_curve(bin_width=DELTA_T, return_variances=False)
-            n = len(msd)
-            new_n = int(n*0.20)
             Y = np.array(msd)
             X = (np.array(t_msd)/DELTA_T)#np.array(range(1,len(Y)+1))
-            X_aux = X[:new_n]
-            Y_aux = Y[:new_n]
-            min_msd = min(min_msd, X_aux[-1])
+            X_aux = X[t_msd<MAX_T]
+            Y_aux = Y[t_msd<MAX_T]
+            #min_msd = min(min_msd, X_aux[-1])
             fitting_cache = {}
-            n = new_n
+            n = len(X_aux)
 
             #plt.plot(X_aux,Y_aux, color='black')
 
             for a_key in fitting_dictionary:
                 fitting_cache[a_key] = fitting_dictionary[a_key]['fitting'](X_aux,Y_aux)
+                fun = np.sum((Y_aux - fitting_dictionary[a_key]['equation'](X_aux, *fitting_cache[a_key].x))**2)
                 #plt.plot(X_aux,fitting_dictionary[a_key]['equation'](X_aux, *fitting_cache[a_key].x), color=fitting_dictionary[a_key]['color'])
                 #print(a_key, *fitting_cache[a_key].x)
-                fitting_cache[a_key] = n * np.log(fitting_cache[a_key].fun/n) + fitting_dictionary[a_key]['number_of_free_parameters'] * np.log(n)
+                fitting_cache[a_key] = n * np.log(fun/n) + fitting_dictionary[a_key]['number_of_free_parameters'] * np.log(n)#n * np.log(fitting_cache[a_key].fun/n) + fitting_dictionary[a_key]['number_of_free_parameters'] * np.log(n)
             MODEL_WITH_LESS_BIC = min(fitting_cache, key=fitting_cache.get)
             #plt.title(MODEL_WITH_LESS_BIC)
             #plt.show()
@@ -150,10 +149,12 @@ for index, dataset in enumerate(new_datasets_list):
         aux = np.array(sorted(list(zip(list(variance_msds_dict.keys()), list(variance_msds_dict.values()))), key=lambda x: x[0]))
         _, variance_msd = aux[:,0], aux[:,1]
 
-        average_msd = average_msd[average_msd_t < min_msd]#[:min_msd]
-        error_msd = error_msd[average_msd_t < min_msd]#[:min_msd]
-        variance_msd = variance_msd[average_msd_t < min_msd]#[:min_msd]
-        average_msd_t = average_msd_t[average_msd_t < min_msd]#[:min_msd]
+        average_msd_t_m = average_msd_t * DELTA_T
+
+        average_msd = average_msd[average_msd_t_m < MAX_T]#[:min_msd]
+        error_msd = error_msd[average_msd_t_m < MAX_T]#[:min_msd]
+        variance_msd = variance_msd[average_msd_t_m < MAX_T]#[:min_msd]
+        average_msd_t = average_msd_t[average_msd_t_m < MAX_T]#[:min_msd]
 
         fitting_dictionary[a_key]['error_msds'] = error_msd
         fitting_dictionary[a_key]['msds'] = average_msd
@@ -169,7 +170,7 @@ for index, dataset in enumerate(new_datasets_list):
                 'error_msds': fitting_dictionary[a_key]['error_msds'],
             }).to_excel(writer, sheet_name=a_key, index=False)
 
-            DISCRETE_X = np.linspace(1,min_msd,1000)#int(min_msd), 1000)
+            DISCRETE_X = np.linspace(1,int(MAX_T/DELTA_T),1000)#int(min_msd), 1000)
             DISCRETE_Y = fitting_dictionary[a_key]['equation'](DISCRETE_X, *fitting_dictionary[a_key]['mean_msd_result'].x)
 
             if a_key == 'hop':
