@@ -78,10 +78,11 @@ for index, dataset in enumerate(new_datasets_list):
         counter += 1
         if limit is not None and counter > limit:
             break
+
         trajectory = Trajectory(
             x=np.array(t['x'])*1000,
             y=np.array(t['y'])*1000,
-            t=np.append(0,np.cumsum(np.round(np.diff(t['t']),4))),
+            t=t['t'],
             noisy=True
         )
 
@@ -94,16 +95,16 @@ for index, dataset in enumerate(new_datasets_list):
             if segment.length != SEGMENT_LENGTH:
                 continue
 
-            t_msd, msd, msd_variance = segment.calculate_msd_curve(bin_width=DELTA_T, return_variances=True)
-            #msd = msd[:int(len(msd)*0.20)]
+            t_msd, msd = segment.calculate_msd_curve(bin_width=DELTA_T, return_variances=False)
             n = len(msd)
+            new_n = int(n*0.20)
             Y = np.array(msd)
-            X = (np.array(t_msd)/DELTA_T).astype(int)#np.array(range(1,len(Y)+1))
-            X_aux = X[:int(n*0.20)]
-            Y_aux = Y[:int(n*0.20)]
-            msd_variance = msd_variance[:int(n*0.20)]
+            X = (np.array(t_msd)/DELTA_T)#np.array(range(1,len(Y)+1))
+            X_aux = X[:new_n]
+            Y_aux = Y[:new_n]
             min_msd = min(min_msd, X_aux[-1])
             fitting_cache = {}
+            n = new_n
 
             #plt.plot(X_aux,Y_aux, color='black')
 
