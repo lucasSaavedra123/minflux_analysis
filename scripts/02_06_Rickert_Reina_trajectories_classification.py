@@ -47,9 +47,9 @@ INDIVIDUAL_DATASETS = [
     'CK666-BTX680',
     'CholesterolPEGKK114',
     'CK666-CHOL',
-    'Control',
-    'BTX640-CHOL-50-nM',
-    'BTX640-CHOL-50-nM-LOW-DENSITY',
+    #'Control',
+    #'BTX640-CHOL-50-nM',
+    #'BTX640-CHOL-50-nM-LOW-DENSITY',
     #'CDx',
 ]
 
