@@ -434,7 +434,7 @@ def equation_confined(x, DU, L_HOP, LOCALIZATION_PRECISION):
     return equation_hop(x, 0, DU, L_HOP, LOCALIZATION_PRECISION)
 
 def free_fitting(X,Y):
-    select_indexes = np.unique(np.geomspace(1,len(X),len(X)//4).astype(int))-1
+    select_indexes = np.unique(np.geomspace(1,len(X),len(X)//1).astype(int))-1
     X = X[select_indexes]
     Y = Y[select_indexes]
 
@@ -452,7 +452,7 @@ def free_fitting(X,Y):
     return min(res_eq_4s, key=lambda r: r.fun)
 
 def hop_fitting(X,Y):
-    select_indexes = np.unique(np.geomspace(1,len(X),len(X)//4).astype(int))-1
+    select_indexes = np.unique(np.geomspace(1,len(X),len(X)//1).astype(int))-1
     X = X[select_indexes]
     Y = Y[select_indexes]
 
@@ -468,7 +468,7 @@ def hop_fitting(X,Y):
     return min(res_eq_9s, key=lambda r: r.fun)
 
 def confined_fitting(X,Y):
-    select_indexes = np.unique(np.geomspace(1,len(X),len(X)//4).astype(int))-1
+    select_indexes = np.unique(np.geomspace(1,len(X),len(X)//1).astype(int))-1
     X = X[select_indexes]
     Y = Y[select_indexes]
 

@@ -47,9 +47,9 @@ INDIVIDUAL_DATASETS = [
     'CK666-BTX680',
     'CholesterolPEGKK114',
     'CK666-CHOL',
-    #'Control',
-    #'BTX640-CHOL-50-nM',
-    #'BTX640-CHOL-50-nM-LOW-DENSITY',
+    'Control',
+    'BTX640-CHOL-50-nM',
+    'BTX640-CHOL-50-nM-LOW-DENSITY',
     #'CDx',
 ]
 
@@ -108,10 +108,10 @@ for index, dataset in enumerate(new_datasets_list):
 
             for a_key in fitting_dictionary:
                 fitting_cache[a_key] = fitting_dictionary[a_key]['fitting'](X_aux,Y_aux)
-                fun = np.sum((Y_aux - fitting_dictionary[a_key]['equation'](X_aux, *fitting_cache[a_key].x))**2)
+                #fun = np.sum((Y_aux - fitting_dictionary[a_key]['equation'](X_aux, *fitting_cache[a_key].x))**2)
                 #plt.plot(X_aux,fitting_dictionary[a_key]['equation'](X_aux, *fitting_cache[a_key].x), color=fitting_dictionary[a_key]['color'])
                 #print(a_key, *fitting_cache[a_key].x)
-                fitting_cache[a_key] = n * np.log(fun/n) + fitting_dictionary[a_key]['number_of_free_parameters'] * np.log(n)#n * np.log(fitting_cache[a_key].fun/n) + fitting_dictionary[a_key]['number_of_free_parameters'] * np.log(n)
+                fitting_cache[a_key] = n * np.log(fitting_cache[a_key].fun/n) + fitting_dictionary[a_key]['number_of_free_parameters'] * np.log(n)
             MODEL_WITH_LESS_BIC = min(fitting_cache, key=fitting_cache.get)
             #plt.title(MODEL_WITH_LESS_BIC)
             #plt.show()
