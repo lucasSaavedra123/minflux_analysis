@@ -28,25 +28,25 @@ def plot_dataset(file, color):
     plt.hist(residence_times, density=True, bins='auto', histtype='stepfilled', alpha=0.2, color=color)
 
 def do_plot(xlim=[0,2], ylim=[0,3]):
-    plt.xlabel('Confinement Time [s]', fontname="Arial", fontsize=30)
+    plt.xlabel('Confinement Time [s]', fontname="Arial", fontsize=50)
     plt.yticks(visible=False)
     plt.xlim(xlim)
     plt.ylim(ylim)
     plt.xticks([0,1,2])
-    plt.xticks(fontname="Arial", fontsize=30)
-    plt.ylabel('Frequency', fontname="Arial", fontsize=30)
+    plt.xticks(fontname="Arial", fontsize=50)
+    plt.ylabel('Frequency', fontname="Arial", fontsize=50)
     plt.tight_layout()
     plt.show()
 
 
-plot_dataset('Control_0_basic_information.xlsx', 'red')
-plot_dataset('CDx_1_basic_information.xlsx', 'blue')
+plot_dataset('Control_0_gs_True_basic_information.xlsx', 'red')
+plot_dataset('CDx_1_gs_True_basic_information.xlsx', 'blue')
 do_plot([0,2], [0,2])
 
-plot_dataset('BTX680R_2_basic_information.xlsx', 'green')
-plot_dataset('BTX680R_4_basic_information.xlsx', '#ff0090')
+plot_dataset('BTX680R_2_gs_True_basic_information.xlsx', 'green')
+plot_dataset("('Cholesterol and btx', 'BTX680R')_8_gs_True_basic_information.xlsx", '#ff0090')
 do_plot([0,2], [0,2])
 
-plot_dataset('CholesterolPEGKK114_3_basic_information.xlsx', 'orange')
-plot_dataset('fPEG-Chol_5_basic_information.xlsx', 'black')
+plot_dataset('CholesterolPEGKK114_3_gs_True_basic_information.xlsx', 'orange')
+plot_dataset("('Cholesterol and btx', 'fPEG-Chol')_9_gs_True_basic_information.xlsx", 'black')
 do_plot([0,2], [0,3])
