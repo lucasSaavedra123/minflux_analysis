@@ -673,7 +673,7 @@ class Trajectory(Document):
         else:
             return t_vec, msd, msd_var
 
-    def temporal_average_mean_squared_displacement(self, non_linear=True, log_log_fit_limit=50, with_noise=True, bin_width=None):
+    def temporal_average_mean_squared_displacement(self, non_linear=True, log_log_fit_limit=50, limit_type='points', with_noise=True, bin_width=None):
         def real_func(t, betha, k):
             return k * (t ** betha)
 
@@ -682,10 +682,16 @@ class Trajectory(Document):
 
         t_vec, msd = self.calculate_msd_curve(with_noise=with_noise, bin_width=bin_width)
 
-        msd_fit = msd[0:log_log_fit_limit]
-        t_vec_fit = t_vec[0:log_log_fit_limit]
-        assert len(t_vec_fit) == log_log_fit_limit
-        assert len(msd_fit) == log_log_fit_limit
+        if limit_type == 'points':
+            msd_fit = msd[0:log_log_fit_limit]
+            t_vec_fit = t_vec[0:log_log_fit_limit]
+            assert len(t_vec_fit) == log_log_fit_limit
+            assert len(msd_fit) == log_log_fit_limit
+        elif limit_type == 'time':
+            msd_fit = msd[log_log_fit_limit < t_vec]
+            t_vec_fit = t_vec[log_log_fit_limit < t_vec]
+        else:
+            raise Exception(f'limit_type=={limit_type} is not accepted')
 
         popt, _ = curve_fit(linear_func, t_vec_fit, np.log(msd_fit), bounds=((0, 0), (2, np.inf)), maxfev=2000)
         goodness_of_fit = r2_score(np.log(msd_fit), linear_func(t_vec_fit, popt[0], popt[1]))
