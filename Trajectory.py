@@ -690,6 +690,8 @@ class Trajectory(Document):
         elif limit_type == 'time':
             msd_fit = msd[log_log_fit_limit < t_vec]
             t_vec_fit = t_vec[log_log_fit_limit < t_vec]
+            assert len(t_vec_fit) != 0
+            assert len(msd_fit) != 0
         else:
             raise Exception(f'limit_type=={limit_type} is not accepted')
 
