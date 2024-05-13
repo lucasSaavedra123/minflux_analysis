@@ -114,7 +114,7 @@ def analyze_trajectory(trajectory_id):
 
     trajectory.info['analysis']['confinement_areas_centroids'] = []
 
-    states, intervals = trajectory.confinement_states(return_intervals=True, v_th=33)
+    states, intervals = trajectory.confinement_states(return_intervals=True, v_th=33, transition_fix_threshold=5)
 
     times = []
 
@@ -147,7 +147,7 @@ def analyze_trajectory(trajectory_id):
     trajectory.info['analysis']['corrDP'] = trajectory.correlated_turning_angle()
     trajectory.info['analysis']['AvgSignD'] = trajectory.directional_persistance()
 
-    sub_trajectories_by_state = trajectory.sub_trajectories_trajectories_from_confinement_states(v_th=33, use_info=True)
+    sub_trajectories_by_state = trajectory.sub_trajectories_trajectories_from_confinement_states(v_th=33, transition_fix_threshold=5, use_info=True)
     for state in sub_trajectories_by_state:
         for sub_trajectory in sub_trajectories_by_state[state]:
 
