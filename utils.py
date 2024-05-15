@@ -482,3 +482,13 @@ def confined_fitting(X,Y):
         res_eq_9s.append(res_eq_9)
 
     return min(res_eq_9s, key=lambda r: r.fun)
+
+def extract_dataset_file_roi_file():
+    file_id_and_roi_list = []
+    a_file = open(FILE_AND_ROI_FILE_CACHE, 'r')
+    for line in a_file.readlines():
+        line = line.strip()
+        line = line.split(',')
+        file_id_and_roi_list.append([line[0], line[1],int(line[2])])
+    a_file.close()
+    return file_id_and_roi_list
