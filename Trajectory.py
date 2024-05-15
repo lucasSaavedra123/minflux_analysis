@@ -807,3 +807,65 @@ class Trajectory(Document):
             steps_lag=1
         )
         return np.nanmean(np.sign(normalized_angles[1:])>0)
+
+    def random_sample(self, roi_x, roi_y, in_place=False):
+        """
+        Only works with noisy trajectories
+        """
+        import math
+
+        def rotate(origin, point, angle):
+            """
+            Rotate a point counterclockwise by a given angle around a given origin.
+
+            The angle should be given in radians.
+            """
+            ox, oy = origin
+            px, py = point
+
+            qx = ox + math.cos(angle) * (px - ox) - math.sin(angle) * (py - oy)
+            qy = oy + math.sin(angle) * (px - ox) + math.cos(angle) * (py - oy)
+            return qx, qy
+
+
+        x = self.get_noisy_x()
+        y = self.get_noisy_y()
+
+        x -= np.mean(x)
+        y -= np.mean(y)
+
+        #plt.plot(x, y)
+        rotation_angle = np.random.uniform(0,180)
+        rotated_points = np.array([rotate([0,0], point, math.radians(rotation_angle)) for point in zip(x, y)])
+        rotated_x, rotated_y = rotated_points[:,0] * np.random.choice([1,-1]), rotated_points[:,1] * np.random.choice([1,-1])
+        new_x, new_y = rotated_x, rotated_y
+        #plt.plot(rotated_x, rotated_y)
+        #plt.show()
+
+        def is_correct_offset(i_x,i_y):
+            condition_a = roi_x[0] < min(i_x) and max(i_x) < roi_x[1]
+            condition_b = roi_y[0] < min(i_y) and max(i_y) < roi_y[1]
+            return condition_a and condition_b
+
+        while not is_correct_offset(new_x,new_y):
+            offset_x = np.random.uniform(low=min(roi_x), high=max(roi_x))
+            offset_y = np.random.uniform(low=min(roi_y), high=max(roi_y))
+            new_x = rotated_x + offset_x
+            new_y = rotated_y + offset_y
+
+        #plt.plot(new_x, new_y)
+        #plt.xlim(roi_x)
+        #plt.ylim(roi_y)
+        #plt.show()
+
+        if in_place:
+            self.x = new_x
+            self.y = new_y
+        else:
+            return Trajectory(
+                x=new_x,
+                y=new_y,
+                t=self.t,
+                info=self.info,
+                noisy=True
+            )
