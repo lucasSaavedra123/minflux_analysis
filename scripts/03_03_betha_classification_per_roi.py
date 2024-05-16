@@ -15,8 +15,21 @@ def pack_percentage_values(info):
     dataframe = dataframe.groupby(['file', 'roi']).sum()
     dataframe['All Sum'] = dataframe['Subdiffusive'] + dataframe['Brownian'] + dataframe['Superdiffusive']
     dataframe['Subdiffusive']/=dataframe['All Sum']
+    dataframe['Subdiffusive'] *= 100
     dataframe['Brownian']/=dataframe['All Sum']
+    dataframe['Brownian'] *= 100
     dataframe['Superdiffusive']/=dataframe['All Sum']
+    dataframe['Superdiffusive'] *= 100
+
+    dataframe['Subdiffusive_mean'] = dataframe['Subdiffusive'].mean()
+    dataframe['Subdiffusive_sem'] = dataframe['Subdiffusive'].sem()
+
+    dataframe['Brownian_mean'] = dataframe['Brownian'].mean()
+    dataframe['Brownian_sem'] = dataframe['Brownian'].sem()
+
+    dataframe['Superdiffusive_mean'] = dataframe['Superdiffusive'].mean()
+    dataframe['Superdiffusive_sem'] = dataframe['Superdiffusive'].sem()
+
     return dataframe
 
 APPLY_GS_CRITERIA = True

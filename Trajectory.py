@@ -688,10 +688,11 @@ class Trajectory(Document):
             assert len(t_vec_fit) == log_log_fit_limit
             assert len(msd_fit) == log_log_fit_limit
         elif limit_type == 'time':
-            msd_fit = msd[log_log_fit_limit < t_vec]
-            t_vec_fit = t_vec[log_log_fit_limit < t_vec]
-            assert len(t_vec_fit) != 0
-            assert len(msd_fit) != 0
+            msd_fit = msd[t_vec < log_log_fit_limit]
+            t_vec_fit = t_vec[t_vec < log_log_fit_limit]
+            enough_number_of_points = int((log_log_fit_limit/bin_width)/2)
+            assert len(t_vec_fit) >= enough_number_of_points
+            assert len(msd_fit) >= enough_number_of_points
         else:
             raise Exception(f'limit_type=={limit_type} is not accepted')
 
@@ -699,7 +700,7 @@ class Trajectory(Document):
         goodness_of_fit = r2_score(np.log(msd_fit), linear_func(t_vec_fit, popt[0], popt[1]))
 
         #plt.title(f"betha={np.round(popt[0], 2)}, k={popt[1]}")
-        #plt.plot(t_vec_fit, t_vec_fit * popt[1])
+        #plt.plot(t_vec_fit, (t_vec_fit**popt[0]) * popt[1])
         #plt.plot(t_vec_fit, msd_fit)
         #plt.show()
         return t_vec, msd, popt[0], popt[1], goodness_of_fit

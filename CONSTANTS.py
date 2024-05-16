@@ -7,6 +7,7 @@ DIMENSION = 2
 R = 1/6
 SEGMENT_LENGTH = 500
 MAX_T = 0.025
+SUB_MAX_T = 0.010
 
 DATASETS_LIST = [
     'Control',
