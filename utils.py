@@ -7,6 +7,7 @@ import numpy as np
 import scipy
 import pandas as pd
 import EntropyHub as EH
+from collections import defaultdict
 from scipy.optimize import minimize, LinearConstraint, NonlinearConstraint
 from CONSTANTS import *
 import math
@@ -41,13 +42,39 @@ def get_list_of_positions(filter_query):
     values = [value for value in values if value.shape[1] > 1]
     return values
 
-def get_list_of_values_of_analysis_field(filter_query, field_name):
-    values = [document['info'].get('analysis', {}).get(field_name, None) for document in Trajectory._get_collection().find(filter_query, {f'info.analysis.{field_name}':1})]
+def get_list_of_values_of_analysis_field(filter_query, field_name, mean_by_roi=False):
+    if not mean_by_roi:
+        values = [document['info'].get('analysis', {}).get(field_name, None) for document in Trajectory._get_collection().find(filter_query, {f'info.analysis.{field_name}':1})]
+    else:
+        documents = list(Trajectory._get_collection().find(filter_query, {f'info.analysis.{field_name}':1,'info.dataset':1,'info.file':1,'info.roi':1}))
+
+        values_per_roi = defaultdict(lambda: [])
+        for document in documents:
+            value = document['info'].get('analysis', {}).get(field_name, None)
+            if value is not None:
+                values_per_roi[document['info']['dataset']+document['info']['file']+str(document['info']['roi'])].append(value)
+
+        for alias in values_per_roi:
+            values_per_roi[alias] = np.mean(values_per_roi[alias])   
+        values = list(values_per_roi.values())
     values = [value for value in values if value is not None]
     return values
 
-def get_list_of_values_of_field(filter_query, field_name):
-    values = [document['info'].get(field_name, None) for document in Trajectory._get_collection().find(filter_query, {f'info.{field_name}':1})]
+def get_list_of_values_of_field(filter_query, field_name, mean_by_roi=False):
+    if not mean_by_roi:
+        values = [document['info'].get(field_name, None) for document in Trajectory._get_collection().find(filter_query, {f'info.{field_name}':1})]
+    else:
+        documents = list(Trajectory._get_collection().find(filter_query, {f'info.{field_name}':1,'info.dataset':1,'info.file':1,'info.roi':1}))
+
+        values_per_roi = defaultdict(lambda: [])
+        for document in documents:
+            value = document['info'].get(field_name, None)
+            if value is not None:
+                values_per_roi[document['info']['dataset']+document['info']['file']+str(document['info']['roi'])].append(value)
+
+        for alias in values_per_roi:
+            values_per_roi[alias] = np.mean(values_per_roi[alias])   
+        values = list(values_per_roi.values())
     values = [value for value in values if value is not None]
     return values
 

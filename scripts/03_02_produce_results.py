@@ -52,20 +52,20 @@ for index, dataset in enumerate(new_datasets_list):
         filter_query = basic_query_dict.copy()
         filter_query.update({'info.immobile': False} if APPLY_GS_CRITERIA else {})
 
-        pd.DataFrame({'k': get_list_of_values_of_analysis_field(filter_query, 'k')}).to_excel(writer, sheet_name='k', index=False)
-        pd.DataFrame({'betha': get_list_of_values_of_analysis_field(filter_query, 'betha')}).to_excel(writer, sheet_name='betha', index=False)
+        pd.DataFrame({'k': get_list_of_values_of_analysis_field(filter_query, 'k', mean_by_roi=True)}).to_excel(writer, sheet_name='k', index=False)
+        pd.DataFrame({'betha': get_list_of_values_of_analysis_field(filter_query, 'betha', mean_by_roi=True)}).to_excel(writer, sheet_name='betha', index=False)
         #pd.DataFrame({'dc': get_list_of_values_of_analysis_field(filter_query, 'directional_coefficient')}).to_excel(writer, sheet_name='directional_coefficient', index=False)
-        pd.DataFrame({'d_2_4': get_list_of_values_of_analysis_field(filter_query, 'd_2_4')}).to_excel(writer, sheet_name='d_2_4', index=False)
-        pd.DataFrame({'localization_precision': get_list_of_values_of_analysis_field(filter_query, 'localization_precision')}).to_excel(writer, sheet_name='localization_precision', index=False)
-        pd.DataFrame({'meanDP': get_list_of_values_of_analysis_field(filter_query, 'meanDP')}).to_excel(writer, sheet_name='meanDP', index=False)
-        pd.DataFrame({'corrDP': get_list_of_values_of_analysis_field(filter_query, 'corrDP')}).to_excel(writer, sheet_name='corrDP', index=False)
-        pd.DataFrame({'AvgSignD': get_list_of_values_of_analysis_field(filter_query, 'AvgSignD')}).to_excel(writer, sheet_name='AvgSignD', index=False)
+        pd.DataFrame({'d_2_4': get_list_of_values_of_analysis_field(filter_query, 'd_2_4', mean_by_roi=True)}).to_excel(writer, sheet_name='d_2_4', index=False)
+        pd.DataFrame({'localization_precision': get_list_of_values_of_analysis_field(filter_query, 'localization_precision', mean_by_roi=True)}).to_excel(writer, sheet_name='localization_precision', index=False)
+        pd.DataFrame({'meanDP': get_list_of_values_of_analysis_field(filter_query, 'meanDP', mean_by_roi=True)}).to_excel(writer, sheet_name='meanDP', index=False)
+        pd.DataFrame({'corrDP': get_list_of_values_of_analysis_field(filter_query, 'corrDP', mean_by_roi=True)}).to_excel(writer, sheet_name='corrDP', index=False)
+        pd.DataFrame({'AvgSignD': get_list_of_values_of_analysis_field(filter_query, 'AvgSignD', mean_by_roi=True)}).to_excel(writer, sheet_name='AvgSignD', index=False)
 
-        residence_times = get_list_of_values_of_analysis_field(filter_query, 'residence_time')
+        residence_times = get_list_of_values_of_analysis_field(filter_query, 'residence_time', mean_by_roi=True)
         residence_times = [residence_time for residence_time in residence_times if residence_time != 0]
         pd.DataFrame({'residence_time': residence_times}).to_excel(writer, sheet_name='residence_time', index=False)
 
-        inverse_residence_times = get_list_of_values_of_analysis_field(filter_query, 'inverse_residence_time')
+        inverse_residence_times = get_list_of_values_of_analysis_field(filter_query, 'inverse_residence_time', mean_by_roi=True)
         inverse_residence_times = [inverse_residence_time for inverse_residence_time in inverse_residence_times if inverse_residence_time != 0]
         pd.DataFrame({'inverse_residence_time': inverse_residence_times}).to_excel(writer, sheet_name='inverse_residence_time', index=False)
 
@@ -91,7 +91,7 @@ for index, dataset in enumerate(new_datasets_list):
         confinement_rates = [value for value in confinement_rates if value is not None]
         pd.DataFrame({'change_rates': confinement_rates}).to_excel(writer, sheet_name='change_rates', index=False)
 
-        list_of_semi_major_axis = get_list_of_values_of_analysis_field(filter_query, 'confinement-a')
+        list_of_semi_major_axis = get_list_of_values_of_analysis_field(filter_query, 'confinement-a', mean_by_roi=True)
         list_of_semi_major_axis = list(itertools.chain.from_iterable(list_of_semi_major_axis))
         pd.DataFrame({'semi_major_axis': list_of_semi_major_axis}).to_excel(writer, sheet_name='semi_major_axis', index=False)
 
@@ -129,55 +129,55 @@ for index, dataset in enumerate(new_datasets_list):
         filter_query = basic_query_dict.copy()
         filter_query.update({'info.immobile': False})
 
-        list_of_number_of_trajectories_per_overlap = get_list_of_values_of_analysis_field(filter_query, 'number_of_trajectories_per_overlap')
+        list_of_number_of_trajectories_per_overlap = get_list_of_values_of_analysis_field(filter_query, 'number_of_trajectories_per_overlap', mean_by_roi=True)
         list_of_number_of_trajectories_per_overlap = list(itertools.chain.from_iterable(list_of_number_of_trajectories_per_overlap))
         pd.DataFrame({'number_of_trajectories_per_overlap': list_of_number_of_trajectories_per_overlap}).to_excel(writer, sheet_name='number_of_trajectories_per_overlap', index=False)
 
-        list_of_semi_major_axis = get_list_of_values_of_analysis_field(filter_query, 'confinement-a')
+        list_of_semi_major_axis = get_list_of_values_of_analysis_field(filter_query, 'confinement-a', mean_by_roi=True)
         list_of_semi_major_axis = list(itertools.chain.from_iterable(list_of_semi_major_axis))
         pd.DataFrame({'semi_major_axis': list_of_semi_major_axis}).to_excel(writer, sheet_name='semi_major_axis', index=False)
 
-        list_of_eccentricities = get_list_of_values_of_analysis_field(filter_query, 'confinement-e')
+        list_of_eccentricities = get_list_of_values_of_analysis_field(filter_query, 'confinement-e', mean_by_roi=True)
         list_of_eccentricities = list(itertools.chain.from_iterable(list_of_eccentricities))
         pd.DataFrame({'eccentricity': list_of_eccentricities}).to_excel(writer, sheet_name='eccentricity', index=False)
 
-        list_of_confinement_areas = get_list_of_values_of_analysis_field(filter_query, 'confinement-area')
+        list_of_confinement_areas = get_list_of_values_of_analysis_field(filter_query, 'confinement-area', mean_by_roi=True)
         list_of_confinement_areas = list(itertools.chain.from_iterable([[area * 1e6 for area in areas] for areas in list_of_confinement_areas]))
         pd.DataFrame({'area': list_of_confinement_areas}).to_excel(writer, sheet_name='area', index=False)
 
-        list_of_steps = get_list_of_values_of_analysis_field(filter_query, 'non-confinement-steps')
+        list_of_steps = get_list_of_values_of_analysis_field(filter_query, 'non-confinement-steps', mean_by_roi=True)
         list_of_steps = list(itertools.chain.from_iterable(list_of_steps))
         pd.DataFrame({'non-confinement-steps': list_of_steps}).to_excel(writer, sheet_name='non-confinement-steps', index=False)
 
-        list_of_steps = get_list_of_values_of_analysis_field(filter_query, 'confinement-steps')
+        list_of_steps = get_list_of_values_of_analysis_field(filter_query, 'confinement-steps', mean_by_roi=True)
         list_of_steps = list(itertools.chain.from_iterable(list_of_steps))
         pd.DataFrame({'confinement-steps': list_of_steps}).to_excel(writer, sheet_name='confinement-steps', index=False)
 
-        list_of_bethas = get_list_of_values_of_analysis_field(filter_query, 'non-confinement-betha')
+        list_of_bethas = get_list_of_values_of_analysis_field(filter_query, 'non-confinement-betha', mean_by_roi=True)
         list_of_bethas = list(itertools.chain.from_iterable(list_of_bethas))
         pd.DataFrame({'non-confinement-betha': list_of_bethas}).to_excel(writer, sheet_name='non-confinement-betha', index=False)
 
-        list_of_bethas = get_list_of_values_of_analysis_field(filter_query, 'confinement-betha')
+        list_of_bethas = get_list_of_values_of_analysis_field(filter_query, 'confinement-betha', mean_by_roi=True)
         list_of_bethas = list(itertools.chain.from_iterable(list_of_bethas))
         pd.DataFrame({'confinement-betha': list_of_bethas}).to_excel(writer, sheet_name='confinement-betha', index=False)
 
-        list_of_ks = get_list_of_values_of_analysis_field(filter_query, 'non-confinement-k')
+        list_of_ks = get_list_of_values_of_analysis_field(filter_query, 'non-confinement-k', mean_by_roi=True)
         list_of_ks = list(itertools.chain.from_iterable(list_of_ks))
         pd.DataFrame({'non-confinement-k': list_of_ks}).to_excel(writer, sheet_name='non-confinement-k', index=False)
 
-        list_of_ks = get_list_of_values_of_analysis_field(filter_query, 'confinement-k')
+        list_of_ks = get_list_of_values_of_analysis_field(filter_query, 'confinement-k', mean_by_roi=True)
         list_of_ks = list(itertools.chain.from_iterable(list_of_ks))
         pd.DataFrame({'confinement-k': list_of_ks}).to_excel(writer, sheet_name='confinement-k', index=False)
 
-        list_of_ds = get_list_of_values_of_analysis_field(filter_query, 'non-confinement-d_2_4')
+        list_of_ds = get_list_of_values_of_analysis_field(filter_query, 'non-confinement-d_2_4', mean_by_roi=True)
         list_of_ds = list(itertools.chain.from_iterable(list_of_ds))
         pd.DataFrame({'non-confinement-d_2_4': list_of_ds}).to_excel(writer, sheet_name='non-confinement-d_2_4', index=False)
 
-        list_of_ds = get_list_of_values_of_analysis_field(filter_query, 'confinement-d_2_4')
+        list_of_ds = get_list_of_values_of_analysis_field(filter_query, 'confinement-d_2_4', mean_by_roi=True)
         list_of_ds = list(itertools.chain.from_iterable(list_of_ds))
         pd.DataFrame({'confinement-d_2_4': list_of_ds}).to_excel(writer, sheet_name='confinement-d_2_4', index=False)
 
-        list_of_confinement_areas_centroids = get_list_of_values_of_analysis_field(filter_query, 'confinement_areas_centroids')
+        list_of_confinement_areas_centroids = get_list_of_values_of_analysis_field(filter_query, 'confinement_areas_centroids', mean_by_roi=True)
         list_of_confinement_areas_centroids = list(itertools.chain.from_iterable([pdist(np.array(confinement_areas_centroids) * 1e3).tolist() for confinement_areas_centroids in list_of_confinement_areas_centroids if len(confinement_areas_centroids) >= 2]))
         pd.DataFrame({'confinement_areas_distance': list_of_confinement_areas_centroids}).to_csv(f'./Results/{dataset}_{index}_confinement_areas_distance.csv')
 
