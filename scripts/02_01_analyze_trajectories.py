@@ -169,7 +169,7 @@ def analyze_trajectory(trajectory_id):
                     trajectory.info['analysis']['confinement-e'].append(e)
 
                     try:
-                        _,_,betha,k,goodness_of_fit = sub_trajectory.temporal_average_mean_squared_displacement(log_log_fit_limit=MAX_T, limit_type='time', bin_width=DELTA_T)
+                        _,_,betha,k,goodness_of_fit = sub_trajectory.temporal_average_mean_squared_displacement(log_log_fit_limit=SUB_MAX_T, limit_type='time', bin_width=DELTA_T)
                         trajectory.info['analysis']['confinement-k'].append(k)
                         trajectory.info['analysis']['confinement-betha'].append(betha)
                         trajectory.info['analysis']['confinement-goodness_of_fit'].append(goodness_of_fit)
@@ -186,7 +186,7 @@ def analyze_trajectory(trajectory_id):
             else:
                 trajectory.info['analysis']['non-confinement-steps'].append(sub_trajectory.length)
                 try:
-                    _,_,betha,k,goodness_of_fit = sub_trajectory.temporal_average_mean_squared_displacement(log_log_fit_limit=MAX_T, limit_type='time', bin_width=DELTA_T)
+                    _,_,betha,k,goodness_of_fit = sub_trajectory.temporal_average_mean_squared_displacement(log_log_fit_limit=SUB_MAX_T, limit_type='time', bin_width=DELTA_T)
                     trajectory.info['analysis']['non-confinement-k'].append(k)
                     trajectory.info['analysis']['non-confinement-betha'].append(betha)
                     trajectory.info['analysis']['non-confinement-goodness_of_fit'].append(goodness_of_fit)
