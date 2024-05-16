@@ -7,6 +7,7 @@ import itertools
 
 import tqdm
 import ray
+import numpy as np
 
 from DatabaseHandler import DatabaseHandler
 from Trajectory import Trajectory
@@ -72,15 +73,17 @@ def analyze_dataset_and_roi(dataset, file, roi):
         chol_trajectory.info[f'number_of_confinement_zones_with_{BTX_NOMENCLATURE}'] = 0
 
         for chol_confinement in chol_confinements:
-            there_is_overlap = any([both_trajectories_intersect(chol_confinement, btx_confinement, via='hull') for btx_confinement in btx_confinements])
-            chol_trajectory.info[f'number_of_confinement_zones_with_{BTX_NOMENCLATURE}'] += 1 if there_is_overlap else 0
-
+            for btx_confinement in btx_confinements:
+                print(np.linalg.norm(chol_confinement.centroid-btx_confinement.centroid))
+                if np.linalg.norm(chol_confinement.centroid-btx_confinement.centroid) < 1:#um
+                    there_is_overlap = both_trajectories_intersect(chol_confinement, btx_confinement, via='hull')
+                    chol_trajectory.info[f'number_of_confinement_zones_with_{BTX_NOMENCLATURE}'] += 1 if there_is_overlap else 0
+                    break
         assert chol_trajectory.info[f'number_of_confinement_zones_with_{BTX_NOMENCLATURE}'] <= chol_trajectory.info['number_of_confinement_zones']
         chol_trajectory.save()
 
     for btx_trajectory in trajectories_by_label[BTX_NOMENCLATURE]:
         btx_confinements = btx_trajectory.sub_trajectories_trajectories_from_confinement_states(v_th=33, transition_fix_threshold=5, use_info=True)[1]
-
         chol_confinements = [chol_trajectory.sub_trajectories_trajectories_from_confinement_states(v_th=33, transition_fix_threshold=5, use_info=True)[1] for chol_trajectory in trajectories_by_label[CHOL_NOMENCLATURE]]
         chol_confinements = list(itertools.chain.from_iterable(chol_confinements))
 
@@ -88,9 +91,11 @@ def analyze_dataset_and_roi(dataset, file, roi):
         btx_trajectory.info[f'number_of_confinement_zones_with_{CHOL_NOMENCLATURE}'] = 0
 
         for btx_confinement in btx_confinements:
-            there_is_overlap = any([both_trajectories_intersect(chol_confinement, btx_confinement, via='hull') for chol_confinement in chol_confinements])
-            btx_trajectory.info[f'number_of_confinement_zones_with_{CHOL_NOMENCLATURE}'] += 1 if there_is_overlap else 0
-
+            for chol_confinement in chol_confinements:
+                if np.linalg.norm(chol_confinement.centroid-btx_confinement.centroid) < 1:#um
+                    there_is_overlap = both_trajectories_intersect(chol_confinement, btx_confinement, via='hull')
+                    btx_trajectory.info[f'number_of_confinement_zones_with_{CHOL_NOMENCLATURE}'] += 1 if there_is_overlap else 0
+                    break
         assert btx_trajectory.info[f'number_of_confinement_zones_with_{CHOL_NOMENCLATURE}'] <= btx_trajectory.info['number_of_confinement_zones']
         btx_trajectory.save()
 

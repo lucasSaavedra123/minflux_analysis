@@ -288,6 +288,10 @@ class Trajectory(Document):
             return self.model_category
 
     @property
+    def centroid(self):
+        return np.array([np.mean(self.get_noisy_x()), np.mean(self.get_noisy_y())])
+
+    @property
     def length(self):
         return len(self.x)
 
