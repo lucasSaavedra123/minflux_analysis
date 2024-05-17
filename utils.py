@@ -519,3 +519,42 @@ def extract_dataset_file_roi_file():
         file_id_and_roi_list.append([line[0], line[1],int(line[2])])
     a_file.close()
     return file_id_and_roi_list
+
+def measure_overlap(trajectories):
+    trajectories_by_label = {
+        CHOL_NOMENCLATURE: [],
+        BTX_NOMENCLATURE: []
+    }
+
+    chol_confinement_to_chol_trajectory = {}
+    chol_confinements = []
+
+    for trajectory in trajectories:
+        if 'analysis' in trajectory.info:
+            trajectories_by_label[trajectory.info['classified_experimental_condition']].append(trajectory)
+
+            if trajectory.info['classified_experimental_condition'] == CHOL_NOMENCLATURE:
+                new_chol_confinements = trajectory.sub_trajectories_trajectories_from_confinement_states(v_th=33, transition_fix_threshold=5, use_info=True)[1]
+                trajectory.info['number_of_confinement_zones'] = len(new_chol_confinements)
+                trajectory.info[f'number_of_confinement_zones_with_{BTX_NOMENCLATURE}'] = 0
+
+                for c in new_chol_confinements:
+                    chol_confinement_to_chol_trajectory[c] = trajectory
+
+                chol_confinements += new_chol_confinements
+
+    for btx_trajectory in trajectories_by_label[BTX_NOMENCLATURE]:
+        btx_confinements = btx_trajectory.sub_trajectories_trajectories_from_confinement_states(v_th=33, transition_fix_threshold=5, use_info=True)[1]
+
+        btx_trajectory.info['number_of_confinement_zones'] = len(btx_confinements)
+        btx_trajectory.info[f'number_of_confinement_zones_with_{CHOL_NOMENCLATURE}'] = 0
+
+        for btx_confinement in btx_confinements:
+            already_overlap = False
+            for chol_confinement in chol_confinements:
+                if np.linalg.norm(chol_confinement.centroid-btx_confinement.centroid) < 1:#um
+                    there_is_overlap = both_trajectories_intersect(chol_confinement, btx_confinement, via='hull')
+                    btx_trajectory.info[f'number_of_confinement_zones_with_{CHOL_NOMENCLATURE}'] += 1 if there_is_overlap and not already_overlap else 0
+                    chol_confinement_to_chol_trajectory[chol_confinement].info[f'number_of_confinement_zones_with_{BTX_NOMENCLATURE}'] += 1
+                    if there_is_overlap:
+                        already_overlap = True

@@ -7,12 +7,11 @@ import itertools
 
 import tqdm
 import ray
-import numpy as np
 
 from DatabaseHandler import DatabaseHandler
 from Trajectory import Trajectory
 from CONSTANTS import *
-from utils import both_trajectories_intersect, extract_dataset_file_roi_file
+from utils import both_trajectories_intersect, extract_dataset_file_roi_file, measure_overlap
 
 
 CHOL_AND_BTX_DATASETS = [
@@ -53,45 +52,10 @@ def analyze_trajectory(trajectory_id):
 @ray.remote
 def analyze_dataset_and_roi(dataset, file, roi):
     DatabaseHandler.connect_over_network(None, None, IP_ADDRESS, COLLECTION_NAME)
+
     trajectories = list(Trajectory.objects(info__file=file, info__dataset=dataset, info__roi=roi))
 
-    trajectories_by_label = {
-        CHOL_NOMENCLATURE: [],
-        BTX_NOMENCLATURE: []
-    }
-
-    chol_confinement_to_chol_trajectory = {}
-    chol_confinements = []
-
-    for trajectory in trajectories:
-        if 'analysis' in trajectory.info:
-            trajectories_by_label[trajectory.info['classified_experimental_condition']].append(trajectory)
-
-            if trajectory.info['classified_experimental_condition'] == CHOL_NOMENCLATURE:
-                new_chol_confinements = trajectory.sub_trajectories_trajectories_from_confinement_states(v_th=33, transition_fix_threshold=5, use_info=True)[1]
-                trajectory.info['number_of_confinement_zones'] = len(new_chol_confinements)
-                trajectory.info[f'number_of_confinement_zones_with_{BTX_NOMENCLATURE}'] = 0
-
-                for c in new_chol_confinements:
-                    chol_confinement_to_chol_trajectory[c] = trajectory
-
-                chol_confinements += new_chol_confinements
-
-    for btx_trajectory in trajectories_by_label[BTX_NOMENCLATURE]:
-        btx_confinements = btx_trajectory.sub_trajectories_trajectories_from_confinement_states(v_th=33, transition_fix_threshold=5, use_info=True)[1]
-
-        btx_trajectory.info['number_of_confinement_zones'] = len(btx_confinements)
-        btx_trajectory.info[f'number_of_confinement_zones_with_{CHOL_NOMENCLATURE}'] = 0
-
-        for btx_confinement in btx_confinements:
-            already_overlap = False
-            for chol_confinement in chol_confinements:
-                if np.linalg.norm(chol_confinement.centroid-btx_confinement.centroid) < 1:#um
-                    there_is_overlap = both_trajectories_intersect(chol_confinement, btx_confinement, via='hull')
-                    btx_trajectory.info[f'number_of_confinement_zones_with_{CHOL_NOMENCLATURE}'] += 1 if there_is_overlap and not already_overlap else 0
-                    chol_confinement_to_chol_trajectory[chol_confinement].info[f'number_of_confinement_zones_with_{BTX_NOMENCLATURE}'] += 1
-                    if there_is_overlap:
-                        already_overlap = True
+    measure_overlap(trajectories)
 
     for t in trajectories:
         t.save()
