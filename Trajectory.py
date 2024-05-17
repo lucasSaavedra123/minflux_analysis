@@ -694,7 +694,7 @@ class Trajectory(Document):
         elif limit_type == 'time':
             msd_fit = msd[t_vec < log_log_fit_limit]
             t_vec_fit = t_vec[t_vec < log_log_fit_limit]
-            enough_number_of_points = int((log_log_fit_limit/bin_width)/2)
+            enough_number_of_points = int((log_log_fit_limit/bin_width)*0.75)
             assert len(t_vec_fit) >= enough_number_of_points
             assert len(msd_fit) >= enough_number_of_points
         else:
