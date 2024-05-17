@@ -55,7 +55,29 @@ def analyze_dataset_and_roi(dataset, file, roi):
 
     trajectories = list(Trajectory.objects(info__file=file, info__dataset=dataset, info__roi=roi))
 
-    measure_overlap(trajectories)
+    trajectories_by_label = {
+        CHOL_NOMENCLATURE: [],
+        BTX_NOMENCLATURE: []
+    }
+
+    for trajectory in trajectories:
+        if 'analysis' in trajectory.info:
+            trajectories_by_label[trajectory.info['classified_experimental_condition']].append(trajectory)
+
+    chol_confinement_to_chol_trajectory = {}
+    chol_confinements = []
+    
+    for chol_trajectory in trajectories_by_label[CHOL_NOMENCLATURE]:
+        new_chol_confinements = chol_trajectory.sub_trajectories_trajectories_from_confinement_states(v_th=33, transition_fix_threshold=5, use_info=True)[1]
+        chol_trajectory.info['number_of_confinement_zones'] = len(new_chol_confinements)
+        chol_trajectory.info[f'number_of_confinement_zones_with_{BTX_NOMENCLATURE}'] = 0
+
+        for c in new_chol_confinements:
+            chol_confinement_to_chol_trajectory[c] = chol_trajectory
+
+        chol_confinements += new_chol_confinements
+
+    measure_overlap(trajectories_by_label, chol_confinement_to_chol_trajectory, chol_confinements)
 
     for t in trajectories:
         t.save()

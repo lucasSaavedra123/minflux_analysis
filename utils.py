@@ -209,7 +209,7 @@ def both_segments_intersect(segment_one, segment_two):
 
     return doIntersect(p1, q1, p2, q2)
 
-def both_trajectories_intersect(trajectory_one, trajectory_two, via='kd-tree', radius_threshold=1, return_kd_tree_intersections=False):
+def both_trajectories_intersect(trajectory_one, trajectory_two, via='kd-tree', radius_threshold=1, return_kd_tree_intersections=False, grid_size=1):
     """
     points_one = np.column_stack((trajectory_one.get_noisy_x(),trajectory_one.get_noisy_y()))
     points_two = np.column_stack((trajectory_two.get_noisy_x(),trajectory_two.get_noisy_y()))
@@ -222,12 +222,38 @@ def both_trajectories_intersect(trajectory_one, trajectory_two, via='kd-tree', r
             if both_segments_intersect(segment_one, segment_two):
                 return True
     """
-    """
-    """
+
     if via=='hull':
         t_one = MultiPoint([point for point in zip(trajectory_one.get_noisy_x(), trajectory_one.get_noisy_y())]).convex_hull
         t_two = MultiPoint([point for point in zip(trajectory_two.get_noisy_x(), trajectory_two.get_noisy_y())]).convex_hull
         return t_one.intersects(t_two)
+    if via=='grid':
+        X1 = np.zeros((trajectory_one.length, 2))
+        X1[:,0] = trajectory_one.get_noisy_x()
+        X1[:,1] = trajectory_one.get_noisy_y()
+
+        X2 = np.zeros((trajectory_two.length, 2))
+        X2[:,0] = trajectory_two.get_noisy_x()
+        X2[:,1] = trajectory_two.get_noisy_y()
+
+        x_min = min(np.min(X1[:,0]), np.min(X2[:,0]))
+        x_max = max(np.max(X1[:,0]), np.max(X2[:,0]))
+
+        y_min = min(np.min(X1[:,1]), np.min(X2[:,1]))
+        y_max = max(np.max(X1[:,1]), np.max(X2[:,1]))
+
+        x_space = np.arange(x_min, x_max, grid_size)
+        y_space = np.arange(y_min, y_max, grid_size)
+
+        for x_i in x_space:
+            for y_i in y_space:
+                localization_of_one = len(X1[((x_i<X1[:,0]) & (X1[:,0]<(x_i+grid_size))) & ((y_i<X1[:,1]) & (X1[:,1]<(y_i+grid_size)))])
+                localization_of_two = len(X2[((x_i<X2[:,0]) & (X2[:,0]<(x_i+grid_size))) & ((y_i<X2[:,1]) & (X2[:,1]<(y_i+grid_size)))])
+                if localization_of_one > 0 and localization_of_two > 0:
+                    return True
+
+        return False
+
     elif via=='ellipse':
         X1 = np.zeros((trajectory_one.length, 2))
         X1[:,0] = trajectory_one.get_noisy_x()
