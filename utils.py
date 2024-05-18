@@ -1,7 +1,7 @@
 import numpy as np
 from Trajectory import Trajectory
 from scipy.spatial import KDTree
-from shapely.geometry import MultiPoint
+from shapely.geometry import MultiPoint, LinearRing
 import scipy
 import numpy as np
 import scipy
@@ -11,6 +11,7 @@ from collections import defaultdict
 from scipy.optimize import minimize, LinearConstraint, NonlinearConstraint
 from CONSTANTS import *
 import math
+from scipy.spatial import distance_matrix
 
 
 def logarithmic_sampling(N, k):
@@ -227,6 +228,49 @@ def both_trajectories_intersect(trajectory_one, trajectory_two, via='kd-tree', r
         t_one = MultiPoint([point for point in zip(trajectory_one.get_noisy_x(), trajectory_one.get_noisy_y())]).convex_hull
         t_two = MultiPoint([point for point in zip(trajectory_two.get_noisy_x(), trajectory_two.get_noisy_y())]).convex_hull
         return t_one.intersects(t_two)
+    elif via=='ellipse':
+        X1 = np.zeros((trajectory_one.length, 2))
+        X1[:,0] = trajectory_one.get_noisy_x()
+        X1[:,1] = trajectory_one.get_noisy_y()
+
+        X2 = np.zeros((trajectory_two.length, 2))
+        X2[:,0] = trajectory_two.get_noisy_x()
+        X2[:,1] = trajectory_two.get_noisy_y()
+
+        ellipses = [get_elliptical_information_of_data_points(X, return_full_description=True)[:5] for X in [X1,X2]]
+        a, b = ellipse_polyline(ellipses)
+
+        ea = LinearRing(a)
+        eb = LinearRing(b)
+
+        return ea.intersects(eb)
+    elif via=='rectangle':
+        class Rectangle:
+            def __init__(self, min_x, max_x, min_y, max_y):
+                self.top_right_point = [max_x, max_y]
+                self.top_left_point = [min_x, max_y]
+                self.bottom_right_point = [max_x, min_y]
+                self.bottom_left_point = [min_x, min_y]
+
+            def intersects(self, other):
+                return not (self.top_right_point[0] < other.bottom_left_point[0]
+                            or self.bottom_left_point[0] > self.top_right_point[0]
+                            or self.top_right_point[1] < other.bottom_left_point[1]
+                            or self.bottom_left_point[1] > self.top_right_point[1])
+
+
+        X1 = np.zeros((trajectory_one.length, 2))
+        X1[:,0] = trajectory_one.get_noisy_x()
+        X1[:,1] = trajectory_one.get_noisy_y()
+
+        rectangle_one = Rectangle(np.min(X1[:,0]), np.max(X1[:,0]), np.min(X1[:,1]), np.max(X1[:,1]))
+
+        X2 = np.zeros((trajectory_two.length, 2))
+        X2[:,0] = trajectory_two.get_noisy_x()
+        X2[:,1] = trajectory_two.get_noisy_y()
+
+        rectangle_two = Rectangle(np.min(X2[:,0]), np.max(X2[:,0]), np.min(X2[:,1]), np.max(X2[:,1]))
+        return rectangle_one.intersects(rectangle_two)
     elif via=='brute-force':
         points_one = np.column_stack((trajectory_one.get_noisy_x(),trajectory_one.get_noisy_y()))
         points_two = np.column_stack((trajectory_two.get_noisy_x(),trajectory_two.get_noisy_y()))
@@ -519,3 +563,85 @@ def extract_dataset_file_roi_file():
         file_id_and_roi_list.append([line[0], line[1],int(line[2])])
     a_file.close()
     return file_id_and_roi_list
+
+def measure_overlap(trajectories_by_label, chol_confinement_to_chol_trajectory, chol_confinements):
+    for btx_trajectory in trajectories_by_label[BTX_NOMENCLATURE]:
+        btx_confinements = btx_trajectory.sub_trajectories_trajectories_from_confinement_states(v_th=33, transition_fix_threshold=5, use_info=True)[1]
+
+        btx_trajectory.info['number_of_confinement_zones'] = len(btx_confinements)
+        btx_trajectory.info[f'number_of_confinement_zones_with_{CHOL_NOMENCLATURE}'] = 0
+
+        for btx_confinement in btx_confinements:
+            already_overlap = False
+            for chol_confinement in chol_confinements:
+                if np.linalg.norm(chol_confinement.centroid-btx_confinement.centroid) < 1:#um
+                    there_is_overlap = both_trajectories_intersect(chol_confinement, btx_confinement, via='hull')
+                    btx_trajectory.info[f'number_of_confinement_zones_with_{CHOL_NOMENCLATURE}'] += 1 if there_is_overlap and not already_overlap else 0
+                    chol_confinement_to_chol_trajectory[chol_confinement].info[f'number_of_confinement_zones_with_{BTX_NOMENCLATURE}'] += 1
+                    if there_is_overlap:
+                        already_overlap = True
+
+def ellipse_polyline(ellipses, n=100):
+    t = np.linspace(0, 2*np.pi, n, endpoint=False)
+    st = np.sin(t)
+    ct = np.cos(t)
+    result = []
+    for x0, y0, a, b, angle in ellipses:
+        #angle = np.deg2rad(angle)
+        sa = np.sin(angle)
+        ca = np.cos(angle)
+        p = np.empty((n, 2))
+        p[:, 0] = x0 + a * ca * ct - b * sa * st
+        p[:, 1] = y0 + a * sa * ct + b * ca * st
+        result.append(p)
+    return result
+
+def intersections_between_ellipses(a, b):
+    ea = LinearRing(a)
+    eb = LinearRing(b)
+    mp = ea.intersection(eb)
+
+    x = [p.x for p in mp]
+    y = [p.y for p in mp]
+    return x, y
+
+def get_elliptical_information_of_data_points(X, return_full_description=False):
+    def cart2pol(numpy_point):
+        rho = np.linalg.norm(numpy_point)
+        phi = np.arctan2(numpy_point[1], numpy_point[0])
+        return rho, phi
+
+    #Displacement Process
+    distances = distance_matrix(X, X)
+    point_a_index, point_b_index = np.unravel_index(np.argmax(distances, axis=None), distances.shape)
+    direction_vector = X[point_a_index] - X[point_b_index]
+
+    middle_point = (X[point_a_index] + X[point_b_index])/2
+
+    displacement = (direction_vector/2) + X[point_b_index]
+
+    displaced_X = X - displacement
+
+    #Rotation Process
+
+    _, phi = cart2pol(direction_vector)
+
+    if phi <= 0:
+        direction_vector = displaced_X[point_b_index] - displaced_X[point_a_index]
+        _, phi = cart2pol(direction_vector)
+
+    rotation_matrix = np.array([
+        [np.cos(np.pi - phi), -np.sin(np.pi - phi)],
+        [np.sin(np.pi - phi), np.cos(np.pi - phi)]
+    ])
+
+    rotated_X = np.dot(rotation_matrix, X.T).T
+
+    a = (np.max(rotated_X[:,0]) - np.min(rotated_X[:,0]))/2 # Semi-Major Axis
+    b = (np.max(rotated_X[:,1]) - np.min(rotated_X[:,1]))/2 # Semi-Minor Axis
+    e = np.sqrt(1-(np.power(b,2)/np.power(a,2)))#Eccentricity
+
+    if not return_full_description:
+        return a,b,e
+    else:
+        return float(middle_point[0]),float(middle_point[1]),a,b,phi,e

@@ -5,7 +5,7 @@ ALL trajectories are analyzed.
 import ray
 import numpy as np
 import tqdm
-from scipy.spatial import distance_matrix
+from utils import get_elliptical_information_of_data_points
 
 from DatabaseHandler import DatabaseHandler
 from Trajectory import Trajectory
@@ -14,43 +14,6 @@ from scipy.spatial import ConvexHull, QhullError
 
 
 ray.init()
-
-def get_elliptical_information_of_data_points(X):
-
-    def cart2pol(numpy_point):
-        rho = np.linalg.norm(numpy_point)
-        phi = np.arctan2(numpy_point[1], numpy_point[0])
-        return rho, phi
-
-    #Displacement Process
-    distances = distance_matrix(X, X)
-    point_a_index, point_b_index = np.unravel_index(np.argmax(distances, axis=None), distances.shape)
-    direction_vector = X[point_a_index] - X[point_b_index]
-
-    displacement = (direction_vector/2) + X[point_b_index]
-
-    displaced_X = X - displacement
-
-    #Rotation Process
-
-    _, phi = cart2pol(direction_vector)
-
-    if phi <= 0:
-        direction_vector = displaced_X[point_b_index] - displaced_X[point_a_index]
-        _, phi = cart2pol(direction_vector)
-
-    rotation_matrix = np.array([
-        [np.cos(np.pi - phi), -np.sin(np.pi - phi)],
-        [np.sin(np.pi - phi), np.cos(np.pi - phi)]
-    ])
-
-    rotated_X = np.dot(rotation_matrix, X.T).T
-
-    a = (np.max(rotated_X[:,0]) - np.min(rotated_X[:,0]))/2 # Semi-Major Axis
-    b = (np.max(rotated_X[:,1]) - np.min(rotated_X[:,1]))/2 # Semi-Minor Axis
-    e = np.sqrt(1-(np.power(b,2)/np.power(a,2)))#Eccentricity
-
-    return a,b,e
 
 @ray.remote
 def analyze_trajectory(trajectory_id):

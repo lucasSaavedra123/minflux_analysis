@@ -864,12 +864,12 @@ class Trajectory(Document):
         #plt.show()
 
         if in_place:
-            self.x = new_x
-            self.y = new_y
+            self.x = new_x.tolist()
+            self.y = new_y.tolist()
         else:
             return Trajectory(
-                x=new_x,
-                y=new_y,
+                x=new_x.tolist(),
+                y=new_y.tolist(),
                 t=self.t,
                 info=self.info,
                 noisy=True
