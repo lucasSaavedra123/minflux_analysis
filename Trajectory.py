@@ -700,11 +700,11 @@ class Trajectory(Document):
         else:
             raise Exception(f'limit_type=={limit_type} is not accepted')
 
-        popt, _ = curve_fit(linear_func, t_vec_fit, np.log(msd_fit), bounds=((0, 0), (2, np.inf)), maxfev=2000)
+        popt, _ = curve_fit(real_func, t_vec_fit, msd_fit, bounds=((0, 0), (2, np.inf)), maxfev=2000)
         goodness_of_fit = r2_score(np.log(msd_fit), linear_func(t_vec_fit, popt[0], popt[1]))
 
         #plt.title(f"betha={np.round(popt[0], 2)}, k={popt[1]}")
-        #plt.plot(t_vec_fit, (t_vec_fit**popt[0]) * popt[1])
+        #plt.plot(t_vec_fit, real_func(t_vec_fit, popt[0], popt[1]))
         #plt.plot(t_vec_fit, msd_fit)
         #plt.show()
         return t_vec, msd, popt[0], popt[1], goodness_of_fit
