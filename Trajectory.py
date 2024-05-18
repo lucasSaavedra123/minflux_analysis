@@ -627,7 +627,7 @@ class Trajectory(Document):
         else:
             return states
 
-    def calculate_msd_curve(self, with_noise=True, bin_width=None, return_variances=False):
+    def calculate_msd_curve(self, with_noise=True, bin_width=None, return_variances=False, limit_type=None, limit_value=None):
         """
         Code Obtained from https://github.com/Eggeling-Lab-Microscope-Software/TRAIT2D/blob/b51498b730140ffac5c0abfc5494ebfca25b445e/trait2d/analysis/__init__.py#L1061
         """
@@ -651,6 +651,10 @@ class Trajectory(Document):
         delta = np.min(np.diff(self.get_time())) if bin_width is None else bin_width
 
         for i in range(1,N-2):
+            if limit_type == 'points' and (i-1) > limit_value:
+                break
+            if limit_type == 'time' and (i-1)*delta > limit_value:
+                break
             calc_tmp = np.sum(np.abs((data_tmp[1+i:N,:] - data_tmp[1:N - i,:]) ** 2), axis=1)
             calc_t_tmp = data_t_tmp[1+i:N] - data_t_tmp[1:N - i]
 
@@ -684,7 +688,7 @@ class Trajectory(Document):
         def linear_func(t, betha, k):
             return np.log(k) + (np.log(t) * betha)
 
-        t_vec, msd = self.calculate_msd_curve(with_noise=with_noise, bin_width=bin_width)
+        t_vec, msd = self.calculate_msd_curve(with_noise=with_noise, bin_width=bin_width, limit_type=limit_type, limit_value=log_log_fit_limit)
 
         if limit_type == 'points':
             msd_fit = msd[0:log_log_fit_limit]
