@@ -16,42 +16,6 @@ from Trajectory import Trajectory
 
 DatabaseHandler.connect_over_network(None, None, IP_ADDRESS, COLLECTION_NAME)
 
-def unique(list1):
-
-    # initialize a null list
-    unique_list = []
-
-    # traverse for all elements
-    for x in list1:
-        # check if exists in unique_list or not
-        if x not in unique_list:
-            unique_list.append(x)
-
-    return unique_list
-
-FILE_AND_ROI_FILE_CACHE = 'file_and_roi.txt'
-
-if not os.path.exists(FILE_AND_ROI_FILE_CACHE):
-    file_id_and_roi_list = [[r['info']['file'], r['info']['roi']] for r in Trajectory._get_collection().find(
-        {},
-        {f'id':1, 'info.roi':1, 'info.file':1}
-    )]
-
-    file_id_and_roi_list = unique(file_id_and_roi_list)
-
-    a_file = open(FILE_AND_ROI_FILE_CACHE, 'w')
-    for file, roi in file_id_and_roi_list:
-        a_file.write(f'{file},{roi}\n')
-    a_file.close()
-else:
-    file_id_and_roi_list = []
-    a_file = open(FILE_AND_ROI_FILE_CACHE, 'r')
-    for line in a_file.readlines():
-        line = line.strip()
-        line = line.split(',')
-        file_id_and_roi_list.append([line[0], int(line[1])])
-    a_file.close()
-
 def t_is_inside_hull(t, hull_path):
     for point in  zip(t.get_noisy_x(), t.get_noisy_y()):
         if hull_path.contains_point((point[0],point[1])):
@@ -103,4 +67,4 @@ def analyze(file_id, roi):
 
     DatabaseHandler.disconnect()
 
-results = ray.get([analyze.remote(p[0], p[1]) for p in file_id_and_roi_list])
+results = ray.get([analyze.remote(p[0], p[1]) for p in extract_dataset_file_roi_file()])
