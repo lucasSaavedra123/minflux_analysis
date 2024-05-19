@@ -92,7 +92,7 @@ for index, dataset in enumerate(new_datasets_list):
         pd.DataFrame({'change_rates': confinement_rates}).to_excel(writer, sheet_name='change_rates', index=False)
 
         list_of_semi_major_axis = get_list_of_values_of_analysis_field(filter_query, 'confinement-a', mean_by_roi=True)
-        list_of_semi_major_axis = list(itertools.chain.from_iterable(list_of_semi_major_axis))
+        #list_of_semi_major_axis = list(itertools.chain.from_iterable(list_of_semi_major_axis))
         pd.DataFrame({'semi_major_axis': list_of_semi_major_axis}).to_excel(writer, sheet_name='semi_major_axis', index=False)
 
         browian_portions = []

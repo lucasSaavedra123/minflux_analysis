@@ -23,10 +23,10 @@ def t_is_inside_hull(t, hull_path):
     return False
 
 @ray.remote
-def analyze(file_id, roi):
+def analyze(dataset, file_id, roi):
     DatabaseHandler.connect_over_network(None, None, IP_ADDRESS, COLLECTION_NAME)
 
-    trajectories = list(Trajectory.objects(info__roi=roi, info__file=file_id))
+    trajectories = list(Trajectory.objects(info__dataset=dataset, info__roi=roi, info__file=file_id))
 
     for trajectory in trajectories:
         if 'analysis' not in trajectory.info or 'number_of_trajectories_per_overlap' in trajectory.info['analysis']:
@@ -67,4 +67,5 @@ def analyze(file_id, roi):
 
     DatabaseHandler.disconnect()
 
-results = ray.get([analyze.remote(p[0], p[1]) for p in extract_dataset_file_roi_file()])
+ray.init()
+ray.get([analyze.remote(p[0],p[1], p[2]) for p in extract_dataset_file_roi_file()])
