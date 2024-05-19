@@ -21,7 +21,7 @@ def reduce_mean_by_file_and_roi(tuples):
     values_per_roi = defaultdict(lambda: [])
     for value, file, roi in tuples:
         if value is not None:
-            values_per_roi[file+roi].append(value)
+            values_per_roi[file+str(roi)].append(value)
 
     for alias in values_per_roi:
         values_per_roi[alias] = np.mean(values_per_roi[alias])   
@@ -35,7 +35,7 @@ def unpack_data(list_of_data, mean_by_roi):
 
 def upload_data_to_writer(writer, filter_query, field, mean_by_roi, unpack_data_neccesary, filter_condition=None, multiplier=None):
     list_of_data = get_list_of_values_of_analysis_field(filter_query, field, mean_by_roi=mean_by_roi)
-    if unpack_data_neccesary and not mean_by_roi:
+    if unpack_data_neccesary:
         list_of_data = unpack_data(list_of_data, mean_by_roi)
     
     if filter_condition is not None:
@@ -82,8 +82,8 @@ for index, dataset in enumerate(new_datasets_list):
             filter_query = basic_query_dict.copy()
             filter_query.update({'info.immobile': False} if APPLY_GS_CRITERIA else {})
 
-            for false_unpack_fields in ['k', 'betha', 'd_2_4', 'localization_precision', 'meanDP', 'corrDP', 'AvgSignD']:
-                upload_data_to_writer(writer, filter_query, false_unpack_fields, mean_by_roi, False)
+            for false_unpack_field in ['k', 'betha', 'd_2_4', 'localization_precision', 'meanDP', 'corrDP', 'AvgSignD']:
+                upload_data_to_writer(writer, filter_query, false_unpack_field, mean_by_roi, False)
 
             upload_data_to_writer(writer, filter_query, 'residence_time', mean_by_roi, False, filter_condition=lambda a: a!=0)
             upload_data_to_writer(writer, filter_query, 'inverse_residence_time', mean_by_roi, False, filter_condition=lambda a: a!=0)
@@ -128,13 +128,14 @@ for index, dataset in enumerate(new_datasets_list):
             #Check this part of the code
             brownian_values_per_roi = defaultdict(lambda: [])
             confined_values_per_roi = defaultdict(lambda: [])
-            for result in list(Trajectory._get_collection().find(filter_query, {'_id':1,'t':1,'x':1,'y':1,'info.analysis.confinement-states':1})):
-                if result.get('info',{},).get('analysis',{}).get('confinement-states',{}) is not None:
+            new_info = list(Trajectory._get_collection().find(filter_query, {'_id':1,'t':1,'x':1,'y':1,'info.analysis.confinement-states':1, 'info.file':1, 'info.roi':1}))
+            for result in new_info[:10]:
+                if result.get('info',{},).get('analysis',{}).get('confinement-states') is not None:
                     a_trajectory = Trajectory(
                         x=result['x'],
                         y=result['y'],
                         t=result['t'],
-                        info={'analysis' : {'confinement-states': result['info']['analysis']['confinement-states']}},
+                        info={'file': result['info']['file'], 'roi': result['info']['roi'], 'analysis' : {'confinement-states': result['info']['analysis']['confinement-states']}},
                         noisy=True
                     )
                     sub_trajectories_by_state = a_trajectory.sub_trajectories_trajectories_from_confinement_states(use_info=True)
@@ -176,16 +177,16 @@ for index, dataset in enumerate(new_datasets_list):
             filter_query = basic_query_dict.copy()
             filter_query.update({'info.immobile': False})
 
-            for true_unpack_fields in [
+            for true_unpack_field in [
                 'number_of_trajectories_per_overlap', 'confinement-a', 'confinement-e','confinement-area',
                 'non-confinement-steps', 'confinement-steps', 'non-confinement-betha', 'confinement-betha',
                 'non-confinement-k', 'confinement-k', 'non-confinement-d_2_4', 'confinement-d_2_4']:
-                upload_data_to_writer(writer, filter_query, false_unpack_fields, mean_by_roi, True)
+                upload_data_to_writer(writer, filter_query, true_unpack_field, mean_by_roi, True)
 
-            list_of_confinement_areas_centroids = get_list_of_values_of_analysis_field(filter_query, 'confinement_areas_centroids', mean_by_roi=True)
-            list_of_confinement_areas_centroids = list(itertools.chain.from_iterable([pdist(np.array(confinement_areas_centroids) * 1e3).tolist() for confinement_areas_centroids in list_of_confinement_areas_centroids if len(confinement_areas_centroids) >= 2]))
-            pd.DataFrame({'confinement_areas_distance': list_of_confinement_areas_centroids}).to_csv(f'./Results/{dataset}_{index}_confinement_areas_distance.csv')
-    exit()
+            #list_of_confinement_areas_centroids = get_list_of_values_of_analysis_field(filter_query, 'confinement_areas_centroids', mean_by_roi=True)
+            #list_of_confinement_areas_centroids = list(itertools.chain.from_iterable([pdist(np.array(confinement_areas_centroids) * 1e3).tolist() for confinement_areas_centroids in list_of_confinement_areas_centroids if len(confinement_areas_centroids) >= 2]))
+            #pd.DataFrame({'confinement_areas_distance': list_of_confinement_areas_centroids}).to_csv(f'./Results/{dataset}_{index}_confinement_areas_distance.csv')
+
 basic_info_file = open('./Results/basic_info.txt','w')
 
 for combined_dataset in [
