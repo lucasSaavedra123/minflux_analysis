@@ -53,7 +53,10 @@ def get_list_of_values_of_analysis_field(filter_query, field_name, mean_by_roi=F
         for document in documents:
             value = document['info'].get('analysis', {}).get(field_name, None)
             if value is not None:
-                values_per_roi[document['info']['dataset']+document['info']['file']+str(document['info']['roi'])].append(value)
+                if type(value) == list:
+                    values_per_roi[document['info']['dataset']+document['info']['file']+str(document['info']['roi'])] += value
+                else:
+                    values_per_roi[document['info']['dataset']+document['info']['file']+str(document['info']['roi'])].append(value)
 
         for alias in values_per_roi:
             values_per_roi[alias] = np.mean(values_per_roi[alias])   
