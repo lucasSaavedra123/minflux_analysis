@@ -17,6 +17,35 @@ from CONSTANTS import *
 from utils import *
 
 
+def reduce_mean_by_file_and_roi(tuples):
+    values_per_roi = defaultdict(lambda: [])
+    for value, file, roi in tuples:
+        if value is not None:
+            values_per_roi[file+roi].append(value)
+
+    for alias in values_per_roi:
+        values_per_roi[alias] = np.mean(values_per_roi[alias])   
+    list_of_values = list(values_per_roi.values())
+    return list_of_values
+
+def unpack_data(list_of_data, mean_by_roi):
+    if not mean_by_roi:
+        list_of_data = list(itertools.chain.from_iterable(list_of_data))
+    return list_of_data
+
+def upload_data_to_writer(writer, filter_query, field, mean_by_roi, unpack_data_neccesary, filter_condition=None, multiplier=None):
+    list_of_data = get_list_of_values_of_analysis_field(filter_query, field, mean_by_roi=mean_by_roi)
+    if unpack_data_neccesary and not mean_by_roi:
+        list_of_data = unpack_data(list_of_data, mean_by_roi)
+    
+    if filter_condition is not None:
+        list_of_data = [value for value in list_of_data if filter_condition(value)]
+
+    if multiplier is not None:
+        list_of_data = [value*multiplier for value in list_of_data]
+
+    pd.DataFrame({field: list_of_data}).to_excel(writer, sheet_name=f'{field}_{mean_by_roi}', index=False)
+
 APPLY_GS_CRITERIA = True
 
 DatabaseHandler.connect_over_network(None, None, IP_ADDRESS, COLLECTION_NAME)
@@ -48,139 +77,115 @@ for index, dataset in enumerate(new_datasets_list):
 
     basic_query_dict = {'info.dataset': dataset} if index < len(INDIVIDUAL_DATASETS) else {'info.dataset': dataset[0], 'info.classified_experimental_condition':dataset[1]}
     with pd.ExcelWriter(f"./Results/{dataset}_{index}_gs_{APPLY_GS_CRITERIA}_basic_information.xlsx") as writer:
-        #Data that take into account GS criteria
-        filter_query = basic_query_dict.copy()
-        filter_query.update({'info.immobile': False} if APPLY_GS_CRITERIA else {})
+        for mean_by_roi in [False, True]:
+            #Data that take into account GS criteria
+            filter_query = basic_query_dict.copy()
+            filter_query.update({'info.immobile': False} if APPLY_GS_CRITERIA else {})
 
-        pd.DataFrame({'k': get_list_of_values_of_analysis_field(filter_query, 'k', mean_by_roi=True)}).to_excel(writer, sheet_name='k', index=False)
-        pd.DataFrame({'betha': get_list_of_values_of_analysis_field(filter_query, 'betha', mean_by_roi=True)}).to_excel(writer, sheet_name='betha', index=False)
-        #pd.DataFrame({'dc': get_list_of_values_of_analysis_field(filter_query, 'directional_coefficient')}).to_excel(writer, sheet_name='directional_coefficient', index=False)
-        pd.DataFrame({'d_2_4': get_list_of_values_of_analysis_field(filter_query, 'd_2_4', mean_by_roi=True)}).to_excel(writer, sheet_name='d_2_4', index=False)
-        pd.DataFrame({'localization_precision': get_list_of_values_of_analysis_field(filter_query, 'localization_precision', mean_by_roi=True)}).to_excel(writer, sheet_name='localization_precision', index=False)
-        pd.DataFrame({'meanDP': get_list_of_values_of_analysis_field(filter_query, 'meanDP', mean_by_roi=True)}).to_excel(writer, sheet_name='meanDP', index=False)
-        pd.DataFrame({'corrDP': get_list_of_values_of_analysis_field(filter_query, 'corrDP', mean_by_roi=True)}).to_excel(writer, sheet_name='corrDP', index=False)
-        pd.DataFrame({'AvgSignD': get_list_of_values_of_analysis_field(filter_query, 'AvgSignD', mean_by_roi=True)}).to_excel(writer, sheet_name='AvgSignD', index=False)
+            for false_unpack_fields in ['k', 'betha', 'd_2_4', 'localization_precision', 'meanDP', 'corrDP', 'AvgSignD']:
+                upload_data_to_writer(writer, filter_query, false_unpack_fields, mean_by_roi, False)
 
-        residence_times = get_list_of_values_of_analysis_field(filter_query, 'residence_time', mean_by_roi=True)
-        residence_times = [residence_time for residence_time in residence_times if residence_time != 0]
-        pd.DataFrame({'residence_time': residence_times}).to_excel(writer, sheet_name='residence_time', index=False)
+            upload_data_to_writer(writer, filter_query, 'residence_time', mean_by_roi, False, filter_condition=lambda a: a!=0)
+            upload_data_to_writer(writer, filter_query, 'inverse_residence_time', mean_by_roi, False, filter_condition=lambda a: a!=0)
 
-        inverse_residence_times = get_list_of_values_of_analysis_field(filter_query, 'inverse_residence_time', mean_by_roi=True)
-        inverse_residence_times = [inverse_residence_time for inverse_residence_time in inverse_residence_times if inverse_residence_time != 0]
-        pd.DataFrame({'inverse_residence_time': inverse_residence_times}).to_excel(writer, sheet_name='inverse_residence_time', index=False)
+            def measure_ratio(residence, inverse):
+                if residence is None or inverse is None:
+                    return None
+                else:
+                    return residence/(inverse+residence)
 
-        def measure_ratio(residence, inverse):
-            if residence is None or inverse is None:
-                return None
+            if not mean_by_roi:
+                residence_times_and_durations = [document for document in Trajectory._get_collection().find(filter_query, {f'info.analysis.inverse_residence_time':1, f'info.analysis.residence_time': 1, 'info.file':1,'info.roi':1})]
+                residence_times_and_durations = [measure_ratio(document.get('info', {}).get('analysis', {}).get('residence_time'), document.get('info', {}).get('analysis', {}).get('inverse_residence_time')) for document in residence_times_and_durations]
             else:
-                return residence/(inverse+residence)
+                residence_times_and_durations = [document for document in Trajectory._get_collection().find(filter_query, {f'info.analysis.inverse_residence_time':1, f'info.analysis.residence_time': 1, 'info.file':1,'info.roi':1})]
+                residence_times_and_durations = [(measure_ratio(document.get('info', {}).get('analysis', {}).get('residence_time'), document.get('info', {}).get('analysis', {}).get('inverse_residence_time')), document.get('info').get('file'), document.get('info').get('roi')) for document in residence_times_and_durations]
+                residence_times_and_durations = reduce_mean_by_file_and_roi(residence_times_and_durations)
 
-        residence_times_and_durations = [document for document in Trajectory._get_collection().find(filter_query, {f'info.analysis.inverse_residence_time':1, f'info.analysis.residence_time': 1})]
-        residence_times_and_durations = [measure_ratio(document.get('info', {}).get('analysis', {}).get('residence_time'), document.get('info', {}).get('analysis', {}).get('inverse_residence_time')) for document in residence_times_and_durations]
-        residence_times_and_durations = [value for value in residence_times_and_durations if value is not None]
-        pd.DataFrame({'residence_times_and_durations': residence_times_and_durations}).to_excel(writer, sheet_name='residence_ratios', index=False)
+            residence_times_and_durations = [value for value in residence_times_and_durations if value is not None]
 
-        def measure_rate(state_array, time_array):
-            if state_array is None or time_array is None:
-                return None
+            pd.DataFrame({'residence_times_and_durations': residence_times_and_durations}).to_excel(writer, sheet_name=f'residence_ratios_{mean_by_roi}', index=False)
+
+            def measure_rate(state_array, time_array):
+                if state_array is None or time_array is None:
+                    return None
+                else:
+                    return np.abs(np.diff(state_array)!=0).sum() / (time_array[-1] - time_array[0])
+
+            if not mean_by_roi:
+                confinement_rates = [document for document in Trajectory._get_collection().find(filter_query, {f'info.analysis.confinement-states':1, f't': 1})]
+                confinement_rates = [measure_rate(document.get('info', {}).get('analysis', {}).get('confinement-states'), document.get('t')) for document in confinement_rates]
             else:
-                return np.abs(np.diff(state_array)!=0).sum() / (time_array[-1] - time_array[0])
+                confinement_rates = [document for document in Trajectory._get_collection().find(filter_query, {f'info.analysis.confinement-states':1, f't': 1, 'info.file':1,'info.roi':1})]
+                confinement_rates = [(measure_rate(document.get('info', {}).get('analysis', {}).get('confinement-states'), document.get('t')), document.get('info').get('file'), document.get('info').get('roi')) for document in confinement_rates]
+                confinement_rates = reduce_mean_by_file_and_roi(confinement_rates)
 
-        confinement_rates = [document for document in Trajectory._get_collection().find(filter_query, {f'info.analysis.confinement-states':1, f't': 1})]
-        confinement_rates = [measure_rate(document.get('info', {}).get('analysis', {}).get('confinement-states'), document.get('t')) for document in confinement_rates]
-        confinement_rates = [value for value in confinement_rates if value is not None]
-        pd.DataFrame({'change_rates': confinement_rates}).to_excel(writer, sheet_name='change_rates', index=False)
+            confinement_rates = [value for value in confinement_rates if value is not None]
+            pd.DataFrame({'change_rates': confinement_rates}).to_excel(writer, sheet_name=f'change_rates_{mean_by_roi}', index=False)
 
-        list_of_semi_major_axis = get_list_of_values_of_analysis_field(filter_query, 'confinement-a', mean_by_roi=True)
-        #list_of_semi_major_axis = list(itertools.chain.from_iterable(list_of_semi_major_axis))
-        pd.DataFrame({'semi_major_axis': list_of_semi_major_axis}).to_excel(writer, sheet_name='semi_major_axis', index=False)
+            browian_portions = []
+            confined_portions = []
+            #Check this part of the code
+            brownian_values_per_roi = defaultdict(lambda: [])
+            confined_values_per_roi = defaultdict(lambda: [])
+            for result in list(Trajectory._get_collection().find(filter_query, {'_id':1,'t':1,'x':1,'y':1,'info.analysis.confinement-states':1})):
+                if result.get('info',{},).get('analysis',{}).get('confinement-states',{}) is not None:
+                    a_trajectory = Trajectory(
+                        x=result['x'],
+                        y=result['y'],
+                        t=result['t'],
+                        info={'analysis' : {'confinement-states': result['info']['analysis']['confinement-states']}},
+                        noisy=True
+                    )
+                    sub_trajectories_by_state = a_trajectory.sub_trajectories_trajectories_from_confinement_states(use_info=True)
 
-        browian_portions = []
-        confined_portions = []
+                    for sub_trajectory in sub_trajectories_by_state[0]:
+                        if not mean_by_roi:
+                            browian_portions.append(sub_trajectory.duration)
+                        else:
+                            browian_portions.append((sub_trajectory.duration, sub_trajectory.info['file'],sub_trajectory.info['roi']))
+                    
+                    for sub_trajectory in sub_trajectories_by_state[1]:
+                        if not mean_by_roi:
+                            confined_portions.append(sub_trajectory.duration)
+                        else:
+                            confined_portions.append((sub_trajectory.duration, sub_trajectory.info['file'],sub_trajectory.info['roi']))
 
-        for result in Trajectory._get_collection().find(filter_query, {'_id':1}):
-            a_trajectory = Trajectory.objects(id=str(result['_id']))[0]
-            sub_trajectories_by_state = a_trajectory.sub_trajectories_trajectories_from_confinement_states(v_th=33, use_info=False)
+            if mean_by_roi:
+                browian_portions = reduce_mean_by_file_and_roi(browian_portions)
+                confined_portions = reduce_mean_by_file_and_roi(confined_portions)
 
-            for sub_trajectory in sub_trajectories_by_state[0]:
-                browian_portions.append(sub_trajectory.duration)
+            pd.DataFrame({'browian_portions': [p for p in browian_portions if p != 0]}).to_excel(writer, sheet_name=f'browian_portions_{mean_by_roi}', index=False)
+            pd.DataFrame({'confined_portions': [p for p in confined_portions if p != 0]}).to_excel(writer, sheet_name=f'confined_portions_{mean_by_roi}', index=False)
+            """
+            #Data that takes all trajectories
+            filter_query = basic_query_dict.copy()
+            pd.DataFrame({'ratio': get_list_of_values_of_field(filter_query, 'ratio')}).to_excel(writer, sheet_name='ratio', index=False)
 
-            for sub_trajectory in sub_trajectories_by_state[1]:
-                confined_portions.append(sub_trajectory.duration)
+            list_of_trajectories_time = get_list_of_main_field(filter_query, 't')
 
-        pd.DataFrame({'browian_portions': [p for p in browian_portions if p != 0]}).to_excel(writer, sheet_name='browian_portions', index=False)
-        pd.DataFrame({'confined_portions': [p for p in confined_portions if p != 0]}).to_excel(writer, sheet_name='confined_portions', index=False)
-        """
-        #Data that takes all trajectories
-        filter_query = basic_query_dict.copy()
-        pd.DataFrame({'ratio': get_list_of_values_of_field(filter_query, 'ratio')}).to_excel(writer, sheet_name='ratio', index=False)
+            lengths = [len(time_list) for time_list in list_of_trajectories_time]
+            lengths = [length for length in lengths if length != 1]
+            pd.DataFrame({'length': lengths}).to_excel(writer, sheet_name='length', index=False)
 
-        list_of_trajectories_time = get_list_of_main_field(filter_query, 't')
+            durations = [time_list[-1] - time_list[0] for time_list in list_of_trajectories_time]
+            durations = [duration for duration in durations if duration != 0]
+            pd.DataFrame({'duration': durations}).to_excel(writer, sheet_name='duration', index=False)
+            """
+            #Data that takes all mobile trajectories
+            filter_query = basic_query_dict.copy()
+            filter_query.update({'info.immobile': False})
 
-        lengths = [len(time_list) for time_list in list_of_trajectories_time]
-        lengths = [length for length in lengths if length != 1]
-        pd.DataFrame({'length': lengths}).to_excel(writer, sheet_name='length', index=False)
+            for true_unpack_fields in [
+                'number_of_trajectories_per_overlap', 'confinement-a', 'confinement-e','confinement-area',
+                'non-confinement-steps', 'confinement-steps', 'non-confinement-betha', 'confinement-betha',
+                'non-confinement-k', 'confinement-k', 'non-confinement-d_2_4', 'confinement-d_2_4']:
+                upload_data_to_writer(writer, filter_query, false_unpack_fields, mean_by_roi, True)
 
-        durations = [time_list[-1] - time_list[0] for time_list in list_of_trajectories_time]
-        durations = [duration for duration in durations if duration != 0]
-        pd.DataFrame({'duration': durations}).to_excel(writer, sheet_name='duration', index=False)
-        """
-        #Data that takes all mobile trajectories
-        filter_query = basic_query_dict.copy()
-        filter_query.update({'info.immobile': False})
-
-        list_of_number_of_trajectories_per_overlap = get_list_of_values_of_analysis_field(filter_query, 'number_of_trajectories_per_overlap', mean_by_roi=True)
-        list_of_number_of_trajectories_per_overlap = list(itertools.chain.from_iterable(list_of_number_of_trajectories_per_overlap))
-        pd.DataFrame({'number_of_trajectories_per_overlap': list_of_number_of_trajectories_per_overlap}).to_excel(writer, sheet_name='number_of_trajectories_per_overlap', index=False)
-
-        list_of_semi_major_axis = get_list_of_values_of_analysis_field(filter_query, 'confinement-a', mean_by_roi=True)
-        list_of_semi_major_axis = list(itertools.chain.from_iterable(list_of_semi_major_axis))
-        pd.DataFrame({'semi_major_axis': list_of_semi_major_axis}).to_excel(writer, sheet_name='semi_major_axis', index=False)
-
-        list_of_eccentricities = get_list_of_values_of_analysis_field(filter_query, 'confinement-e', mean_by_roi=True)
-        list_of_eccentricities = list(itertools.chain.from_iterable(list_of_eccentricities))
-        pd.DataFrame({'eccentricity': list_of_eccentricities}).to_excel(writer, sheet_name='eccentricity', index=False)
-
-        list_of_confinement_areas = get_list_of_values_of_analysis_field(filter_query, 'confinement-area', mean_by_roi=True)
-        list_of_confinement_areas = list(itertools.chain.from_iterable([[area * 1e6 for area in areas] for areas in list_of_confinement_areas]))
-        pd.DataFrame({'area': list_of_confinement_areas}).to_excel(writer, sheet_name='area', index=False)
-
-        list_of_steps = get_list_of_values_of_analysis_field(filter_query, 'non-confinement-steps', mean_by_roi=True)
-        list_of_steps = list(itertools.chain.from_iterable(list_of_steps))
-        pd.DataFrame({'non-confinement-steps': list_of_steps}).to_excel(writer, sheet_name='non-confinement-steps', index=False)
-
-        list_of_steps = get_list_of_values_of_analysis_field(filter_query, 'confinement-steps', mean_by_roi=True)
-        list_of_steps = list(itertools.chain.from_iterable(list_of_steps))
-        pd.DataFrame({'confinement-steps': list_of_steps}).to_excel(writer, sheet_name='confinement-steps', index=False)
-
-        list_of_bethas = get_list_of_values_of_analysis_field(filter_query, 'non-confinement-betha', mean_by_roi=True)
-        list_of_bethas = list(itertools.chain.from_iterable(list_of_bethas))
-        pd.DataFrame({'non-confinement-betha': list_of_bethas}).to_excel(writer, sheet_name='non-confinement-betha', index=False)
-
-        list_of_bethas = get_list_of_values_of_analysis_field(filter_query, 'confinement-betha', mean_by_roi=True)
-        list_of_bethas = list(itertools.chain.from_iterable(list_of_bethas))
-        pd.DataFrame({'confinement-betha': list_of_bethas}).to_excel(writer, sheet_name='confinement-betha', index=False)
-
-        list_of_ks = get_list_of_values_of_analysis_field(filter_query, 'non-confinement-k', mean_by_roi=True)
-        list_of_ks = list(itertools.chain.from_iterable(list_of_ks))
-        pd.DataFrame({'non-confinement-k': list_of_ks}).to_excel(writer, sheet_name='non-confinement-k', index=False)
-
-        list_of_ks = get_list_of_values_of_analysis_field(filter_query, 'confinement-k', mean_by_roi=True)
-        list_of_ks = list(itertools.chain.from_iterable(list_of_ks))
-        pd.DataFrame({'confinement-k': list_of_ks}).to_excel(writer, sheet_name='confinement-k', index=False)
-
-        list_of_ds = get_list_of_values_of_analysis_field(filter_query, 'non-confinement-d_2_4', mean_by_roi=True)
-        list_of_ds = list(itertools.chain.from_iterable(list_of_ds))
-        pd.DataFrame({'non-confinement-d_2_4': list_of_ds}).to_excel(writer, sheet_name='non-confinement-d_2_4', index=False)
-
-        list_of_ds = get_list_of_values_of_analysis_field(filter_query, 'confinement-d_2_4', mean_by_roi=True)
-        list_of_ds = list(itertools.chain.from_iterable(list_of_ds))
-        pd.DataFrame({'confinement-d_2_4': list_of_ds}).to_excel(writer, sheet_name='confinement-d_2_4', index=False)
-
-        list_of_confinement_areas_centroids = get_list_of_values_of_analysis_field(filter_query, 'confinement_areas_centroids', mean_by_roi=True)
-        list_of_confinement_areas_centroids = list(itertools.chain.from_iterable([pdist(np.array(confinement_areas_centroids) * 1e3).tolist() for confinement_areas_centroids in list_of_confinement_areas_centroids if len(confinement_areas_centroids) >= 2]))
-        pd.DataFrame({'confinement_areas_distance': list_of_confinement_areas_centroids}).to_csv(f'./Results/{dataset}_{index}_confinement_areas_distance.csv')
-
+            list_of_confinement_areas_centroids = get_list_of_values_of_analysis_field(filter_query, 'confinement_areas_centroids', mean_by_roi=True)
+            list_of_confinement_areas_centroids = list(itertools.chain.from_iterable([pdist(np.array(confinement_areas_centroids) * 1e3).tolist() for confinement_areas_centroids in list_of_confinement_areas_centroids if len(confinement_areas_centroids) >= 2]))
+            pd.DataFrame({'confinement_areas_distance': list_of_confinement_areas_centroids}).to_csv(f'./Results/{dataset}_{index}_confinement_areas_distance.csv')
+    exit()
 basic_info_file = open('./Results/basic_info.txt','w')
 
 for combined_dataset in [
