@@ -13,22 +13,11 @@ DatabaseHandler.connect_over_network(None, None, IP_ADDRESS, COLLECTION_NAME)
 #THIS IS FOR TRAJECTORY DELETION
 """
 files_to_delete = [
-    '231013-124511_mbm test.txt',
-    '231013-125044_mbm test.txt',
-    '231013-125411_mbm test.txt',
-    '231013-125818_mbm test.txt',
-    '231013-130259_mbm test.txt',
-    '231013-124040_mbm test.txt',
-    '231013-131100_mbm test.txt',
-    '231013-131935_mbm test.txt',
-    '231013-132310_mbm test.txt',
-    '231013-132703_mbm test.txt',
-    '231013-124511_mbm test.txt',
-    '231013-130259_mbm test.txt',
+    '',
 ]
 
 for a_file in files_to_delete:
-    for t in Trajectory.objects(info__dataset='Cholesterol and btx', info__file=a_file):
+    for t in Trajectory.objects(info__dataset='BTX680R', info__file=a_file):
         t.delete()
 exit()
 """
