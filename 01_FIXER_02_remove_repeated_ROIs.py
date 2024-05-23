@@ -5,7 +5,6 @@ from Trajectory import Trajectory
 from collections import defaultdict
 from utils import extract_dataset_file_roi_file
 import tqdm
-from IPython import embed
 
 DatabaseHandler.connect_over_network(None, None, IP_ADDRESS, COLLECTION_NAME)
 
@@ -13,18 +12,7 @@ DatabaseHandler.connect_over_network(None, None, IP_ADDRESS, COLLECTION_NAME)
 #THIS IS FOR TRAJECTORY DELETION
 """
 files_to_delete = [
-    '231013-124511_mbm test.txt',
-    '231013-125044_mbm test.txt',
-    '231013-125411_mbm test.txt',
-    '231013-125818_mbm test.txt',
-    '231013-130259_mbm test.txt',
-    '231013-124040_mbm test.txt',
-    '231013-131100_mbm test.txt',
-    '231013-131935_mbm test.txt',
-    '231013-132310_mbm test.txt',
-    '231013-132703_mbm test.txt',
-    '231013-124511_mbm test.txt',
-    '231013-130259_mbm test.txt',
+    '',
 ]
 
 for a_file in files_to_delete:
@@ -62,7 +50,7 @@ def combine_edges(edges):
   return [list(set(c)) for c in combinations]
 
 dataset_file_roi = extract_dataset_file_roi_file()
-datasets = ['Cholesterol and btx']#set([a[0] for a in dataset_file_roi])
+datasets = set([a[0] for a in dataset_file_roi])
 print(datasets)
 for dataset in datasets:
     print(dataset)
@@ -80,8 +68,8 @@ for dataset in datasets:
 
     files = list(trajectories_info_by_file.keys())
 
-    for i, a_file in tqdm.tqdm(enumerate(files)):
-        for another_file in tqdm.tqdm(files[i:]):
+    for i ,a_file in tqdm.tqdm(list(enumerate(files))):
+        for another_file in files[i:]:
             if a_file == another_file:
                 continue
 
@@ -90,18 +78,5 @@ for dataset in datasets:
 
             if datasets_overlap(first_file_trajectories, second_second_trajectories):
                 print(a_file, another_file)
-                """
-                infos = [{'info.dataset':dataset, 'info.file':a_file}, {'info.dataset':dataset, 'info.file':another_file}]
-
-                fig, ax = plt.subplots(1,2)
-
-                for i, info in enumerate(infos):
-                    ax[i].set_title(info['info.file'])
-
-                    for d in trajectories_info_by_file[info['info.file']]:
-                        ax[i].plot(d['x'], d['y'], color=['red', 'blue'][i])
-
-                plt.show()
-                """
 
 DatabaseHandler.disconnect()
