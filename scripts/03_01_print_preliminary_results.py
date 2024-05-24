@@ -3,6 +3,7 @@ From the paper, this is the "basic" characterization
 of trajectories.
 """
 import itertools
+import os
 
 import numpy as np
 import pandas as pd
@@ -144,3 +145,61 @@ for dataset in tqdm.tqdm(COMBINED_DATASETS):
 
 file.close()
 DatabaseHandler.disconnect()
+
+info_dict = [
+    {
+        'alias': 'BTX', 
+        'datasets': [
+            'BTX680R',
+            'CK666-BTX680',
+    ]},
+    {
+        'alias': 'BTX with fPEG-Chol', 
+        'datasets': [
+            'Cholesterol and btx_BTX680R',
+            'BTX680-fPEG-CHOL-50-nM_BTX680R',
+            'BTX680-fPEG-CHOL-100-nM_BTX680R',
+            'CK666-BTX680-CHOL_BTX680R'
+    ]},
+    {
+        'alias': 'fPEG-Chol', 
+        'datasets': [
+            'CholesterolPEGKK114',
+            'CK666-CHOL',
+    ]},
+    {
+        'alias': 'fPEG-Chol with fPEG-Chol', 
+        'datasets': [
+            'Cholesterol and btx_fPEG-Chol',
+            'BTX680-fPEG-CHOL-50-nM_fPEG-Chol',
+            'BTX680-fPEG-CHOL-100-nM_fPEG-Chol',
+            'CK666-BTX680-CHOL_fPEG-Chol'
+    ]},
+    {
+        'alias': 'CDx', 
+        'datasets': ['CDx']
+    },
+    {
+        'alias': 'Control', 
+        'datasets': [
+            'Control',
+            'BTX640-CHOL-50-nM',
+            'BTX640-CHOL-50-nM-LOW-DENSITY',
+    ]},
+]
+
+all_list = []
+
+for info in info_dict:
+    new_list = []
+
+    for dataset in info['datasets']:
+        new_list += pd.read_csv(os.path.join('./Results', dataset+'_ratios.csv'))['ratio'].tolist()
+        os.remove(os.path.join('./Results', dataset+'_ratios.csv'))
+
+    pd.DataFrame({'ratio': new_list}).to_csv(os.path.join('./Results', f'{info["alias"]}_ratios.csv'))
+
+    if info['alias'] not in ['fPEG-Chol', 'fPEG-Chol with fPEG-Chol']:
+        all_list += new_list
+
+pd.DataFrame({'ratio': all_list}).to_csv(os.path.join('./Results', f'all_ratios.csv'))
