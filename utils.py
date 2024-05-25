@@ -43,10 +43,34 @@ def get_list_of_positions(filter_query):
     values = [value for value in values if value.shape[1] > 1]
     return values
 
-def get_list_of_values_of_analysis_field(filter_query, field_name, mean_by_roi=False):
-    if not mean_by_roi:
-        values = [document['info'].get('analysis', {}).get(field_name, None) for document in Trajectory._get_collection().find(filter_query, {f'info.analysis.{field_name}':1})]
+def remove_outliers_from_set_of_values(list_of_values, return_upper_and_lower=False):
+    list_of_values = np.array(list_of_values)
+    Q1 = np.percentile(np.log10(list_of_values), 25, method='midpoint')
+    Q3 = np.percentile(np.log10(list_of_values), 75, method='midpoint')
+    IQR = Q3 - Q1
+
+    upper = Q3+1.5*IQR
+    list_of_values = list_of_values[np.log10(list_of_values) <= upper]
+
+    lower = Q1-1.5*IQR
+    list_of_values = list_of_values[np.log10(list_of_values) >= lower]
+
+    if return_upper_and_lower:
+        return 10**lower, 10**upper
     else:
+        return list_of_values.tolist()
+
+def get_list_of_values_of_analysis_field(filter_query, field_name, mean_by_roi=False, filter_outliers=False):
+    values = [document['info'].get('analysis', {}).get(field_name, None) for document in Trajectory._get_collection().find(filter_query, {f'info.analysis.{field_name}':1})]
+    values = [value for value in values if value is not None]
+    if not mean_by_roi:
+        if filter_outliers:
+            values = remove_outliers_from_set_of_values(values)
+    else:
+        if filter_outliers:
+            lower, upper = remove_outliers_from_set_of_values(values, return_upper_and_lower=True)
+        else:
+            lower, upper = float('-inf'), float('inf')
         documents = list(Trajectory._get_collection().find(filter_query, {f'info.analysis.{field_name}':1,'info.dataset':1,'info.file':1,'info.roi':1}))
 
         values_per_roi = defaultdict(lambda: [])
@@ -59,9 +83,8 @@ def get_list_of_values_of_analysis_field(filter_query, field_name, mean_by_roi=F
                     values_per_roi[document['info']['dataset']+document['info']['file']+str(document['info']['roi'])].append(value)
 
         for alias in values_per_roi:
-            values_per_roi[alias] = np.mean(values_per_roi[alias])   
+            values_per_roi[alias] = np.mean([value for value in values_per_roi[alias] if lower < value < upper])   
         values = list(values_per_roi.values())
-    values = [value for value in values if value is not None]
     return values
 
 def get_list_of_values_of_field(filter_query, field_name, mean_by_roi=False):

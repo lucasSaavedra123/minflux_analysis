@@ -34,7 +34,7 @@ def unpack_data(list_of_data, mean_by_roi):
     return list_of_data
 
 def upload_data_to_writer(writer, filter_query, field, mean_by_roi, unpack_data_neccesary, filter_condition=None, multiplier=None):
-    list_of_data = get_list_of_values_of_analysis_field(filter_query, field, mean_by_roi=mean_by_roi)
+    list_of_data = get_list_of_values_of_analysis_field(filter_query, field, mean_by_roi=mean_by_roi, filter_outliers=not unpack_data_neccesary)
     if unpack_data_neccesary:
         list_of_data = unpack_data(list_of_data, mean_by_roi)
     
