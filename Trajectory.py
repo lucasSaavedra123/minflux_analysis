@@ -706,11 +706,19 @@ class Trajectory(Document):
 
         popt, _ = curve_fit(real_func, t_vec_fit, msd_fit, bounds=((0, 0), (2, np.inf)), maxfev=2000)
         goodness_of_fit = r2_score(np.log(msd_fit), linear_func(t_vec_fit, popt[0], popt[1]))
+        """
+        fig, ax = plt.subplots(1,2)
 
-        #plt.title(f"betha={np.round(popt[0], 2)}, k={popt[1]}")
-        #plt.plot(t_vec_fit, real_func(t_vec_fit, popt[0], popt[1]))
-        #plt.plot(t_vec_fit, msd_fit)
-        #plt.show()
+        ax[0].set_title(f"betha={np.round(popt[0], 2)}, k={popt[1]}")
+        ax[0].plot(t_vec_fit, real_func(t_vec_fit, popt[0], popt[1]), marker='X', color='black')
+        ax[0].plot(t_vec_fit, msd_fit, marker='X', color='red')
+
+        ax[1].set_title(f"betha={np.round(popt[0], 2)}, k={popt[1]}")
+        ax[1].loglog(t_vec_fit, real_func(t_vec_fit, popt[0], popt[1]), marker='X', color='black')
+        ax[1].loglog(t_vec_fit, msd_fit, marker='X', color='red')
+
+        plt.show()
+        """
         return t_vec, msd, popt[0], popt[1], goodness_of_fit
 
     def short_range_diffusion_coefficient_msd(self, with_noise=True, bin_width=None):
