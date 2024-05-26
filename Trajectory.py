@@ -666,9 +666,9 @@ class Trajectory(Document):
                 break
             if limit_type == 'time' and (i-1)*delta > limit_value:
                 break
-            calc_tmp = np.sum(np.abs((data_tmp[1+i:N,:] - data_tmp[1:N - i,:]) ** 2), axis=1)
-            calc_t_tmp = data_t_tmp[1+i:N] - data_t_tmp[1:N - i]
-
+            calc_tmp = np.sum(np.abs((data_tmp[i:N,:]-data_tmp[0:N-i,:]) ** 2), axis=1)
+            calc_t_tmp = data_t_tmp[i:N] - data_t_tmp[0:N-i]
+            #plt.scatter(calc_t_tmp, calc_tmp, color='blue', s=0.1)
             for interval, square_displacement in zip(calc_t_tmp, calc_tmp):
                 msd_dict[int(interval/delta)].append(square_displacement)
 
@@ -679,12 +679,15 @@ class Trajectory(Document):
             msd_variances_dict[i] = np.var(msd_dict[i])
             msd_dict[i] = np.mean(msd_dict[i])
 
-        aux = np.array(sorted(list(zip(list(msd_dict.keys()), list(msd_dict.values()))), key=lambda x: x[0]))
-        t_vec, msd = (aux[:,0] * delta) + delta, aux[:,1]
+        time_msd = [[t*delta, msd_dict[t]] for t in msd_dict]
+        aux = np.array(sorted(time_msd, key=lambda x: x[0]))
+        t_vec, msd = aux[:,0], aux[:,1]
 
-        aux = np.array(sorted(list(zip(list(msd_variances_dict.keys()), list(msd_variances_dict.values()))), key=lambda x: x[0]))
-        _, msd_var = (aux[:,0] * delta) + delta, aux[:,1]
-
+        time_msd = [[t*delta, msd_variances_dict[t]] for t in msd_variances_dict]
+        aux = np.array(sorted(time_msd, key=lambda x: x[0]))
+        t_vec, msd_var = aux[:,0], aux[:,1]
+        #plt.scatter(t_vec, np.zeros_like(t_vec))
+        #plt.show()
         assert len(t_vec) == len(msd) == len(msd_var)
 
         if not return_variances:
