@@ -156,23 +156,32 @@ class Trajectory(Document):
 
     @classmethod
     def ensemble_average_mean_square_displacement(cls, trajectories, number_of_points_for_msd=50, bin_width=None, alpha=0.95):
-        """
+
         trajectories = [trajectory for trajectory in trajectories if trajectory.length > number_of_points_for_msd + 1]
         #print("len average ->", np.mean([t.length for t in trajectories]))
-        ea_msd = np.zeros((len(trajectories), number_of_points_for_msd))
-        mu_t = np.zeros((len(trajectories), number_of_points_for_msd))
+        ea_msd_dict = defaultdict(lambda: [])
+        mu_t_dict = defaultdict(lambda: [])
 
         for j_index, trajectory in enumerate(trajectories):
             positions = np.zeros((trajectory.length,2))
             positions[:,0] = trajectory.get_noisy_x()
             positions[:,1] = trajectory.get_noisy_y()
+            time_position = trajectory.get_time()
 
             for index in range(0, number_of_points_for_msd):
-                ea_msd[j_index, index] = np.linalg.norm(positions[index+1]-positions[0]) ** 2
-                mu_t[j_index, index] = np.linalg.norm(positions[index+1]-positions[0])
+                ea_msd_dict[int(time_position[index+1] - time_position[0]/bin_width)].append(np.linalg.norm(positions[index+1]-positions[0]) ** 2)
+                mu_t_dict[int(time_position[index+1] - time_position[0]/bin_width)].append(np.linalg.norm(positions[index+1]-positions[0]))
+        
+        t_lag = np.sort(np.array([bin_width * i for i in ea_msd_dict]))
 
-        ea_msd = np.mean(ea_msd, axis=0)
-        mu_t = np.mean(mu_t, axis=0)
+        ea_msd, mu_t = [], []
+
+        for t in t_lag:
+            ea_msd.append(np.mean(ea_msd_dict[t]))
+            mu_t.append(np.mean(mu_t_dict[t]))
+
+        ea_msd = np.array(ea_msd)
+        mu_t = np.array(mu_t)
 
         alpha_1 = chi2.ppf(alpha/2, len(trajectories))
         alpha_2 = chi2.ppf(1-(alpha/2), len(trajectories))
@@ -184,7 +193,8 @@ class Trajectory(Document):
             (A/alpha_2)+(mu_t**2)
         ]
 
-        return ea_msd, intervals
+        return t_lag, ea_msd, intervals
+
         """
         #print("len average ->", np.mean([t.length for t in trajectories]))
         ea_msd = defaultdict(lambda: [])
@@ -213,6 +223,7 @@ class Trajectory(Document):
         t_vec, ea_msd = (aux[:,0] * delta) + delta, aux[:,1]
 
         return t_vec, ea_msd, [np.array(intervals[0]), np.array(intervals[1])]
+        """
 
     def __init__(self, x, y=None, z=None, model_category=None, noise_x=None, noise_y=None, noise_z=None, noisy=False, t=None, exponent=None, exponent_type='anomalous', info={}, **kwargs):
 
