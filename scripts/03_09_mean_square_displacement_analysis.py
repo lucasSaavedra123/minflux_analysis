@@ -1,3 +1,4 @@
+from collections import defaultdict
 import tqdm
 import numpy as np
 import matplotlib.pyplot as plt
@@ -69,27 +70,39 @@ for index, dataset in enumerate(new_datasets_list):
     msd_results = [result[1] for result in results]
     t_lags = [result[2] for result in results]
 
+    ea_ta_msd = defaultdict(lambda: [])
+
     #print("n->", len(msd_results))
     #t_lag = np.arange(0,NUMBER_OF_POINTS_FOR_MSD * DATASET_TO_DELTA_T[dataset], DATASET_TO_DELTA_T[dataset])
     #t_lag = np.linspace(DATASET_TO_DELTA_T[dataset], DATASET_TO_DELTA_T[dataset] * 250, 250 - 2)
 
     for t_lag, msd_result in zip(t_lags, msd_results):
-        t_lag = t_lag[MAX_T < t_lag]
-        msd_result = msd_result[MAX_T < t_lag]
-        plt.loglog(t_lag, msd_result,color='cyan')
+        msd_result = msd_result[t_lag < MAX_T]
+        t_lag = t_lag[t_lag < MAX_T]
+        plt.loglog(t_lag, msd_result,color='cyan', linewidth=0.25)
+
+        for t, m in zip(t_lag, msd_result):
+            ea_ta_msd[t].append(m)
+
+    for t in ea_ta_msd:
+        ea_ta_msd[t] = np.mean(ea_ta_msd[t])
+
+    time_msd = [[t, ea_ta_msd[t]] for t in ea_ta_msd]
+    aux = np.array(sorted(time_msd, key=lambda x: x[0]))
+    ea_ta_msd_t_vec, ea_ta_msd = aux[:,0], aux[:,1]
+    plt.loglog(ea_ta_msd_t_vec, ea_ta_msd, color='red')
     """
-    ea_ta_msd = np.mean(msd_results, axis=0)
     popt, _ = curve_fit(lambda t,b,k: np.log(k) + (np.log(t) * b), t_lag, np.log(ea_ta_msd), bounds=((0, 0), (2, np.inf)), maxfev=2000)
     print(popt[0], popt[1])
 
     plt.loglog(t_lag,t_lag, color='black', linestyle='dashed')
     plt.loglog(t_lag,popt[1]*(t_lag**popt[0]), color='red')
     """
-    plt.xlim([DELTA_T, MAX_T])
-    #plt.ylim([1e-6, 1])
-    plt.xticks(fontsize=20)
-    plt.yticks(fontsize=20)
-    plt.subplots_adjust(left=0.17)
+    plt.xlim([min(ea_ta_msd_t_vec), max(ea_ta_msd_t_vec)])
+    plt.ylim([10e-6, 20e-1])
+    plt.xticks(fontsize=30)
+    plt.yticks(fontsize=30)
+    plt.subplots_adjust(left=0.174, right=0.866, top=0.968, bottom=0.118)
     plt.savefig(f"{index}_{dataset}_msd.png", dpi=300)
     plt.clf()
     """
