@@ -678,11 +678,19 @@ class Trajectory(Document):
             msd_variances_dict[i] = np.var(msd_dict[i])
             msd_dict[i] = np.mean(msd_dict[i])
 
-        time_msd = [[bin_width*(t-(1/2)), msd_dict[t]] for t in msd_dict]
+        if time_start is not None:
+            time_msd = [[time_start+(bin_width*(t-(1/2))), msd_dict[t]] for t in msd_dict]
+        else:
+            time_msd = [[bin_width*t, msd_dict[t]] for t in msd_dict]
+
         aux = np.array(sorted(time_msd, key=lambda x: x[0]))
         t_vec, msd = aux[:,0], aux[:,1]
 
-        time_msd = [[bin_width*(t-(1/2)), msd_variances_dict[t]] for t in msd_variances_dict]
+        if time_start is not None:
+            time_msd = [[time_start+(bin_width*(t-(1/2))), msd_variances_dict[t]] for t in msd_variances_dict]
+        else:
+            time_msd = [[bin_width*t, msd_variances_dict[t]] for t in msd_variances_dict]
+
         aux = np.array(sorted(time_msd, key=lambda x: x[0]))
         t_vec, msd_var = aux[:,0], aux[:,1]
         #plt.scatter(t_vec, np.zeros_like(t_vec))
