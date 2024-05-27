@@ -2,14 +2,11 @@ from collections import defaultdict
 import tqdm
 import numpy as np
 import matplotlib.pyplot as plt
-from scipy.stats import chi2
 
 from DatabaseHandler import DatabaseHandler
 from Trajectory import Trajectory
 from CONSTANTS import *
 from scipy.optimize import curve_fit
-
-import ray
 
 
 def analyze_trajectory(trajectory_id, dataset):
@@ -18,10 +15,13 @@ def analyze_trajectory(trajectory_id, dataset):
     trajectory = trajectories[0]
 
     try:
-        t_vec,msd,_,_,_ = trajectory.temporal_average_mean_squared_displacement(log_log_fit_limit=MAX_T, limit_type='time', bin_width=DELTA_T, time_start=TIME_START)
+        t_vec,msd,_,_,g = trajectory.temporal_average_mean_squared_displacement(log_log_fit_limit=MAX_T, limit_type='time', bin_width=DELTA_T, time_start=TIME_START)
     except AssertionError as e:
         return None
     except ValueError as e:
+        return None
+
+    if g < 0.8:
         return None
 
     return trajectory, msd, t_vec
@@ -60,7 +60,7 @@ for index, dataset in enumerate(new_datasets_list):
 
     results = []
 
-    for id_batch in tqdm.tqdm(batch(uploaded_trajectories_ids, n=1000)):
+    for id_batch in tqdm.tqdm(list(batch(uploaded_trajectories_ids, n=100))):
         results += [analyze_trajectory(an_id, dataset) for an_id in id_batch]
 
     results = [result for result in results if result is not None]
@@ -79,7 +79,7 @@ for index, dataset in enumerate(new_datasets_list):
     for t_lag, msd_result in zip(t_lags, msd_results):
         msd_result = msd_result[t_lag < MAX_T]
         t_lag = t_lag[t_lag < MAX_T]
-        plt.loglog(t_lag, msd_result,color='cyan', linewidth=0.25)
+        plt.loglog(t_lag, msd_result,color='gray', linewidth=0.1)
 
         for t, m in zip(t_lag, msd_result):
             ea_ta_msd[t].append(m)
