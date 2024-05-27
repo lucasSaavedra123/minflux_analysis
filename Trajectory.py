@@ -638,7 +638,7 @@ class Trajectory(Document):
         else:
             return states
 
-    def calculate_msd_curve(self, with_noise=True, bin_width=None, return_variances=False, limit_type=None, limit_value=None):
+    def calculate_msd_curve(self, with_noise=True, bin_width=None, return_variances=False, limit_type=None, limit_value=None, time_start=None):
         """
         Code Obtained from https://github.com/Eggeling-Lab-Microscope-Software/TRAIT2D/blob/b51498b730140ffac5c0abfc5494ebfca25b445e/trait2d/analysis/__init__.py#L1061
         """
@@ -651,8 +651,6 @@ class Trajectory(Document):
 
         N = len(x)
         assert N-3 > 0
-        col_Array  = np.zeros(N-3)
-        col_t_Array  = np.zeros(N-3)
         data_tmp = np.column_stack((x, y))
         data_t_tmp = self.get_time()
 
@@ -670,20 +668,21 @@ class Trajectory(Document):
             calc_t_tmp = data_t_tmp[i:N] - data_t_tmp[0:N-i]
             #plt.scatter(calc_t_tmp, calc_tmp, color='blue', s=0.1)
             for interval, square_displacement in zip(calc_t_tmp, calc_tmp):
-                msd_dict[int(interval/delta)].append(square_displacement)
-
-            col_Array[i-1] = np.mean(calc_tmp)
-            col_t_Array[i-1] = i * delta
+                if time_start is not None:
+                    assert time_start < interval 
+                    msd_dict[int((interval-time_start)/delta)+1].append(square_displacement)
+                else:
+                    msd_dict[int(interval/delta)].append(square_displacement)
 
         for i in msd_dict:
             msd_variances_dict[i] = np.var(msd_dict[i])
             msd_dict[i] = np.mean(msd_dict[i])
 
-        time_msd = [[t*delta, msd_dict[t]] for t in msd_dict]
+        time_msd = [[bin_width*(t-(1/2)), msd_dict[t]] for t in msd_dict]
         aux = np.array(sorted(time_msd, key=lambda x: x[0]))
         t_vec, msd = aux[:,0], aux[:,1]
 
-        time_msd = [[t*delta, msd_variances_dict[t]] for t in msd_variances_dict]
+        time_msd = [[bin_width*(t-(1/2)), msd_variances_dict[t]] for t in msd_variances_dict]
         aux = np.array(sorted(time_msd, key=lambda x: x[0]))
         t_vec, msd_var = aux[:,0], aux[:,1]
         #plt.scatter(t_vec, np.zeros_like(t_vec))
@@ -695,14 +694,14 @@ class Trajectory(Document):
         else:
             return t_vec, msd, msd_var
 
-    def temporal_average_mean_squared_displacement(self, non_linear=True, log_log_fit_limit=50, limit_type='points', with_noise=True, bin_width=None):
+    def temporal_average_mean_squared_displacement(self, non_linear=True, log_log_fit_limit=50, limit_type='points', with_noise=True, bin_width=None, time_start=None):
         def real_func(t, betha, k):
             return k * (t ** betha)
 
         def linear_func(t, betha, k):
             return np.log(k) + (np.log(t) * betha)
 
-        t_vec, msd = self.calculate_msd_curve(with_noise=with_noise, bin_width=bin_width, limit_type=limit_type, limit_value=log_log_fit_limit)
+        t_vec, msd = self.calculate_msd_curve(with_noise=with_noise, bin_width=bin_width, limit_type=limit_type, limit_value=log_log_fit_limit, time_start=time_start)
 
         if limit_type == 'points':
             msd_fit = msd[0:log_log_fit_limit]
@@ -735,7 +734,7 @@ class Trajectory(Document):
         """
         return t_vec, msd, popt[0], popt[1], goodness_of_fit
 
-    def short_range_diffusion_coefficient_msd(self, with_noise=True, bin_width=None):
+    def short_range_diffusion_coefficient_msd(self, with_noise=True, bin_width=None, time_start=None):
         def linear_func(t, d, sigma):
             return (4 * t * d) + (sigma**2)
 
@@ -746,7 +745,7 @@ class Trajectory(Document):
             x = self.get_x()
             y = self.get_y()
 
-        t_vec, msd = self.calculate_msd_curve(with_noise=with_noise, bin_width=bin_width)
+        t_vec, msd = self.calculate_msd_curve(with_noise=with_noise, bin_width=bin_width, time_start=time_start)
 
         msd_fit = msd[1:4]
         t_vec_fit = t_vec[1:4]
