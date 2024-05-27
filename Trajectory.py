@@ -662,7 +662,7 @@ class Trajectory(Document):
         for i in range(1,N-2):
             if limit_type == 'points' and (i-1) > limit_value:
                 break
-            if limit_type == 'time' and (i-1)*delta > limit_value:
+            if limit_type == 'time' and ((time_start is not None and time_start+((i-1)*delta) > limit_value) or (time_start is None and (i-1)*delta > limit_value)):
                 break
             calc_tmp = np.sum(np.abs((data_tmp[i:N,:]-data_tmp[0:N-i,:]) ** 2), axis=1)
             calc_t_tmp = data_t_tmp[i:N] - data_t_tmp[0:N-i]
