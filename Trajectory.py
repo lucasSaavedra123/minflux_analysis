@@ -669,8 +669,8 @@ class Trajectory(Document):
             #plt.scatter(calc_t_tmp, calc_tmp, color='blue', s=0.1)
             for interval, square_displacement in zip(calc_t_tmp, calc_tmp):
                 if time_start is not None:
-                    assert time_start < interval 
-                    msd_dict[int((interval-time_start)/delta)+1].append(square_displacement)
+                    if time_start < interval:
+                        msd_dict[int((interval-time_start)/delta)+1].append(square_displacement)
                 else:
                     msd_dict[int(interval/delta)].append(square_displacement)
 
