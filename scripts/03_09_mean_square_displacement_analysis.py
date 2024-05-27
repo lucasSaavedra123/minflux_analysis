@@ -18,7 +18,7 @@ def analyze_trajectory(trajectory_id, dataset):
     trajectory = trajectories[0]
 
     try:
-        t_vec,msd,_,_,_ = trajectory.temporal_average_mean_squared_displacement(log_log_fit_limit=MAX_T, limit_type='time', bin_width=DELTA_T)
+        t_vec,msd,_,_,_ = trajectory.temporal_average_mean_squared_displacement(log_log_fit_limit=MAX_T, limit_type='time', bin_width=DELTA_T, time_start=TIME_START)
     except AssertionError as e:
         return None
     except ValueError as e:
