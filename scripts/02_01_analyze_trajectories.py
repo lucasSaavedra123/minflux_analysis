@@ -65,11 +65,13 @@ def analyze_trajectory(trajectory_id):
     trajectory.info['analysis']['confinement-b'] = []
     trajectory.info['analysis']['confinement-e'] = []
     trajectory.info['analysis']['confinement-steps'] = []
+    trajectory.info['analysis']['confinement-duration'] = []
     trajectory.info['analysis']['confinement-k'] = []
     trajectory.info['analysis']['confinement-betha'] = []
     trajectory.info['analysis']['confinement-goodness_of_fit'] = []
     trajectory.info['analysis']['confinement-d_2_4'] = []
     trajectory.info['analysis']['non-confinement-steps'] = []
+    trajectory.info['analysis']['non-confinement-duration'] = []
     trajectory.info['analysis']['non-confinement-k'] = []
     trajectory.info['analysis']['non-confinement-betha'] = []
     trajectory.info['analysis']['non-confinement-goodness_of_fit'] = []
@@ -126,7 +128,7 @@ def analyze_trajectory(trajectory_id):
                     a,b,e = get_elliptical_information_of_data_points(raw_trajectory)
 
                     trajectory.info['analysis']['confinement_areas_centroids'].append(np.mean(raw_trajectory, axis=0).tolist())
-
+                    trajectory.info['analysis']['confinement-duration'].append(sub_trajectory.duration)
                     trajectory.info['analysis']['confinement-steps'].append(sub_trajectory.length)
                     trajectory.info['analysis']['confinement-area'].append(area)
                     trajectory.info['analysis']['confinement-a'].append(a)
@@ -155,6 +157,7 @@ def analyze_trajectory(trajectory_id):
                         trajectory.info['analysis']['confinement-d_2_4'].append(None)
                 except QhullError:
                     trajectory.info['analysis']['confinement_areas_centroids'].append(None)
+                    trajectory.info['analysis']['confinement-duration'].append(None)
                     trajectory.info['analysis']['confinement-steps'].append(None)
                     trajectory.info['analysis']['confinement-area'].append(None)
                     trajectory.info['analysis']['confinement-a'].append(None)
@@ -166,6 +169,7 @@ def analyze_trajectory(trajectory_id):
                     trajectory.info['analysis']['confinement-d_2_4'].append(None)
             else:
                 trajectory.info['analysis']['non-confinement-steps'].append(sub_trajectory.length)
+                trajectory.info['analysis']['non-confinement-duration'].append(sub_trajectory.duration)
                 try:
                     _,_,betha,k,goodness_of_fit = sub_trajectory.temporal_average_mean_squared_displacement(log_log_fit_limit=SUB_MAX_T, limit_type='time', bin_width=DELTA_T, time_start=TIME_START)
                     trajectory.info['analysis']['non-confinement-k'].append(k)
