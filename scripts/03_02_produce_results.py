@@ -186,7 +186,7 @@ for index, dataset in enumerate(new_datasets_list):
             #list_of_confinement_areas_centroids = get_list_of_values_of_analysis_field(filter_query, 'confinement_areas_centroids', mean_by_roi=True)
             #list_of_confinement_areas_centroids = list(itertools.chain.from_iterable([pdist(np.array(confinement_areas_centroids) * 1e3).tolist() for confinement_areas_centroids in list_of_confinement_areas_centroids if len(confinement_areas_centroids) >= 2]))
             #pd.DataFrame({'confinement_areas_distance': list_of_confinement_areas_centroids}).to_csv(f'./Results/{dataset}_{index}_confinement_areas_distance.csv')
-
+print("Generating overlap_confinement_portion_info")
 basic_info_file = open('./Results/overlap_confinement_portion_info.txt','w')
 
 for combined_dataset in [
@@ -195,6 +195,7 @@ for combined_dataset in [
     'BTX680-fPEG-CHOL-50-nM',
     'BTX680-fPEG-CHOL-100-nM',
 ]:
+    print(combined_dataset)
     fractions = []
     for btx_id in Trajectory._get_collection().find({'info.dataset': combined_dataset, 'info.classified_experimental_condition':BTX_NOMENCLATURE, 'info.immobile': False}, {f'id':1}):
         btx_trajectory = Trajectory.objects(id=btx_id['_id'])[0]
