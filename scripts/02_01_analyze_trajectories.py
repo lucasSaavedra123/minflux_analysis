@@ -154,6 +154,7 @@ def analyze_trajectory(trajectory_id):
                     except ValueError:
                         trajectory.info['analysis']['confinement-d_2_4'].append(None)
                 except QhullError:
+                    trajectory.info['analysis']['confinement_areas_centroids'].append(None)
                     trajectory.info['analysis']['confinement-steps'].append(None)
                     trajectory.info['analysis']['confinement-area'].append(None)
                     trajectory.info['analysis']['confinement-a'].append(None)
