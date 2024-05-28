@@ -129,7 +129,7 @@ for index, dataset in enumerate(new_datasets_list):
             brownian_values_per_roi = defaultdict(lambda: [])
             confined_values_per_roi = defaultdict(lambda: [])
             new_info = list(Trajectory._get_collection().find(filter_query, {'_id':1,'t':1,'x':1,'y':1,'info.analysis.confinement-states':1, 'info.file':1, 'info.roi':1}))
-            for result in new_info[:10]:
+            for result in new_info:
                 if result.get('info',{},).get('analysis',{}).get('confinement-states') is not None:
                     a_trajectory = Trajectory(
                         x=result['x'],
@@ -214,7 +214,7 @@ for combined_dataset in [
     basic_info_file.write(f"{combined_dataset}-{CHOL_NOMENCLATURE} Fraction: {np.mean(fractions)}, S.E.M: {sem(fractions)}s\n")
 
 basic_info_file.close()
-
+"""
 overlap_non_confinement_portion_info = open('./Results/overlap_non_confinement_portion_info.txt','w')
 
 for combined_dataset in [
@@ -228,9 +228,11 @@ for combined_dataset in [
         btx_trajectory = Trajectory.objects(id=btx_id['_id'])[0]
         
         if f'{CHOL_NOMENCLATURE}_single_intersections' in btx_trajectory.info:
-            for non_confined_portion in btx_trajectory.sub_trajectories_trajectories_from_confinement_states(v_th=33, use_info=True)[0]:
-                fractions.append(np.sum(non_confined_portion.info[f'{CHOL_NOMENCLATURE}_single_intersections'])/non_confined_portion.length)
-
+            try:
+                for non_confined_portion in btx_trajectory.sub_trajectories_trajectories_from_confinement_states(v_th=33, use_info=True)[0]:
+                    fractions.append(np.sum(non_confined_portion.info[f'{CHOL_NOMENCLATURE}_single_intersections'])/non_confined_portion.length)
+            except KeyError:
+                pass
     np.savetxt(f'./Results/{combined_dataset}-{BTX_NOMENCLATURE}_non_confinement_overlap_fraction.txt', fractions, fmt='%f')
     overlap_non_confinement_portion_info.write(f"{combined_dataset}-{BTX_NOMENCLATURE} Fraction: {np.mean(fractions)}, S.E.M: {sem(fractions)}s\n")
 
@@ -238,13 +240,16 @@ for combined_dataset in [
     for chol_id in Trajectory._get_collection().find({'info.dataset': combined_dataset, 'info.classified_experimental_condition':CHOL_NOMENCLATURE, 'info.immobile': False}, {f'id':1}):
         chol_trajectory = Trajectory.objects(id=chol_id['_id'])[0]
 
-        if f'{BTX_NOMENCLATURE}_single_intersections' in btx_trajectory.info:
-            for non_confined_portion in btx_trajectory.sub_trajectories_trajectories_from_confinement_states(v_th=33, use_info=True)[0]:
-                fractions.append(np.sum(non_confined_portion.info[f'{BTX_NOMENCLATURE}_single_intersections'])/non_confined_portion.length)
-    
+        if f'{BTX_NOMENCLATURE}_single_intersections' in chol_trajectory.info:
+            try:
+                for non_confined_portion in chol_trajectory.sub_trajectories_trajectories_from_confinement_states(v_th=33, use_info=True)[0]:
+                    fractions.append(np.sum(non_confined_portion.info[f'{BTX_NOMENCLATURE}_single_intersections'])/non_confined_portion.length)
+            except KeyError:
+                pass
     np.savetxt(f'./Results/{combined_dataset}-{CHOL_NOMENCLATURE}_non_confinement_overlap_fraction.txt', fractions, fmt='%f')
     overlap_non_confinement_portion_info.write(f"{combined_dataset}-{CHOL_NOMENCLATURE} Fraction: {np.mean(fractions)}, S.E.M: {sem(fractions)}s\n")
 
 overlap_non_confinement_portion_info.close()
+"""
 
 DatabaseHandler.disconnect()
