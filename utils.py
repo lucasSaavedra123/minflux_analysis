@@ -14,6 +14,21 @@ import math
 from scipy.spatial import distance_matrix
 
 
+def remove_outliers_from_set_of_values_of_column(list_of_values, return_upper_and_lower=False):
+    filtered_list_of_values = list_of_values[~np.isnan(list_of_values)]
+    Q1 = np.percentile(filtered_list_of_values, 25, method='midpoint')
+    Q3 = np.percentile(filtered_list_of_values, 75, method='midpoint')
+    IQR = Q3 - Q1
+
+    upper = Q3+1.5*IQR
+    lower = Q1-1.5*IQR
+
+    for i in range(len(list_of_values)):
+        if list_of_values[i] is not None and not (lower <= list_of_values[i] <= upper):
+            list_of_values[i] = None
+
+    return list_of_values
+
 def get_dataframe_of_trajectory_analysis_data(a_query):
     p = {
         'info.file':1,
@@ -145,23 +160,6 @@ def get_list_of_positions(filter_query):
     values = [np.vstack((document['x'], document['y'])) for document in Trajectory._get_collection().find(filter_query, {'x':1,'y':1})]
     values = [value for value in values if value.shape[1] > 1]
     return values
-
-def remove_outliers_from_set_of_values(list_of_values, return_upper_and_lower=False):
-    list_of_values = np.array(list_of_values)
-    Q1 = np.percentile(np.log10(list_of_values), 25, method='midpoint')
-    Q3 = np.percentile(np.log10(list_of_values), 75, method='midpoint')
-    IQR = Q3 - Q1
-
-    upper = Q3+1.5*IQR
-    list_of_values = list_of_values[np.log10(list_of_values) <= upper]
-
-    lower = Q1-1.5*IQR
-    list_of_values = list_of_values[np.log10(list_of_values) >= lower]
-
-    if return_upper_and_lower:
-        return 10**lower, 10**upper
-    else:
-        return list_of_values.tolist()
 
 def get_list_of_values_of_field(filter_query, field_name, mean_by_roi=False):
     if not mean_by_roi:

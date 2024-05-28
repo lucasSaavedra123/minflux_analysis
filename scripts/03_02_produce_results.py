@@ -43,6 +43,11 @@ for index, dataset in enumerate(new_datasets_list):
         filter_query.update({'info.immobile': False} if APPLY_GS_CRITERIA else {})
 
         trajectory_analysis_dataframe = get_dataframe_of_trajectory_analysis_data(filter_query)
+
+        trajectory_analysis_dataframe['k'] = 10**remove_outliers_from_set_of_values_of_column(np.log10(trajectory_analysis_dataframe['k']))
+        trajectory_analysis_dataframe['residence_time'] = 10**remove_outliers_from_set_of_values_of_column(np.log10(trajectory_analysis_dataframe['residence_time']))
+        trajectory_analysis_dataframe['inverse_residence_time'] = 10**remove_outliers_from_set_of_values_of_column(np.log10(trajectory_analysis_dataframe['inverse_residence_time']))
+
         trajectory_analysis_dataframe['residence_ratios'] = trajectory_analysis_dataframe['residence_time']/(trajectory_analysis_dataframe['residence_time']+trajectory_analysis_dataframe['inverse_residence_time'])
         trajectory_analysis_dataframe[f'{BTX_NOMENCLATURE}_overlap_confinement_portion'] = trajectory_analysis_dataframe[f'number_of_confinement_zones_with_{BTX_NOMENCLATURE}']/trajectory_analysis_dataframe['number_of_confinement_zones']
         trajectory_analysis_dataframe[f'{CHOL_NOMENCLATURE}_overlap_confinement_portion'] = trajectory_analysis_dataframe[f'number_of_confinement_zones_with_{CHOL_NOMENCLATURE}']/trajectory_analysis_dataframe['number_of_confinement_zones']
@@ -51,6 +56,9 @@ for index, dataset in enumerate(new_datasets_list):
         trajectory_analysis_dataframe.groupby(['file', 'roi']).mean().to_excel(writer, sheet_name=f'trajectory_by_roi', index=False)
 
         confinement_dataframe, non_confinement_dataframe = get_dataframe_of_portions_analysis_data(filter_query)
+
+        confinement_dataframe['confinement-duration'] = 10**remove_outliers_from_set_of_values_of_column(np.log10(confinement_dataframe['confinement-duration']))
+        non_confinement_dataframe['non-confinement-duration'] = 10**remove_outliers_from_set_of_values_of_column(np.log10(non_confinement_dataframe['non-confinement-duration']))
 
         confinement_dataframe.to_excel(writer, sheet_name=f'confinement', index=False)
         confinement_dataframe.groupby(['file', 'roi']).mean().to_excel(writer, sheet_name=f'confinement_by_roi', index=False)
