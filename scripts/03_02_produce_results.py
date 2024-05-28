@@ -187,7 +187,7 @@ for index, dataset in enumerate(new_datasets_list):
             #list_of_confinement_areas_centroids = list(itertools.chain.from_iterable([pdist(np.array(confinement_areas_centroids) * 1e3).tolist() for confinement_areas_centroids in list_of_confinement_areas_centroids if len(confinement_areas_centroids) >= 2]))
             #pd.DataFrame({'confinement_areas_distance': list_of_confinement_areas_centroids}).to_csv(f'./Results/{dataset}_{index}_confinement_areas_distance.csv')
 
-basic_info_file = open('./Results/basic_info.txt','w')
+basic_info_file = open('./Results/overlap_confinement_portion_info.txt','w')
 
 for combined_dataset in [
     'Cholesterol and btx',
