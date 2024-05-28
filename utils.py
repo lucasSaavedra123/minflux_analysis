@@ -14,6 +14,109 @@ import math
 from scipy.spatial import distance_matrix
 
 
+def get_dataframe_of_trajectory_analysis_data(a_query):
+    p = {
+        'info.file':1,
+        'info.roi':1,
+        'info.analysis.confinement-states': 1,
+        't': 1,
+        f'info.number_of_confinement_zones_with_{CHOL_NOMENCLATURE}': 1,
+        f'info.number_of_confinement_zones_with_{BTX_NOMENCLATURE}': 1,
+        'info.number_of_confinement_zones': 1
+    }
+
+    dataframe = {}
+    fields = ['k', 'betha', 'd_2_4', 'localization_precision', 'goodness_of_fit', 'meanDP', 'corrDP', 'AvgSignD', 'residence_time', 'inverse_residence_time']
+
+    for field in fields:
+        p[f'info.analysis.{field}'] = 1
+        dataframe[field] = []
+
+    dataframe['file'] = []
+    dataframe['roi'] = []
+    dataframe['change_rate'] = []
+    dataframe[f'number_of_confinement_zones_with_{CHOL_NOMENCLATURE}'] = []
+    dataframe[f'number_of_confinement_zones_with_{BTX_NOMENCLATURE}'] = []
+    dataframe[f'number_of_confinement_zones'] = []
+
+    documents = Trajectory._get_collection().find(a_query, p)
+
+    for d in documents:
+        if 'analysis' not in d['info']:
+            continue
+        dataframe['file'].append(d['info']['file'])
+        dataframe['roi'].append(d['info']['roi'])
+        for field in fields:
+            try:
+                dataframe[field].append(d['info']['analysis'][field])
+            except KeyError:
+                dataframe[field].append(None)
+
+        if 'confinement-states' in d['info']['analysis']:
+            rate = np.abs(np.diff(d['info']['analysis']['confinement-states'])!=0).sum() / (d['t'][-1] - d['t'][0])
+            dataframe['change_rate'].append(rate)
+        else:
+            dataframe['change_rate'].append(None)
+
+        dataframe[f'number_of_confinement_zones_with_{CHOL_NOMENCLATURE}'].append(0)
+        dataframe[f'number_of_confinement_zones_with_{BTX_NOMENCLATURE}'].append(0)
+        dataframe[f'number_of_confinement_zones'].append(0)
+
+        if f'number_of_confinement_zones_with_{CHOL_NOMENCLATURE}' in d['info']:
+            dataframe[f'number_of_confinement_zones_with_{CHOL_NOMENCLATURE}'][-1] = d['info'][f'number_of_confinement_zones_with_{CHOL_NOMENCLATURE}']
+
+        if f'number_of_confinement_zones_with_{BTX_NOMENCLATURE}' in d['info']:
+            dataframe[f'number_of_confinement_zones_with_{BTX_NOMENCLATURE}'][-1] = d['info'][f'number_of_confinement_zones_with_{BTX_NOMENCLATURE}']
+
+        if f'number_of_confinement_zones' in d['info']:
+            dataframe[f'number_of_confinement_zones'][-1] = d['info'][f'number_of_confinement_zones']
+
+    return pd.DataFrame(dataframe)
+
+def get_dataframe_of_portions_analysis_data(a_query):
+    p = {'info.file':1,'info.roi':1}
+
+    confinement_dataframe, non_confinement_dataframe = {}, {}
+    confinement_fields = ['confinement-a', 'confinement-e','confinement-area', 'confinement-steps', 'confinement-betha', 'confinement-k', 'confinement-d_2_4', 'confinement-duration', 'confinement-goodness_of_fit']
+    non_confinement_fields = ['non-confinement-steps', 'non-confinement-betha', 'non-confinement-k', 'non-confinement-d_2_4', 'non-confinement-duration', 'non-confinement-goodness_of_fit']
+
+    confinement_dataframe['roi'], confinement_dataframe['file'] = [], []
+    for field in confinement_fields:
+        p[f'info.analysis.{field}'] = 1
+        confinement_dataframe[field] = []
+
+    non_confinement_dataframe['roi'], non_confinement_dataframe['file'] = [], []
+    for field in non_confinement_fields:
+        p[f'info.analysis.{field}'] = 1
+        non_confinement_dataframe[field] = []
+
+    documents = Trajectory._get_collection().find(a_query, p)
+
+    for d in documents:
+        if 'analysis' not in d['info']:
+            continue
+        confinement_values = [d['info']['analysis'][field] for field in confinement_fields]
+        confinement_values = zip(*confinement_values)
+
+        for row in confinement_values:
+            confinement_dataframe['file'].append(d['info']['file'])
+            confinement_dataframe['roi'].append(d['info']['roi'])
+
+            for field, value in zip(confinement_fields, row):
+                confinement_dataframe[field].append(value)
+
+        non_confinement_values = [d['info']['analysis'][field] for field in non_confinement_fields]
+        non_confinement_values = zip(*non_confinement_values)
+
+        for row in non_confinement_values:
+            non_confinement_dataframe['file'].append(d['info']['file'])
+            non_confinement_dataframe['roi'].append(d['info']['roi'])
+
+            for field, value in zip(non_confinement_fields, row):
+                non_confinement_dataframe[field].append(value)
+
+    return pd.DataFrame(confinement_dataframe), pd.DataFrame(non_confinement_dataframe)
+
 def logarithmic_sampling(N, k):
     # Calcula los intervalos logarítmicos
     intervals = [math.exp(i * math.log(N) / (k - 1)) for i in range(k)]
@@ -60,33 +163,6 @@ def remove_outliers_from_set_of_values(list_of_values, return_upper_and_lower=Fa
     else:
         return list_of_values.tolist()
 
-def get_list_of_values_of_analysis_field(filter_query, field_name, mean_by_roi=False, filter_outliers=False):
-    values = [document['info'].get('analysis', {}).get(field_name, None) for document in Trajectory._get_collection().find(filter_query, {f'info.analysis.{field_name}':1})]
-    values = [value for value in values if value is not None]
-    if not mean_by_roi:
-        if filter_outliers:
-            values = remove_outliers_from_set_of_values(values)
-    else:
-        if filter_outliers:
-            lower, upper = remove_outliers_from_set_of_values(values, return_upper_and_lower=True)
-        else:
-            lower, upper = float('-inf'), float('inf')
-        documents = list(Trajectory._get_collection().find(filter_query, {f'info.analysis.{field_name}':1,'info.dataset':1,'info.file':1,'info.roi':1}))
-
-        values_per_roi = defaultdict(lambda: [])
-        for document in documents:
-            value = document['info'].get('analysis', {}).get(field_name, None)
-            if value is not None:
-                if type(value) == list:
-                    values_per_roi[document['info']['dataset']+document['info']['file']+str(document['info']['roi'])] += value
-                else:
-                    values_per_roi[document['info']['dataset']+document['info']['file']+str(document['info']['roi'])].append(value)
-
-        for alias in values_per_roi:
-            values_per_roi[alias] = np.mean([value for value in values_per_roi[alias] if lower < value < upper])   
-        values = list(values_per_roi.values())
-    return values
-
 def get_list_of_values_of_field(filter_query, field_name, mean_by_roi=False):
     if not mean_by_roi:
         values = [document['info'].get(field_name, None) for document in Trajectory._get_collection().find(filter_query, {f'info.{field_name}':1})]
@@ -104,11 +180,6 @@ def get_list_of_values_of_field(filter_query, field_name, mean_by_roi=False):
         values = list(values_per_roi.values())
     values = [value for value in values if value is not None]
     return values
-
-def get_list_of_analysis_field(filter_query, field_name):
-    list_of_list = [document['info'].get('analysis', {}).get(field_name, []) for document in Trajectory._get_collection().find(filter_query, {f'info.{field_name}':1})]
-    list_of_list = [a_list for a_list in list_of_list if len(a_list) != 0]
-    return list_of_list
 
 def get_list_of_main_field(filter_query, field_name):
     list_of_list = [document.get(field_name, []) for document in Trajectory._get_collection().find(filter_query, {f'{field_name}':1})]
