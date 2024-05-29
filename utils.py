@@ -86,7 +86,13 @@ def get_dataframe_of_trajectory_analysis_data(a_query):
         if f'number_of_confinement_zones' in d['info']:
             dataframe[f'number_of_confinement_zones'][-1] = d['info'][f'number_of_confinement_zones']
 
-    return pd.DataFrame(dataframe)
+    dataframe = pd.DataFrame(dataframe)
+
+    rows_to_eliminate = dataframe['goodness_of_fit'] < 0.8
+    dataframe[rows_to_eliminate]['k'] = None
+    dataframe[rows_to_eliminate]['betha'] = None
+    dataframe[rows_to_eliminate]['goodness_of_fit'] = None
+    return dataframe
 
 def get_dataframe_of_portions_analysis_data(a_query):
     p = {'info.file':1,'info.roi':1}
@@ -130,7 +136,19 @@ def get_dataframe_of_portions_analysis_data(a_query):
             for field, value in zip(non_confinement_fields, row):
                 non_confinement_dataframe[field].append(value)
 
-    return pd.DataFrame(confinement_dataframe), pd.DataFrame(non_confinement_dataframe)
+    confinement_dataframe, non_confinement_dataframe = pd.DataFrame(confinement_dataframe), pd.DataFrame(non_confinement_dataframe)
+
+    rows_to_eliminate = confinement_dataframe['confinement-goodness_of_fit'] < 0.8
+    confinement_dataframe[rows_to_eliminate]['confinement-k'] = None
+    confinement_dataframe[rows_to_eliminate]['confinement-betha'] = None
+    confinement_dataframe[rows_to_eliminate]['confinement-goodness_of_fit'] = None
+
+    rows_to_eliminate = non_confinement_dataframe['non-confinement-goodness_of_fit'] < 0.8
+    non_confinement_dataframe[rows_to_eliminate]['non-confinement-k'] = None
+    non_confinement_dataframe[rows_to_eliminate]['non-confinement-betha'] = None
+    non_confinement_dataframe[rows_to_eliminate]['non-confinement-goodness_of_fit'] = None
+
+    return confinement_dataframe, non_confinement_dataframe
 
 def logarithmic_sampling(N, k):
     # Calcula los intervalos logarítmicos
