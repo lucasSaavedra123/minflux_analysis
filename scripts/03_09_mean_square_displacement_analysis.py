@@ -88,19 +88,23 @@ for index, dataset in enumerate(new_datasets_list):
     time_msd = [[t, ea_ta_msd[t]] for t in ea_ta_msd]
     aux = np.array(sorted(time_msd, key=lambda x: x[0]))
     ea_ta_msd_t_vec, ea_ta_msd = aux[:,0], aux[:,1]
-    plt.loglog(ea_ta_msd_t_vec, ea_ta_msd, color='#FF1B1C', linewidth=1)#'red')
-    """
-    popt, _ = curve_fit(lambda t,b,k: np.log(k) + (np.log(t) * b), t_lag, np.log(ea_ta_msd), bounds=((0, 0), (2, np.inf)), maxfev=2000)
+    
+    brown_line = np.linspace(min(ea_ta_msd_t_vec), max(ea_ta_msd_t_vec), 100)
+    
+    plt.loglog(ea_ta_msd_t_vec, ea_ta_msd, color='#FF1B1C', linewidth=2)#'red')
+    plt.loglog(brown_line,brown_line, color='black', linestyle='dashed', linewidth=2)
+
+    popt, _ = curve_fit(lambda t,b,k: k * (t ** b), ea_ta_msd_t_vec, ea_ta_msd, bounds=((0, 0), (2, np.inf)), maxfev=2000)
     print(popt[0], popt[1])
 
-    plt.loglog(t_lag,t_lag, color='black', linestyle='dashed')
+    """
     plt.loglog(t_lag,popt[1]*(t_lag**popt[0]), color='red')
     """
     plt.xlim([min(ea_ta_msd_t_vec), max(ea_ta_msd_t_vec)])
     plt.ylim([10e-6, 20e-1])
-    plt.xticks(fontsize=30)
-    plt.yticks(fontsize=30)
-    plt.subplots_adjust(left=0.174, right=0.866, top=0.968, bottom=0.118)
+    plt.xticks(fontsize=40)
+    plt.yticks(fontsize=40)
+    plt.subplots_adjust(left=0.3, right=0.983, top=0.968, bottom=0.13)
     plt.savefig(f"{index}_{dataset}_msd.png", dpi=300)
     plt.clf()
     """
