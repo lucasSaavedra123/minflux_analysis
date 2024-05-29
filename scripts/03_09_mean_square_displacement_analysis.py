@@ -21,9 +21,6 @@ def analyze_trajectory(trajectory_id, dataset):
     except ValueError as e:
         return None
 
-    if g < 0.8:
-        return None
-
     return trajectory, msd, t_vec
 
 #import warnings
@@ -56,6 +53,7 @@ DatabaseHandler.connect_over_network(None, None, IP_ADDRESS, COLLECTION_NAME)
 for index, dataset in enumerate(new_datasets_list):
     print(dataset)
     SEARCH_FIELD = {'info.dataset': dataset, 'info.immobile': False} if index < len(INDIVIDUAL_DATASETS) else {'info.dataset': dataset[0], 'info.classified_experimental_condition':dataset[1], 'info.immobile': False}
+    SEARCH_FIELD.update({'info.analysis.goodness_of_fit': {'$gt':0.8}})
     uploaded_trajectories_ids = [str(trajectory_result['_id']) for trajectory_result in Trajectory._get_collection().find(SEARCH_FIELD, {'_id':1})]
 
     results = []
@@ -79,7 +77,7 @@ for index, dataset in enumerate(new_datasets_list):
     for t_lag, msd_result in zip(t_lags, msd_results):
         msd_result = msd_result[t_lag < MAX_T]
         t_lag = t_lag[t_lag < MAX_T]
-        plt.loglog(t_lag, msd_result,color='gray', linewidth=0.1)
+        plt.loglog(t_lag, msd_result, color='#BEB7A4', linewidth=0.1)#'gray', linewidth=0.1)
 
         for t, m in zip(t_lag, msd_result):
             ea_ta_msd[t].append(m)
@@ -90,7 +88,7 @@ for index, dataset in enumerate(new_datasets_list):
     time_msd = [[t, ea_ta_msd[t]] for t in ea_ta_msd]
     aux = np.array(sorted(time_msd, key=lambda x: x[0]))
     ea_ta_msd_t_vec, ea_ta_msd = aux[:,0], aux[:,1]
-    plt.loglog(ea_ta_msd_t_vec, ea_ta_msd, color='red')
+    plt.loglog(ea_ta_msd_t_vec, ea_ta_msd, color='#FF1B1C', linewidth=1)#'red')
     """
     popt, _ = curve_fit(lambda t,b,k: np.log(k) + (np.log(t) * b), t_lag, np.log(ea_ta_msd), bounds=((0, 0), (2, np.inf)), maxfev=2000)
     print(popt[0], popt[1])
