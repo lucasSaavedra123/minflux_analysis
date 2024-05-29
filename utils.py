@@ -88,10 +88,14 @@ def get_dataframe_of_trajectory_analysis_data(a_query):
 
     dataframe = pd.DataFrame(dataframe)
 
-    rows_to_eliminate = dataframe['goodness_of_fit'] < 0.8
-    dataframe[rows_to_eliminate]['k'] = None
-    dataframe[rows_to_eliminate]['betha'] = None
-    dataframe[rows_to_eliminate]['goodness_of_fit'] = None
+    def mask(row):
+        if row["goodness_of_fit"] is not None and row["goodness_of_fit"] < 0.8:
+            row["k"] = None
+            row["betha"] = None
+            row["goodness_of_fit"] = None
+        return row
+
+    dataframe = dataframe.apply(mask, axis=1)
     return dataframe
 
 def get_dataframe_of_portions_analysis_data(a_query):
@@ -138,15 +142,22 @@ def get_dataframe_of_portions_analysis_data(a_query):
 
     confinement_dataframe, non_confinement_dataframe = pd.DataFrame(confinement_dataframe), pd.DataFrame(non_confinement_dataframe)
 
-    rows_to_eliminate = confinement_dataframe['confinement-goodness_of_fit'] < 0.8
-    confinement_dataframe[rows_to_eliminate]['confinement-k'] = None
-    confinement_dataframe[rows_to_eliminate]['confinement-betha'] = None
-    confinement_dataframe[rows_to_eliminate]['confinement-goodness_of_fit'] = None
+    def confinement_mask(row):
+        if row["confinement-goodness_of_fit"] is not None and row["confinement-goodness_of_fit"] < 0.8:
+            row["confinement-k"] = None
+            row["confinement-betha"] = None
+            row["confinement-goodness_of_fit"] = None
+        return row
 
-    rows_to_eliminate = non_confinement_dataframe['non-confinement-goodness_of_fit'] < 0.8
-    non_confinement_dataframe[rows_to_eliminate]['non-confinement-k'] = None
-    non_confinement_dataframe[rows_to_eliminate]['non-confinement-betha'] = None
-    non_confinement_dataframe[rows_to_eliminate]['non-confinement-goodness_of_fit'] = None
+    def non_confinement_mask(row):
+        if row["non-confinement-goodness_of_fit"] is not None and row["non-confinement-goodness_of_fit"] < 0.8:
+            row["non-confinement-k"] = None
+            row["non-confinement-betha"] = None
+            row["non-confinement-goodness_of_fit"] = None
+        return row
+
+    confinement_dataframe = confinement_dataframe.apply(confinement_mask, axis=1)
+    non_confinement_dataframe = non_confinement_dataframe.apply(non_confinement_mask, axis=1)
 
     return confinement_dataframe, non_confinement_dataframe
 
