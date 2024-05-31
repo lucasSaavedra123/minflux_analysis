@@ -86,7 +86,7 @@ for index, dataset in enumerate(new_datasets_list):
             noisy=True
         )
 
-        if 'betha' not in t['info']['analysis'] or t['info']['analysis']['betha'] > 1.1:
+        if 'analysis' not in t['info'] or 'betha' not in t['info']['analysis'] or t['info']['analysis']['betha'] > 1.1:
             continue
 
         segments = [trajectory.build_noisy_subtrajectory_from_range(i, i+SEGMENT_LENGTH) for i in range(0,trajectory.length, SEGMENT_LENGTH)]
@@ -95,7 +95,7 @@ for index, dataset in enumerate(new_datasets_list):
             if segment.length != SEGMENT_LENGTH:
                 continue
 
-            t_msd, msd = segment.calculate_msd_curve(bin_width=DELTA_T, return_variances=False)
+            t_msd, msd = segment.calculate_msd_curve(bin_width=DELTA_T, return_variances=False, time_start=TIME_START)
             Y = np.array(msd)
             X = (np.array(t_msd)/DELTA_T)#np.array(range(1,len(Y)+1))
             X_aux = X[t_msd<MAX_T]
