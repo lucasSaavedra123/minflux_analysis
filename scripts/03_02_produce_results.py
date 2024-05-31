@@ -57,7 +57,13 @@ for index, dataset in enumerate(new_datasets_list):
 
         confinement_dataframe, non_confinement_dataframe = get_dataframe_of_portions_analysis_data(filter_query)
 
+        confinement_dataframe['confinement-area'] *= 1e6
+        confinement_dataframe['confinement-a'] *= 1e3
+        confinement_dataframe['confinement-b'] *= 1e3
         confinement_dataframe['confinement-duration'] = 10**remove_outliers_from_set_of_values_of_column(np.log10(confinement_dataframe['confinement-duration']))
+        confinement_dataframe['confinement-a'] = 10**remove_outliers_from_set_of_values_of_column(np.log10(confinement_dataframe['confinement-a']))
+        confinement_dataframe['confinement-b'] = 10**remove_outliers_from_set_of_values_of_column(np.log10(confinement_dataframe['confinement-b']))
+        confinement_dataframe['confinement-area'] = 10**remove_outliers_from_set_of_values_of_column(np.log10(confinement_dataframe['confinement-area']))
         non_confinement_dataframe['non-confinement-duration'] = 10**remove_outliers_from_set_of_values_of_column(np.log10(non_confinement_dataframe['non-confinement-duration']))
 
         confinement_dataframe.to_excel(writer, sheet_name=f'confinement', index=False)
