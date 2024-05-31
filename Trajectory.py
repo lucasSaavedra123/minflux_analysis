@@ -907,3 +907,15 @@ class Trajectory(Document):
                 info=self.info,
                 noisy=True
             )
+
+    def copy(self):
+        """
+        Only works with noisy trajectories
+        """
+        return Trajectory(
+            x=self.get_noisy_x().tolist(),
+            y=self.get_noisy_y().tolist(),
+            t=self.get_time(),
+            info=self.info,
+            noisy=True
+        )
