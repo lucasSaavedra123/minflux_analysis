@@ -74,7 +74,7 @@ for index, dataset in enumerate(new_datasets_list):
     counter = 0
     limit = None
     #min_msd = float('inf')
-    for t in tqdm.tqdm(Trajectory._get_collection().find(basic_query_dict, {'_id':1, 'x':1, 'y':1, 't':1,'info.analysis.betha':1})):
+    for t in tqdm.tqdm(Trajectory._get_collection().find(basic_query_dict, {'_id':1, 'x':1, 'y':1, 't':1,'info.analysis.betha':1, 'info.analysis.goodness_of_fit':1})):
         counter += 1
         if limit is not None and counter > limit:
             break
@@ -86,7 +86,7 @@ for index, dataset in enumerate(new_datasets_list):
             noisy=True
         )
 
-        if 'analysis' not in t['info'] or 'betha' not in t['info']['analysis'] or t['info']['analysis']['betha'] > 1.1:
+        if 'analysis' not in t['info'] or 'betha' not in t['info']['analysis'] or t['info']['analysis']['goodness_of_fit'] < 0.8 or t['info']['analysis']['betha'] > 1.1:
             continue
 
         segments = [trajectory.build_noisy_subtrajectory_from_range(i, i+SEGMENT_LENGTH) for i in range(0,trajectory.length, SEGMENT_LENGTH)]
