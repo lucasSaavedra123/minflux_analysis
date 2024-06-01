@@ -1,3 +1,4 @@
+from CONSTANTS import CHOL_NOMENCLATURE, BTX_NOMENCLATURE
 import numpy as np
 from Trajectory import Trajectory
 from scipy.spatial import KDTree
@@ -28,6 +29,27 @@ def remove_outliers_from_set_of_values_of_column(list_of_values, return_upper_an
             list_of_values[i] = None
 
     return list_of_values
+
+def transform_trajectories_with_confinement_states_from_mongo_to_dataframe(trajectories):
+    dataframe = {}
+    dataframe['trajectory_id'] = []
+    dataframe['x'] = []
+    dataframe['y'] = []
+    dataframe['t'] = []
+    dataframe['type'] = []
+    dataframe['color'] = []
+    dataframe['confinement-states'] = []
+    for t in trajectories:
+        if t.info.get('analysis', {}).get('confinement-states', None) is not None:
+            dataframe['confinement-states'] += t.info['analysis']['confinement-states']
+            dataframe['x'] += t.get_noisy_x().tolist()
+            dataframe['y'] += t.get_noisy_y().tolist()
+            dataframe['t'] += t.get_time().tolist()
+            dataframe['type'] += [t.info['classified_experimental_condition']] * t.length
+            dataframe['trajectory_id'] += [t.info['trajectory_id']] * t.length
+            dataframe['color'] += ['red' if t.info['classified_experimental_condition'] == 'BTX680R' else 'green'] * t.length
+    dataframe = pd.DataFrame(dataframe)
+    return dataframe
 
 def get_dataframe_of_trajectory_analysis_data(a_query):
     p = {
@@ -713,6 +735,25 @@ def extract_dataset_file_roi_file():
         file_id_and_roi_list.append([line[0], line[1],int(line[2])])
     a_file.close()
     return file_id_and_roi_list
+
+def measure_overlap_with_iou(dataframe):
+    X = np.arange(dataframe.x.min(),dataframe.x.max(),0.05)
+    Y = np.arange(dataframe.y.min(),dataframe.y.max(),0.05)
+
+    CHOL_dataframe = dataframe[dataframe['type'] == CHOL_NOMENCLATURE]
+    BTX_dataframe = dataframe[dataframe['type'] == BTX_NOMENCLATURE]
+
+    H_CHOL, _, _ = np.histogram2d(CHOL_dataframe[['x']].values[:,0], CHOL_dataframe[['y']].values[:,0], bins=[X, Y])
+    H_CHOL = (H_CHOL.T!=0).astype(int)
+
+    H_BTX, _, _ = np.histogram2d(BTX_dataframe[['x']].values[:,0], BTX_dataframe[['y']].values[:,0], bins=[X, Y])
+    H_BTX = (H_BTX.T!=0).astype(int)
+
+    H_sum = (H_CHOL + H_BTX)
+    H_overlap = (H_sum==2).astype(int)
+    H_union = (H_sum != 0).astype(int)
+
+    return (H_overlap.sum())/(H_union.sum())
 
 def measure_overlap(trajectories_by_label, chol_confinement_to_chol_trajectory, chol_confinements):
     for btx_trajectory in trajectories_by_label[BTX_NOMENCLATURE]:

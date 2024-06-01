@@ -557,7 +557,7 @@ class Trajectory(Document):
                     t = self.get_time()[initial_index:final_index],
                     noisy=noisy
                 )
-        
+
         BTX_NOMENCLATURE = 'BTX680R'
         CHOL_NOMENCLATURE = 'fPEG-Chol'
 
@@ -569,14 +569,20 @@ class Trajectory(Document):
             new_trajectory.info['dataset'] = self.info['dataset']
         if 'roi' in self.info:
             new_trajectory.info['roi'] = self.info['roi']
-        if 'file' in self.info:
-            new_trajectory.info['file'] = self.info['file']
+        if 'roi' in self.info:
+            new_trajectory.info['roi'] = self.info['roi']
+        if 'trajectory_id' in self.info:
+            new_trajectory.info['trajectory_id'] = self.info['trajectory_id']
         if 'classified_experimental_condition' in self.info:
             new_trajectory.info['classified_experimental_condition'] = self.info['classified_experimental_condition']
         if f'{BTX_NOMENCLATURE}_single_intersections' in self.info:
             new_trajectory.info[f'{BTX_NOMENCLATURE}_single_intersections'] = self.info[f'{BTX_NOMENCLATURE}_single_intersections'][initial_index:final_index]
         if f'{CHOL_NOMENCLATURE}_single_intersections' in self.info:
             new_trajectory.info[f'{CHOL_NOMENCLATURE}_single_intersections'] = self.info[f'{CHOL_NOMENCLATURE}_single_intersections'][initial_index:final_index]
+        if 'analysis' in self.info:
+            new_trajectory.info['analysis'] = {}
+            if 'confinement-states' in self.info['analysis']:
+                new_trajectory.info['analysis']['confinement-states'] = self.info['analysis']['confinement-states'][initial_index:final_index]
 
         return new_trajectory
 
