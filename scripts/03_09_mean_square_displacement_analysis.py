@@ -102,9 +102,10 @@ for index, dataset in enumerate(new_datasets_list):
     """
     plt.xlim([min(ea_ta_msd_t_vec), max(ea_ta_msd_t_vec)])
     plt.ylim([10e-6, 20e-1])
-    plt.xticks(fontsize=40)
-    plt.yticks(fontsize=40)
-    plt.subplots_adjust(left=0.3, right=0.983, top=0.968, bottom=0.13)
+    plt.xticks(fontsize=50)
+    plt.yticks(fontsize=50)
+    plt.subplots_adjust(left=0.31, right=0.983, top=0.968, bottom=0.137)
+    plt.yticks([1e-5, 1e-3, 1e-1])
     plt.savefig(f"{index}_{dataset}_msd.png", dpi=300)
     plt.clf()
     """
