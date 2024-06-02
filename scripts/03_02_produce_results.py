@@ -64,7 +64,10 @@ for index, dataset in enumerate(new_datasets_list):
         confinement_dataframe['confinement-a'] = 10**remove_outliers_from_set_of_values_of_column(np.log10(confinement_dataframe['confinement-a']))
         confinement_dataframe['confinement-b'] = 10**remove_outliers_from_set_of_values_of_column(np.log10(confinement_dataframe['confinement-b']))
         confinement_dataframe['confinement-area'] = 10**remove_outliers_from_set_of_values_of_column(np.log10(confinement_dataframe['confinement-area']))
+        #confinement_dataframe['confinement-steps'] = 10**remove_outliers_from_set_of_values_of_column(np.log10(confinement_dataframe['confinement-steps']))
+
         non_confinement_dataframe['non-confinement-duration'] = 10**remove_outliers_from_set_of_values_of_column(np.log10(non_confinement_dataframe['non-confinement-duration']))
+        #non_confinement_dataframe['non-confinement-steps'] = 10**remove_outliers_from_set_of_values_of_column(np.log10(non_confinement_dataframe['non-confinement-steps']))
 
         confinement_dataframe.to_excel(writer, sheet_name=f'confinement', index=False)
         confinement_dataframe.groupby(['file', 'roi']).mean().to_excel(writer, sheet_name=f'confinement_by_roi', index=False)

@@ -235,8 +235,11 @@ def get_list_of_main_field(filter_query, field_name):
     list_of_list = [a_list for a_list in list_of_list if len(a_list) != 0]
     return list_of_list
 
-def get_ids_of_trayectories_under_betha_limits(filter_query, betha_min, betha_max):
+def get_ids_of_trayectories_under_betha_limits(filter_query, betha_min, betha_max, filter_by_gof=False):
+    filter_query = filter_query.copy()
     filter_query['info.analysis.betha'] = {'$gt': betha_min, '$lte': betha_max}
+    if filter_by_gof:
+        filter_query['info.analysis.goodness_of_fit'] = {'$gt': 0.8}
     list_of_list = [str(document['_id']) for document in Trajectory._get_collection().find(filter_query, {f'_id':1})]
     return list_of_list
 
