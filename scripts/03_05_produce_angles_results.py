@@ -58,6 +58,7 @@ for index, dataset in enumerate(new_datasets_list):
                 filter_query,
                 DIFFUSION_BEHAVIOURS_INFORMATION[label]['range_0'],
                 DIFFUSION_BEHAVIOURS_INFORMATION[label]['range_1'],
+                filter_by_gof=True
             )
 
             angles_infos = Trajectory._get_collection().find(
