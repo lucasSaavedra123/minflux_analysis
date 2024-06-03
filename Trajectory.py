@@ -708,13 +708,7 @@ class Trajectory(Document):
         else:
             return t_vec, msd, msd_var
 
-    def temporal_average_mean_squared_displacement(self, non_linear=True, log_log_fit_limit=50, limit_type='points', with_noise=True, bin_width=None, time_start=None):
-        def real_func(t, betha, k):
-            return k * (t ** betha)
-
-        def linear_func(t, betha, k):
-            return np.log(k) + (np.log(t) * betha)
-
+    def temporal_average_mean_squared_displacement(self, log_log_fit_limit=50, limit_type='points', with_noise=True, bin_width=None, time_start=None, with_corrections=False):
         t_vec, msd = self.calculate_msd_curve(with_noise=with_noise, bin_width=bin_width, limit_type=limit_type, limit_value=log_log_fit_limit, time_start=time_start)
 
         if limit_type == 'points':
@@ -725,28 +719,63 @@ class Trajectory(Document):
         elif limit_type == 'time':
             msd_fit = msd[t_vec < log_log_fit_limit]
             t_vec_fit = t_vec[t_vec < log_log_fit_limit]
-            enough_number_of_points = int((log_log_fit_limit/bin_width)*0.75)
+            enough_number_of_points = int((log_log_fit_limit/bin_width)*0.50)
             assert len(t_vec_fit) >= enough_number_of_points
             assert len(msd_fit) >= enough_number_of_points
         else:
             raise Exception(f'limit_type=={limit_type} is not accepted')
 
-        popt, _ = curve_fit(real_func, t_vec_fit, msd_fit, bounds=((0, 0), (2, np.inf)), maxfev=2000)
-        goodness_of_fit = r2_score(np.log(msd_fit), linear_func(t_vec_fit, popt[0], popt[1]))
-        """
-        fig, ax = plt.subplots(1,2)
+        if not with_corrections:
+            def real_func(t, betha, k):
+                return k * (t ** betha)
 
-        ax[0].set_title(f"betha={np.round(popt[0], 2)}, k={popt[1]}")
-        ax[0].plot(t_vec_fit, real_func(t_vec_fit, popt[0], popt[1]), marker='X', color='black')
-        ax[0].plot(t_vec_fit, msd_fit, marker='X', color='red')
+            def linear_func(t, betha, k):
+                return np.log(k) + (np.log(t) * betha)
 
-        ax[1].set_title(f"betha={np.round(popt[0], 2)}, k={popt[1]}")
-        ax[1].loglog(t_vec_fit, real_func(t_vec_fit, popt[0], popt[1]), marker='X', color='black')
-        ax[1].loglog(t_vec_fit, msd_fit, marker='X', color='red')
+            popt, _ = curve_fit(real_func, t_vec_fit, msd_fit, bounds=((0, 0), (2, np.inf)), maxfev=2000)
+            goodness_of_fit = r2_score(np.log(msd_fit), linear_func(t_vec_fit, popt[0], popt[1]))
+            """
+            fig, ax = plt.subplots(1,2)
 
-        plt.show()
-        """
-        return t_vec, msd, popt[0], popt[1], goodness_of_fit
+            ax[0].set_title(f"betha={np.round(popt[0], 2)}, k={popt[1]}")
+            ax[0].plot(t_vec_fit, real_func(t_vec_fit, popt[0], popt[1]), marker='X', color='black')
+            ax[0].plot(t_vec_fit, msd_fit, marker='X', color='red')
+
+            ax[1].set_title(f"betha={np.round(popt[0], 2)}, k={popt[1]}")
+            ax[1].loglog(t_vec_fit, real_func(t_vec_fit, popt[0], popt[1]), marker='X', color='black')
+            ax[1].loglog(t_vec_fit, msd_fit, marker='X', color='red')
+
+            plt.show()
+            """
+            return t_vec, msd, popt[0], popt[1], goodness_of_fit
+        else:
+            R = 1/6
+            DELTA_T = bin_width
+            DIMENSION = 2
+
+            def equation_anomalous(x, T, B, LOCALIZATION_PRECISION):
+                TERM_1 = T*((x*DELTA_T)**(B-1))*2*DIMENSION*DELTA_T*x*(1-((2*R)/x))
+                TERM_2 = 2*DIMENSION*(LOCALIZATION_PRECISION**2)
+                return TERM_1 + TERM_2 
+
+            popt, _ = curve_fit(equation_anomalous, t_vec_fit/DELTA_T, msd_fit, bounds=((0, 0, 0), (np.inf, 2, np.inf)), maxfev=2000)
+            goodness_of_fit = msd_fit - equation_anomalous(t_vec_fit/DELTA_T, popt[0], popt[1], popt[2])
+            goodness_of_fit = np.sum(goodness_of_fit**2)/(len(t_vec_fit)-2)
+            goodness_of_fit = np.sqrt(goodness_of_fit)
+            """
+            fig, ax = plt.subplots(1,2)
+            print(goodness_of_fit) #1000 < goodness_of_fit * 1e6 fittings are ignored.
+            ax[0].set_title(f"T={np.round(popt[0], 3)}, betha={np.round(popt[1], 2)}, loc_precision={np.round(popt[2], 3)}")
+            ax[0].plot(t_vec_fit, equation_anomalous(t_vec_fit/DELTA_T, popt[0], popt[1], popt[2]), marker='X', color='black')
+            ax[0].plot(t_vec_fit, msd_fit, marker='X', color='red')
+
+            ax[1].set_title(f"T={np.round(popt[0], 3)}, betha={np.round(popt[1], 2)}, loc_precision={np.round(popt[2], 3)}")
+            ax[1].loglog(t_vec_fit, equation_anomalous(t_vec_fit/DELTA_T, popt[0], popt[1], popt[2]), marker='X', color='black')
+            ax[1].loglog(t_vec_fit, msd_fit, marker='X', color='red')
+
+            plt.show()
+            """
+            return t_vec, msd, popt[0], popt[1], popt[2], goodness_of_fit
 
     def short_range_diffusion_coefficient_msd(self, with_noise=True, bin_width=None, time_start=None):
         def linear_func(t, d, sigma):

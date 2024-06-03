@@ -663,6 +663,11 @@ def equation_free(x, D, LOCALIZATION_PRECISION):
     TERM_2 = 2*DIMENSION*(LOCALIZATION_PRECISION**2)
     return TERM_1 + TERM_2
 
+def equation_anomalous(x, T, B, LOCALIZATION_PRECISION):
+    TERM_1 = T*((x*DELTA_T)**(B-1))*2*DIMENSION*DELTA_T*x*(1-((2*R)/x))
+    TERM_2 = 2*DIMENSION*(LOCALIZATION_PRECISION**2)
+    return TERM_1 + TERM_2
+
 def equation_hop(x, DM, DU, L_HOP, LOCALIZATION_PRECISION):
     TERM_1_1_1 = (DU-DM)/DU
     TERM_1_1_2 = (L_HOP**2)/(6*DIMENSION*x*DELTA_T)

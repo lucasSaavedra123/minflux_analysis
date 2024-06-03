@@ -91,22 +91,16 @@ def analyze_trajectory(trajectory_id):
     trajectory.info['analysis']['confinement-states'] = states.tolist()
 
     try:
-        _,_,d_2_4,localization_precision,_= trajectory.short_range_diffusion_coefficient_msd(bin_width=DELTA_T, time_start=TIME_START)
-        trajectory.info['analysis']['d_2_4'] = d_2_4
+        _,_,transport_coefficient,betha,localization_precision,goodness_of_fit = trajectory.temporal_average_mean_squared_displacement(log_log_fit_limit=MAX_T, limit_type='time', bin_width=DELTA_T, time_start=TIME_START, with_corrections=True)
+        trajectory.info['analysis']['k'] = transport_coefficient*2*DIMENSION
+        trajectory.info['analysis']['betha'] = betha
+        trajectory.info['analysis']['goodness_of_fit'] = goodness_of_fit
         trajectory.info['analysis']['localization_precision'] = localization_precision
     except AssertionError:
         pass
     except ValueError:
         pass
-    try:
-        _,_,betha,k,goodness_of_fit = trajectory.temporal_average_mean_squared_displacement(log_log_fit_limit=MAX_T, limit_type='time', bin_width=DELTA_T, time_start=TIME_START)
-        trajectory.info['analysis']['betha'] = betha
-        trajectory.info['analysis']['k'] = k
-        trajectory.info['analysis']['goodness_of_fit'] = goodness_of_fit
-    except AssertionError:
-        pass
-    except ValueError:
-        pass
+
     for angle in trajectory.info['analysis']['angles_analysis']:
         trajectory.info['analysis']['angles_analysis'][angle] = trajectory.turning_angles(steps_lag=int(angle))
 
@@ -136,8 +130,8 @@ def analyze_trajectory(trajectory_id):
                     trajectory.info['analysis']['confinement-e'].append(e)
 
                     try:
-                        _,_,betha,k,goodness_of_fit = sub_trajectory.temporal_average_mean_squared_displacement(log_log_fit_limit=SUB_MAX_T, limit_type='time', bin_width=DELTA_T, time_start=TIME_START)
-                        trajectory.info['analysis']['confinement-k'].append(k)
+                        _,_,transport_coefficient,betha,_,goodness_of_fit = sub_trajectory.temporal_average_mean_squared_displacement(log_log_fit_limit=SUB_MAX_T, limit_type='time', bin_width=DELTA_T, time_start=TIME_START, with_corrections=True)
+                        trajectory.info['analysis']['confinement-k'].append(transport_coefficient*2*DIMENSION)
                         trajectory.info['analysis']['confinement-betha'].append(betha)
                         trajectory.info['analysis']['confinement-goodness_of_fit'].append(goodness_of_fit)
                     except AssertionError:
@@ -148,13 +142,6 @@ def analyze_trajectory(trajectory_id):
                         trajectory.info['analysis']['confinement-k'].append(None)
                         trajectory.info['analysis']['confinement-betha'].append(None)
                         trajectory.info['analysis']['confinement-goodness_of_fit'].append(None)
-                    try:
-                        _,_,d_2_4,_,_= sub_trajectory.short_range_diffusion_coefficient_msd(bin_width=DELTA_T, time_start=TIME_START)
-                        trajectory.info['analysis']['confinement-d_2_4'].append(d_2_4)
-                    except AssertionError:
-                        trajectory.info['analysis']['confinement-d_2_4'].append(None)
-                    except ValueError:
-                        trajectory.info['analysis']['confinement-d_2_4'].append(None)
                 except QhullError:
                     trajectory.info['analysis']['confinement_areas_centroids'].append(None)
                     trajectory.info['analysis']['confinement-duration'].append(None)
@@ -166,13 +153,12 @@ def analyze_trajectory(trajectory_id):
                     trajectory.info['analysis']['confinement-k'].append(None)
                     trajectory.info['analysis']['confinement-betha'].append(None)
                     trajectory.info['analysis']['confinement-goodness_of_fit'].append(None)
-                    trajectory.info['analysis']['confinement-d_2_4'].append(None)
             else:
                 trajectory.info['analysis']['non-confinement-steps'].append(sub_trajectory.length)
                 trajectory.info['analysis']['non-confinement-duration'].append(sub_trajectory.duration)
                 try:
-                    _,_,betha,k,goodness_of_fit = sub_trajectory.temporal_average_mean_squared_displacement(log_log_fit_limit=SUB_MAX_T, limit_type='time', bin_width=DELTA_T, time_start=TIME_START)
-                    trajectory.info['analysis']['non-confinement-k'].append(k)
+                    _,_,transport_coefficient,betha,_,goodness_of_fit = sub_trajectory.temporal_average_mean_squared_displacement(log_log_fit_limit=SUB_MAX_T, limit_type='time', bin_width=DELTA_T, time_start=TIME_START, with_corrections=True)
+                    trajectory.info['analysis']['non-confinement-k'].append(transport_coefficient*2*DIMENSION)
                     trajectory.info['analysis']['non-confinement-betha'].append(betha)
                     trajectory.info['analysis']['non-confinement-goodness_of_fit'].append(goodness_of_fit)
                 except AssertionError:
@@ -183,13 +169,7 @@ def analyze_trajectory(trajectory_id):
                     trajectory.info['analysis']['non-confinement-k'].append(None)
                     trajectory.info['analysis']['non-confinement-betha'].append(None)
                     trajectory.info['analysis']['non-confinement-goodness_of_fit'].append(None)
-                try:
-                    _,_,d_2_4,_,_= sub_trajectory.short_range_diffusion_coefficient_msd(bin_width=DELTA_T, time_start=TIME_START)
-                    trajectory.info['analysis']['non-confinement-d_2_4'].append(d_2_4)
-                except AssertionError:
-                    trajectory.info['analysis']['non-confinement-d_2_4'].append(None)
-                except ValueError:
-                    trajectory.info['analysis']['non-confinement-d_2_4'].append(None)
+
             for angle in trajectory.info['analysis']['angles_by_state'][str(state)]['angles']:
                 trajectory.info['analysis']['angles_by_state'][str(state)]['angles'][angle] += sub_trajectory.turning_angles(steps_lag=int(angle))
 
