@@ -740,8 +740,8 @@ def extract_dataset_file_roi_file():
     return file_id_and_roi_list
 
 def measure_overlap_with_iou(dataframe):
-    X = np.arange(dataframe.x.min(),dataframe.x.max(),0.05)
-    Y = np.arange(dataframe.y.min(),dataframe.y.max(),0.05)
+    X = np.arange(dataframe.x.min(),dataframe.x.max(),0.01)
+    Y = np.arange(dataframe.y.min(),dataframe.y.max(),0.01)
 
     CHOL_dataframe = dataframe[dataframe['type'] == CHOL_NOMENCLATURE]
     BTX_dataframe = dataframe[dataframe['type'] == BTX_NOMENCLATURE]
