@@ -8,6 +8,7 @@ import matplotlib.pyplot as plt
 from collections import defaultdict
 import pandas as pd
 from utils import *
+from CONSTANTS import GOODNESS_OF_FIT_MAXIMUM
 
 
 fitting_dictionary = {
@@ -86,7 +87,7 @@ for index, dataset in enumerate(new_datasets_list):
             noisy=True
         )
 
-        if 'analysis' not in t['info'] or 'betha' not in t['info']['analysis'] or t['info']['analysis']['goodness_of_fit'] < 0.8 or t['info']['analysis']['betha'] > 1.1:
+        if 'analysis' not in t['info'] or 'betha' not in t['info']['analysis'] or t['info']['analysis']['goodness_of_fit'] > GOODNESS_OF_FIT_MAXIMUM or t['info']['analysis']['betha'] > 1.1:
             continue
 
         segments = [trajectory.build_noisy_subtrajectory_from_range(i, i+SEGMENT_LENGTH) for i in range(0,trajectory.length, SEGMENT_LENGTH)]

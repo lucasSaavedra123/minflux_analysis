@@ -80,7 +80,7 @@ for index, dataset in enumerate(new_datasets_list):
             )
 
             for info in bethas_infos:
-                if info['info']['analysis']['goodness_of_fit'] > 0.8:
+                if info['info']['analysis']['goodness_of_fit'] < GOODNESS_OF_FIT_MAXIMUM:
                     all_bethas_infos.append({
                         'file': info['info']['file'],
                         'roi': info['info']['roi'],
@@ -93,7 +93,7 @@ for index, dataset in enumerate(new_datasets_list):
 
                 for aux_label in DIFFUSION_BEHAVIOURS_INFORMATION:
                     for confined_betha, confined_gof in zip(info['info']['analysis']['confinement-betha'], info['info']['analysis']['confinement-goodness_of_fit']):
-                        if confined_betha is not None and confined_gof > 0.8 and DIFFUSION_BEHAVIOURS_INFORMATION[aux_label]['range_0'] < confined_betha < DIFFUSION_BEHAVIOURS_INFORMATION[aux_label]['range_1']:
+                        if confined_betha is not None and confined_gof < GOODNESS_OF_FIT_MAXIMUM and DIFFUSION_BEHAVIOURS_INFORMATION[aux_label]['range_0'] < confined_betha < DIFFUSION_BEHAVIOURS_INFORMATION[aux_label]['range_1']:
                             all_confined_bethas_infos.append({
                                 'file': info['info']['file'],
                                 'roi': info['info']['roi'],
@@ -104,7 +104,7 @@ for index, dataset in enumerate(new_datasets_list):
 
                             all_confined_bethas_infos[-1][aux_label] = 1
                     for non_confined_betha, non_confined_gof in zip(info['info']['analysis']['non-confinement-betha'], info['info']['analysis']['non-confinement-goodness_of_fit']):
-                        if non_confined_betha is not None and non_confined_gof > 0.8 and DIFFUSION_BEHAVIOURS_INFORMATION[aux_label]['range_0'] < non_confined_betha < DIFFUSION_BEHAVIOURS_INFORMATION[aux_label]['range_1']:
+                        if non_confined_betha is not None and non_confined_gof < GOODNESS_OF_FIT_MAXIMUM and DIFFUSION_BEHAVIOURS_INFORMATION[aux_label]['range_0'] < non_confined_betha < DIFFUSION_BEHAVIOURS_INFORMATION[aux_label]['range_1']:
                             all_non_confined_bethas_infos.append({
                                 'file': info['info']['file'],
                                 'roi': info['info']['roi'],

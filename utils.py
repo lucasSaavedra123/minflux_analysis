@@ -111,7 +111,7 @@ def get_dataframe_of_trajectory_analysis_data(a_query):
     dataframe = pd.DataFrame(dataframe)
 
     def mask(row):
-        if row["goodness_of_fit"] is not None and row["goodness_of_fit"] < 0.8:
+        if row["goodness_of_fit"] is not None and row["goodness_of_fit"] > GOODNESS_OF_FIT_MAXIMUM:
             row["k"] = None
             row["betha"] = None
             row["goodness_of_fit"] = None
@@ -165,14 +165,14 @@ def get_dataframe_of_portions_analysis_data(a_query):
     confinement_dataframe, non_confinement_dataframe = pd.DataFrame(confinement_dataframe), pd.DataFrame(non_confinement_dataframe)
 
     def confinement_mask(row):
-        if row["confinement-goodness_of_fit"] is not None and row["confinement-goodness_of_fit"] < 0.8:
+        if row["confinement-goodness_of_fit"] is not None and row["confinement-goodness_of_fit"] > GOODNESS_OF_FIT_MAXIMUM:
             row["confinement-k"] = None
             row["confinement-betha"] = None
             row["confinement-goodness_of_fit"] = None
         return row
 
     def non_confinement_mask(row):
-        if row["non-confinement-goodness_of_fit"] is not None and row["non-confinement-goodness_of_fit"] < 0.8:
+        if row["non-confinement-goodness_of_fit"] is not None and row["non-confinement-goodness_of_fit"] > GOODNESS_OF_FIT_MAXIMUM:
             row["non-confinement-k"] = None
             row["non-confinement-betha"] = None
             row["non-confinement-goodness_of_fit"] = None
@@ -239,7 +239,7 @@ def get_ids_of_trayectories_under_betha_limits(filter_query, betha_min, betha_ma
     filter_query = filter_query.copy()
     filter_query['info.analysis.betha'] = {'$gt': betha_min, '$lte': betha_max}
     if filter_by_gof:
-        filter_query['info.analysis.goodness_of_fit'] = {'$gt': 0.8}
+        filter_query['info.analysis.goodness_of_fit'] = {'$lt': GOODNESS_OF_FIT_MAXIMUM}
     list_of_list = [str(document['_id']) for document in Trajectory._get_collection().find(filter_query, {f'_id':1})]
     return list_of_list
 

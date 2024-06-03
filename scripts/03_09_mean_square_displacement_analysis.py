@@ -53,7 +53,7 @@ DatabaseHandler.connect_over_network(None, None, IP_ADDRESS, COLLECTION_NAME)
 for index, dataset in enumerate(new_datasets_list):
     print(dataset)
     SEARCH_FIELD = {'info.dataset': dataset, 'info.immobile': False} if index < len(INDIVIDUAL_DATASETS) else {'info.dataset': dataset[0], 'info.classified_experimental_condition':dataset[1], 'info.immobile': False}
-    SEARCH_FIELD.update({'info.analysis.goodness_of_fit': {'$gt':0.8}})
+    SEARCH_FIELD.update({'info.analysis.goodness_of_fit': {'$lt':GOODNESS_OF_FIT_MAXIMUM}})
     uploaded_trajectories_ids = [str(trajectory_result['_id']) for trajectory_result in Trajectory._get_collection().find(SEARCH_FIELD, {'_id':1})]
 
     results = []
