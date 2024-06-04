@@ -8,6 +8,10 @@ from Trajectory import Trajectory
 from CONSTANTS import *
 from scipy.optimize import curve_fit
 
+def equation_anomalous(x, T, B, LOCALIZATION_PRECISION):
+    TERM_1 = T*((x*DELTA_T)**(B-1))*2*DIMENSION*DELTA_T*x*(1-((2*R)/x))
+    TERM_2 = 2*DIMENSION*(LOCALIZATION_PRECISION**2)
+    return TERM_1 + TERM_2 
 
 def analyze_trajectory(trajectory_id, dataset):
     trajectories = Trajectory.objects(id=trajectory_id)
@@ -90,9 +94,9 @@ for index, dataset in enumerate(new_datasets_list):
     ea_ta_msd_t_vec, ea_ta_msd = aux[:,0], aux[:,1]
     
     brown_line = np.linspace(min(ea_ta_msd_t_vec), max(ea_ta_msd_t_vec), 100)
-    
+
     plt.loglog(ea_ta_msd_t_vec, ea_ta_msd, color='#FF1B1C', linewidth=2)#'red')
-    plt.loglog(brown_line,brown_line, color='black', linestyle='dashed', linewidth=2)
+    plt.loglog(brown_line,equation_anomalous(brown_line/DELTA_T, 0.05, 1, 0.010), color='black', linestyle='dashed', linewidth=2)
 
     popt, _ = curve_fit(lambda t,b,k: k * (t ** b), ea_ta_msd_t_vec, ea_ta_msd, bounds=((0, 0), (2, np.inf)), maxfev=2000)
     print(popt[0], popt[1])
