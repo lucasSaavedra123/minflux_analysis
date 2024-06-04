@@ -719,7 +719,7 @@ class Trajectory(Document):
         elif limit_type == 'time':
             msd_fit = msd[t_vec < log_log_fit_limit]
             t_vec_fit = t_vec[t_vec < log_log_fit_limit]
-            enough_number_of_points = int((log_log_fit_limit/bin_width)*0.50)
+            enough_number_of_points = int((log_log_fit_limit/bin_width)*0.75)
             assert len(t_vec_fit) >= enough_number_of_points
             assert len(msd_fit) >= enough_number_of_points
         else:
@@ -761,12 +761,8 @@ class Trajectory(Document):
             def log_equation_anomalous(x, T, B, LOCALIZATION_PRECISION):
                 return np.log10(equation_anomalous(10**x, T, B, LOCALIZATION_PRECISION))
 
-            select_indexes = np.unique(np.geomspace(1,len(t_vec_fit),len(t_vec_fit)//2).astype(int))-1
-            t_vec_fit_sampled = t_vec_fit[select_indexes]
-            msd_fit_sampled = msd_fit[select_indexes]
-
-            popt, _ = curve_fit(log_equation_anomalous, np.log10(t_vec_fit_sampled/DELTA_T), np.log10(msd_fit_sampled), bounds=((0, 0, 0), (np.inf, 2, np.inf)), maxfev=2000)
-            goodness_of_fit = msd_fit_sampled - equation_anomalous(t_vec_fit_sampled/DELTA_T, popt[0], popt[1], popt[2])
+            popt, _ = curve_fit(log_equation_anomalous, np.log10(t_vec_fit/DELTA_T), np.log10(msd_fit), bounds=((0, 0, 0), (np.inf, 2, np.inf)), maxfev=2000)
+            goodness_of_fit = msd_fit - equation_anomalous(t_vec_fit/DELTA_T, popt[0], popt[1], popt[2])
             goodness_of_fit = np.sum(goodness_of_fit**2)/(len(t_vec_fit)-2)
             goodness_of_fit = np.sqrt(goodness_of_fit)
             """
