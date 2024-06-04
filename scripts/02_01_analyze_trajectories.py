@@ -69,13 +69,13 @@ def analyze_trajectory(trajectory_id):
     trajectory.info['analysis']['confinement-k'] = []
     trajectory.info['analysis']['confinement-betha'] = []
     trajectory.info['analysis']['confinement-goodness_of_fit'] = []
-    trajectory.info['analysis']['confinement-d_2_4'] = []
+    #trajectory.info['analysis']['confinement-d_2_4'] = []
     trajectory.info['analysis']['non-confinement-steps'] = []
     trajectory.info['analysis']['non-confinement-duration'] = []
     trajectory.info['analysis']['non-confinement-k'] = []
     trajectory.info['analysis']['non-confinement-betha'] = []
     trajectory.info['analysis']['non-confinement-goodness_of_fit'] = []
-    trajectory.info['analysis']['non-confinement-d_2_4'] = []
+    #trajectory.info['analysis']['non-confinement-d_2_4'] = []
 
     trajectory.info['analysis']['confinement_areas_centroids'] = []
 

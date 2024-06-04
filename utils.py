@@ -63,7 +63,7 @@ def get_dataframe_of_trajectory_analysis_data(a_query):
     }
 
     dataframe = {}
-    fields = ['k', 'betha', 'd_2_4', 'localization_precision', 'goodness_of_fit', 'meanDP', 'corrDP', 'AvgSignD', 'residence_time', 'inverse_residence_time']
+    fields = ['k', 'betha', 'localization_precision', 'goodness_of_fit', 'meanDP', 'corrDP', 'AvgSignD', 'residence_time', 'inverse_residence_time']
 
     for field in fields:
         p[f'info.analysis.{field}'] = 1
@@ -124,8 +124,8 @@ def get_dataframe_of_portions_analysis_data(a_query):
     p = {'info.file':1,'info.roi':1}
 
     confinement_dataframe, non_confinement_dataframe = {}, {}
-    confinement_fields = ['confinement-a', 'confinement-b', 'confinement-e','confinement-area', 'confinement-steps', 'confinement-betha', 'confinement-k', 'confinement-d_2_4', 'confinement-duration', 'confinement-goodness_of_fit']
-    non_confinement_fields = ['non-confinement-steps', 'non-confinement-betha', 'non-confinement-k', 'non-confinement-d_2_4', 'non-confinement-duration', 'non-confinement-goodness_of_fit']
+    confinement_fields = ['confinement-a', 'confinement-b', 'confinement-e','confinement-area', 'confinement-steps', 'confinement-betha', 'confinement-k', 'confinement-duration', 'confinement-goodness_of_fit']
+    non_confinement_fields = ['non-confinement-steps', 'non-confinement-betha', 'non-confinement-k', 'non-confinement-duration', 'non-confinement-goodness_of_fit']
 
     confinement_dataframe['roi'], confinement_dataframe['file'] = [], []
     for field in confinement_fields:
