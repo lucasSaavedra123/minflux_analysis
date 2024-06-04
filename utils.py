@@ -765,7 +765,7 @@ def measure_overlap_with_iou(dataframe):
 
 def measure_overlap(trajectories_by_label, chol_confinement_to_chol_trajectory, chol_confinements):
     for btx_trajectory in trajectories_by_label[BTX_NOMENCLATURE]:
-        btx_confinements = btx_trajectory.sub_trajectories_trajectories_from_confinement_states(v_th=33, transition_fix_threshold=5, use_info=True)[1]
+        btx_confinements = btx_trajectory.sub_trajectories_trajectories_from_confinement_states(v_th=33, transition_fix_threshold=3, use_info=True)[1]
 
         btx_trajectory.info['number_of_confinement_zones'] = len(btx_confinements)
         btx_trajectory.info[f'number_of_confinement_zones_with_{CHOL_NOMENCLATURE}'] = 0

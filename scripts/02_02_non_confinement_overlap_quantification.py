@@ -37,7 +37,7 @@ for file in tqdm.tqdm(btx_and_chol_files):
 
     for trajectory in trajectories:
         try:
-            non_confined_portions_by_condition[trajectory.info['classified_experimental_condition']] += trajectory.sub_trajectories_trajectories_from_confinement_states(v_th=33, transition_fix_threshold=5, use_info=True)[0]
+            non_confined_portions_by_condition[trajectory.info['classified_experimental_condition']] += trajectory.sub_trajectories_trajectories_from_confinement_states(v_th=33, transition_fix_threshold=3, use_info=True)[0]
         except KeyError:
             continue
         trajectories_by_condition[trajectory.info['classified_experimental_condition']].append(trajectory)
@@ -45,7 +45,7 @@ for file in tqdm.tqdm(btx_and_chol_files):
     for btx_trajectory in trajectories_by_condition[BTX_NOMENCLATURE]:
         btx_trajectory.info[f'non_confinement_portions_lengths'] = []
         btx_trajectory.info[f'{CHOL_NOMENCLATURE}_intersections'] = []
-        for non_btx_confinement_portion in btx_trajectory.sub_trajectories_trajectories_from_confinement_states(v_th=33, transition_fix_threshold=5, use_info=True)[0]:
+        for non_btx_confinement_portion in btx_trajectory.sub_trajectories_trajectories_from_confinement_states(v_th=33, transition_fix_threshold=3, use_info=True)[0]:
             btx_trajectory.info[f'non_confinement_portions_lengths'].append(non_btx_confinement_portion.length)
             btx_trajectory.info[f'{CHOL_NOMENCLATURE}_intersections'].append(0)
             for non_chol_confinement_portion in non_confined_portions_by_condition[CHOL_NOMENCLATURE]:
@@ -57,7 +57,7 @@ for file in tqdm.tqdm(btx_and_chol_files):
     for chol_trajectory in trajectories_by_condition[CHOL_NOMENCLATURE]:
         chol_trajectory.info[f'non_confinement_portions_lengths'] = []
         chol_trajectory.info[f'{BTX_NOMENCLATURE}_intersections'] = []
-        for non_chol_confinement_portion in chol_trajectory.sub_trajectories_trajectories_from_confinement_states(v_th=33, transition_fix_threshold=5, use_info=True)[0]:
+        for non_chol_confinement_portion in chol_trajectory.sub_trajectories_trajectories_from_confinement_states(v_th=33, transition_fix_threshold=3, use_info=True)[0]:
             chol_trajectory.info[f'non_confinement_portions_lengths'].append(non_btx_confinement_portion.length)
             chol_trajectory.info[f'{BTX_NOMENCLATURE}_intersections'].append(0)
             for non_btx_confinement_portion in non_confined_portions_by_condition[BTX_NOMENCLATURE]:

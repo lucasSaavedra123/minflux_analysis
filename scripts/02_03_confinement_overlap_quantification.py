@@ -68,7 +68,7 @@ def analyze_dataset_and_roi(dataset, file, roi):
     chol_confinements = []
     
     for chol_trajectory in trajectories_by_label[CHOL_NOMENCLATURE]:
-        new_chol_confinements = chol_trajectory.sub_trajectories_trajectories_from_confinement_states(v_th=33, transition_fix_threshold=5, use_info=True)[1]
+        new_chol_confinements = chol_trajectory.sub_trajectories_trajectories_from_confinement_states(v_th=33, transition_fix_threshold=3, use_info=True)[1]
         chol_trajectory.info['number_of_confinement_zones'] = len(new_chol_confinements)
         chol_trajectory.info[f'number_of_confinement_zones_with_{BTX_NOMENCLATURE}'] = 0
 
