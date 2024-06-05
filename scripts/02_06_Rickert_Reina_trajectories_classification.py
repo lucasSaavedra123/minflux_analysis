@@ -160,7 +160,7 @@ for index, dataset in enumerate(new_datasets_list):
         fitting_dictionary[a_key]['error_msds'] = error_msd
         fitting_dictionary[a_key]['msds'] = average_msd
         fitting_dictionary[a_key]['x_msds'] = average_msd_t
-        fitting_dictionary[a_key]['mean_msd_result'] = fitting_dictionary[a_key]['fitting'](fitting_dictionary[a_key]['x_msds'], fitting_dictionary[a_key]['msds'])
+        fitting_dictionary[a_key]['mean_msd_result'] = fitting_dictionary[a_key]['fitting'](fitting_dictionary[a_key]['x_msds'], fitting_dictionary[a_key]['msds'], with_logarithmic_sampling=False)
 
     result_file = open(f"./Results/{dataset}_hop_vs_free_vs_confined.txt", 'w')
     with pd.ExcelWriter(f"./Results/{dataset}_hop_vs_free_vs_confined.xlsx") as writer:
