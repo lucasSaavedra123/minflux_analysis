@@ -58,7 +58,7 @@ def get_chol_confinement_to_chol_trajectory_and_chol_confinements(list_of_trajec
     chol_confinements = []
     for trajectory in list_of_trajectories:
         if 'analysis' in trajectory.info and trajectory.info['classified_experimental_condition'] == CHOL_NOMENCLATURE:
-            new_chol_confinements = trajectory.sub_trajectories_trajectories_from_confinement_states(v_th=33, transition_fix_threshold=5, use_info=True)[1]
+            new_chol_confinements = trajectory.sub_trajectories_trajectories_from_confinement_states(v_th=33, transition_fix_threshold=3, use_info=True)[1]
 
             for c in new_chol_confinements:
                 chol_confinement_to_chol_trajectory[c] = trajectory
