@@ -761,7 +761,10 @@ def measure_overlap_with_iou(dataframe, bin_size=0.01):
     H_BTX = (H_BTX.T!=0).astype(int)
 
     H_sum = (H_CHOL + H_BTX)
-    H_overlap = (H_sum==2).astype(int)
+    #H_overlap = (H_sum==2).astype(int)
+    H_overlap = modify_matrix_keeping_overlaps_and_neighbors((H_CHOL*1) + (H_BTX*2))
+    H_overlap = ((0 < H_overlap) & (H_overlap < 3)).astype(int)
+
     H_union = (H_sum != 0).astype(int)
 
     return (H_overlap.sum())/(H_union.sum())
@@ -847,3 +850,49 @@ def get_elliptical_information_of_data_points(X, return_full_description=False):
         return a,b,e
     else:
         return float(middle_point[0]),float(middle_point[1]),a,b,phi,e
+
+def modify_matrix_keeping_overlaps_and_neighbors(matriz):
+    nueva_matriz = matriz.copy()
+
+    # Desplazamientos para obtener los vecinos
+    vecinos_offsets = [(-1, -1), (-1, 0), (-1, 1),
+                       (0, -1),           (0, 1),
+                       (1, -1),  (1, 0),  (1, 1)]
+
+    # Crear máscaras para cada vecino
+    vecinos_matrices = []
+    for di, dj in vecinos_offsets:
+        vecino = np.zeros_like(matriz)
+
+        if di == -1 and dj == -1:
+            vecino[1:, 1:] = matriz[:-1, :-1]
+        elif di == -1 and dj == 0:
+            vecino[1:, :] = matriz[:-1, :]
+        elif di == -1 and dj == 1:
+            vecino[1:, :-1] = matriz[:-1, 1:]
+        elif di == 0 and dj == -1:
+            vecino[:, 1:] = matriz[:, :-1]
+        elif di == 0 and dj == 1:
+            vecino[:, :-1] = matriz[:, 1:]
+        elif di == 1 and dj == -1:
+            vecino[:-1, 1:] = matriz[1:, :-1]
+        elif di == 1 and dj == 0:
+            vecino[:-1, :] = matriz[1:, :]
+        elif di == 1 and dj == 1:
+            vecino[:-1, :-1] = matriz[1:, 1:]
+
+        vecinos_matrices.append(vecino)
+    
+    vecinos_stack = np.stack(vecinos_matrices)
+
+    v1 = np.any(vecinos_stack == 1, axis=0)
+    v2 = np.any(vecinos_stack == 2, axis=0)
+    v3 = np.any(vecinos_stack == 3, axis=0)
+
+    condicion_1 = (matriz == 1) & (v2 | v3)
+    condicion_2 = (matriz == 2) & (v1 | v3)
+    condicion_3 = (matriz == 3)
+
+    nueva_matriz[~(condicion_2 | condicion_1 | condicion_3)] = 0
+
+    return nueva_matriz
