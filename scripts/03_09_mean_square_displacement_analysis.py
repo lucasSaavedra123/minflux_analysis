@@ -2,11 +2,13 @@ from collections import defaultdict
 import tqdm
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib as mpl
 
 from DatabaseHandler import DatabaseHandler
 from Trajectory import Trajectory
 from CONSTANTS import *
 from scipy.optimize import curve_fit
+mpl.rcParams['axes.linewidth'] = 2
 
 def equation_anomalous(x, T, B, LOCALIZATION_PRECISION):
     TERM_1 = T*((x*DELTA_T)**(B-1))*2*DIMENSION*DELTA_T*x*(1-((2*R)/x))
@@ -56,6 +58,7 @@ DatabaseHandler.connect_over_network(None, None, IP_ADDRESS, COLLECTION_NAME)
 
 for index, dataset in enumerate(new_datasets_list):
     print(dataset)
+    fig, ax = plt.subplots(1,1)
     SEARCH_FIELD = {'info.dataset': dataset, 'info.immobile': False} if index < len(INDIVIDUAL_DATASETS) else {'info.dataset': dataset[0], 'info.classified_experimental_condition':dataset[1], 'info.immobile': False}
     SEARCH_FIELD.update({'info.analysis.goodness_of_fit': {'$lt':GOODNESS_OF_FIT_MAXIMUM}})
     uploaded_trajectories_ids = [str(trajectory_result['_id']) for trajectory_result in Trajectory._get_collection().find(SEARCH_FIELD, {'_id':1})]
@@ -81,7 +84,7 @@ for index, dataset in enumerate(new_datasets_list):
     for t_lag, msd_result in zip(t_lags, msd_results):
         msd_result = msd_result[t_lag < MAX_T]
         t_lag = t_lag[t_lag < MAX_T]
-        plt.loglog(t_lag, msd_result, color='#BEB7A4', linewidth=0.1)#'gray', linewidth=0.1)
+        ax.loglog(t_lag, msd_result, color='#BEB7A4', linewidth=0.1)#'gray', linewidth=0.1)
 
         for t, m in zip(t_lag, msd_result):
             ea_ta_msd[t].append(m)
@@ -95,8 +98,8 @@ for index, dataset in enumerate(new_datasets_list):
     
     brown_line = np.linspace(min(ea_ta_msd_t_vec), max(ea_ta_msd_t_vec), 100)
 
-    plt.loglog(ea_ta_msd_t_vec, ea_ta_msd, color='#FF1B1C', linewidth=2)#'red')
-    plt.loglog(brown_line,equation_anomalous(brown_line/DELTA_T, 0.05, 1, 0.010), color='black', linestyle='dashed', linewidth=2)
+    ax.loglog(ea_ta_msd_t_vec, ea_ta_msd, color='#FF1B1C', linewidth=2)#'red')
+    ax.loglog(brown_line,equation_anomalous(brown_line/DELTA_T, 0.05, 1, 0.010), color='black', linestyle='dashed', linewidth=2)
 
     popt, _ = curve_fit(lambda t,b,k: k * (t ** b), ea_ta_msd_t_vec, ea_ta_msd, bounds=((0, 0), (2, np.inf)), maxfev=2000)
     print(popt[0], popt[1])
@@ -104,10 +107,12 @@ for index, dataset in enumerate(new_datasets_list):
     """
     plt.loglog(t_lag,popt[1]*(t_lag**popt[0]), color='red')
     """
-    plt.xlim([min(ea_ta_msd_t_vec), max(ea_ta_msd_t_vec)])
-    plt.ylim([10e-6, 20e-1])
-    plt.xticks(fontsize=50)
-    plt.yticks(fontsize=50)
+    ax.set_xlim([min(ea_ta_msd_t_vec), max(ea_ta_msd_t_vec)])
+    ax.set_ylim([10e-6, 20e-1])
+    plt.xticks(fontsize=45)
+    plt.yticks(fontsize=45)
+    ax.tick_params(which='major', direction='out', length=6, width=2, pad=5)
+    ax.tick_params(which='minor', direction='out', length=3, width=2, pad=5)
     plt.subplots_adjust(left=0.31, right=0.983, top=0.968, bottom=0.137)
     plt.yticks([1e-5, 1e-3, 1e-1])
     plt.savefig(f"{index}_{dataset}_msd.png", dpi=300)
