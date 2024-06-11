@@ -39,6 +39,7 @@ def transform_trajectories_with_confinement_states_from_mongo_to_dataframe(traje
     dataframe['type'] = []
     dataframe['color'] = []
     dataframe['confinement-states'] = []
+    dataframe['confinement-overlaps'] = []
     for t in trajectories:
         if t.info.get('analysis', {}).get('confinement-states', None) is not None:
             dataframe['confinement-states'] += t.info['analysis']['confinement-states']
@@ -48,6 +49,13 @@ def transform_trajectories_with_confinement_states_from_mongo_to_dataframe(traje
             dataframe['type'] += [t.info['classified_experimental_condition']] * t.length
             dataframe['trajectory_id'] += [t.info['trajectory_id']] * t.length
             dataframe['color'] += ['red' if t.info['classified_experimental_condition'] == 'BTX680R' else 'green'] * t.length
+            try:
+                if t.info['classified_experimental_condition'] == 'BTX680R':
+                    dataframe['confinement-overlaps'] += [t.info[f'number_of_confinement_zones_with_{CHOL_NOMENCLATURE}']] * t.length
+                else:
+                    dataframe['confinement-overlaps'] += [t.info[f'number_of_confinement_zones_with_{BTX_NOMENCLATURE}']] * t.length
+            except KeyError:
+                dataframe['confinement-overlaps'] += [0] * t.length
     dataframe = pd.DataFrame(dataframe)
     return dataframe
 
@@ -761,8 +769,8 @@ def measure_overlap_with_iou(dataframe, bin_size=0.01):
     H_BTX = (H_BTX.T!=0).astype(int)
 
     H_sum = (H_CHOL + H_BTX)
-    #H_overlap = (H_sum==2).astype(int)
-    H_overlap = modify_matrix_keeping_overlaps_and_neighbors((H_CHOL*1) + (H_BTX*2))
+    H_overlap = (H_sum==2).astype(int)
+    #H_overlap = modify_matrix_keeping_overlaps_and_neighbors((H_CHOL*1) + (H_BTX*2))
     H_overlap = ((0 < H_overlap) & (H_overlap < 3)).astype(int)
 
     H_union = (H_sum != 0).astype(int)

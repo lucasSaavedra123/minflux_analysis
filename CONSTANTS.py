@@ -1,4 +1,4 @@
-IP_ADDRESS = '192.168.0.181'
+IP_ADDRESS = 'localhost'
 COLLECTION_NAME = 'MINFLUX_DATA'
 FILE_AND_ROI_FILE_CACHE = 'file_and_roi.txt'
 
