@@ -1,16 +1,195 @@
+from CONSTANTS import CHOL_NOMENCLATURE, BTX_NOMENCLATURE
 import numpy as np
 from Trajectory import Trajectory
 from scipy.spatial import KDTree
-from shapely.geometry import MultiPoint
+from shapely.geometry import MultiPoint, LinearRing
 import scipy
 import numpy as np
 import scipy
 import pandas as pd
 import EntropyHub as EH
+from collections import defaultdict
 from scipy.optimize import minimize, LinearConstraint, NonlinearConstraint
 from CONSTANTS import *
 import math
+from scipy.spatial import distance_matrix
 
+
+def remove_outliers_from_set_of_values_of_column(list_of_values, return_upper_and_lower=False):
+    filtered_list_of_values = list_of_values[~np.isnan(list_of_values)]
+    Q1 = np.percentile(filtered_list_of_values, 25, method='midpoint')
+    Q3 = np.percentile(filtered_list_of_values, 75, method='midpoint')
+    IQR = Q3 - Q1
+
+    upper = Q3+1.5*IQR
+    lower = Q1-1.5*IQR
+
+    for i in range(len(list_of_values)):
+        if list_of_values[i] is not None and not (lower <= list_of_values[i] <= upper):
+            list_of_values[i] = None
+
+    return list_of_values
+
+def transform_trajectories_with_confinement_states_from_mongo_to_dataframe(trajectories):
+    dataframe = {}
+    dataframe['trajectory_id'] = []
+    dataframe['x'] = []
+    dataframe['y'] = []
+    dataframe['t'] = []
+    dataframe['type'] = []
+    dataframe['color'] = []
+    dataframe['confinement-states'] = []
+    dataframe['confinement-overlaps'] = []
+    for t in trajectories:
+        if t.info.get('analysis', {}).get('confinement-states', None) is not None:
+            dataframe['confinement-states'] += t.info['analysis']['confinement-states']
+            dataframe['x'] += t.get_noisy_x().tolist()
+            dataframe['y'] += t.get_noisy_y().tolist()
+            dataframe['t'] += t.get_time().tolist()
+            dataframe['type'] += [t.info['classified_experimental_condition']] * t.length
+            dataframe['trajectory_id'] += [t.info['trajectory_id']] * t.length
+            dataframe['color'] += ['red' if t.info['classified_experimental_condition'] == 'BTX680R' else 'green'] * t.length
+            try:
+                if t.info['classified_experimental_condition'] == 'BTX680R':
+                    dataframe['confinement-overlaps'] += [t.info[f'number_of_confinement_zones_with_{CHOL_NOMENCLATURE}']] * t.length
+                else:
+                    dataframe['confinement-overlaps'] += [t.info[f'number_of_confinement_zones_with_{BTX_NOMENCLATURE}']] * t.length
+            except KeyError:
+                dataframe['confinement-overlaps'] += [0] * t.length
+    dataframe = pd.DataFrame(dataframe)
+    return dataframe
+
+def get_dataframe_of_trajectory_analysis_data(a_query):
+    p = {
+        'info.file':1,
+        'info.roi':1,
+        'info.analysis.confinement-states': 1,
+        't': 1,
+        f'info.number_of_confinement_zones_with_{CHOL_NOMENCLATURE}': 1,
+        f'info.number_of_confinement_zones_with_{BTX_NOMENCLATURE}': 1,
+        'info.number_of_confinement_zones': 1
+    }
+
+    dataframe = {}
+    fields = ['k', 'betha', 'localization_precision', 'goodness_of_fit', 'meanDP', 'corrDP', 'AvgSignD', 'residence_time', 'inverse_residence_time']
+
+    for field in fields:
+        p[f'info.analysis.{field}'] = 1
+        dataframe[field] = []
+
+    dataframe['file'] = []
+    dataframe['roi'] = []
+    dataframe['change_rate'] = []
+    dataframe[f'number_of_confinement_zones_with_{CHOL_NOMENCLATURE}'] = []
+    dataframe[f'number_of_confinement_zones_with_{BTX_NOMENCLATURE}'] = []
+    dataframe[f'number_of_confinement_zones'] = []
+
+    documents = Trajectory._get_collection().find(a_query, p)
+
+    for d in documents:
+        if 'analysis' not in d['info']:
+            continue
+        dataframe['file'].append(d['info']['file'])
+        dataframe['roi'].append(d['info']['roi'])
+        for field in fields:
+            try:
+                dataframe[field].append(d['info']['analysis'][field])
+            except KeyError:
+                dataframe[field].append(None)
+
+        if 'confinement-states' in d['info']['analysis']:
+            rate = np.abs(np.diff(d['info']['analysis']['confinement-states'])!=0).sum() / (d['t'][-1] - d['t'][0])
+            dataframe['change_rate'].append(rate)
+        else:
+            dataframe['change_rate'].append(None)
+
+        dataframe[f'number_of_confinement_zones_with_{CHOL_NOMENCLATURE}'].append(0)
+        dataframe[f'number_of_confinement_zones_with_{BTX_NOMENCLATURE}'].append(0)
+        dataframe[f'number_of_confinement_zones'].append(0)
+
+        if f'number_of_confinement_zones_with_{CHOL_NOMENCLATURE}' in d['info']:
+            dataframe[f'number_of_confinement_zones_with_{CHOL_NOMENCLATURE}'][-1] = d['info'][f'number_of_confinement_zones_with_{CHOL_NOMENCLATURE}']
+
+        if f'number_of_confinement_zones_with_{BTX_NOMENCLATURE}' in d['info']:
+            dataframe[f'number_of_confinement_zones_with_{BTX_NOMENCLATURE}'][-1] = d['info'][f'number_of_confinement_zones_with_{BTX_NOMENCLATURE}']
+
+        if f'number_of_confinement_zones' in d['info']:
+            dataframe[f'number_of_confinement_zones'][-1] = d['info'][f'number_of_confinement_zones']
+
+    dataframe = pd.DataFrame(dataframe)
+
+    def mask(row):
+        if row["goodness_of_fit"] is not None and row["goodness_of_fit"] > GOODNESS_OF_FIT_MAXIMUM:
+            row["k"] = None
+            row["betha"] = None
+            row["goodness_of_fit"] = None
+        return row
+
+    dataframe = dataframe.apply(mask, axis=1)
+    return dataframe
+
+def get_dataframe_of_portions_analysis_data(a_query):
+    p = {'info.file':1,'info.roi':1}
+
+    confinement_dataframe, non_confinement_dataframe = {}, {}
+    confinement_fields = ['confinement-a', 'confinement-b', 'confinement-e','confinement-area', 'confinement-steps', 'confinement-betha', 'confinement-k', 'confinement-duration', 'confinement-goodness_of_fit']
+    non_confinement_fields = ['non-confinement-steps', 'non-confinement-betha', 'non-confinement-k', 'non-confinement-duration', 'non-confinement-goodness_of_fit']
+
+    confinement_dataframe['roi'], confinement_dataframe['file'] = [], []
+    for field in confinement_fields:
+        p[f'info.analysis.{field}'] = 1
+        confinement_dataframe[field] = []
+
+    non_confinement_dataframe['roi'], non_confinement_dataframe['file'] = [], []
+    for field in non_confinement_fields:
+        p[f'info.analysis.{field}'] = 1
+        non_confinement_dataframe[field] = []
+
+    documents = Trajectory._get_collection().find(a_query, p)
+
+    for d in documents:
+        if 'analysis' not in d['info']:
+            continue
+        confinement_values = [d['info']['analysis'][field] for field in confinement_fields]
+        confinement_values = zip(*confinement_values)
+
+        for row in confinement_values:
+            confinement_dataframe['file'].append(d['info']['file'])
+            confinement_dataframe['roi'].append(d['info']['roi'])
+
+            for field, value in zip(confinement_fields, row):
+                confinement_dataframe[field].append(value)
+
+        non_confinement_values = [d['info']['analysis'][field] for field in non_confinement_fields]
+        non_confinement_values = zip(*non_confinement_values)
+
+        for row in non_confinement_values:
+            non_confinement_dataframe['file'].append(d['info']['file'])
+            non_confinement_dataframe['roi'].append(d['info']['roi'])
+
+            for field, value in zip(non_confinement_fields, row):
+                non_confinement_dataframe[field].append(value)
+
+    confinement_dataframe, non_confinement_dataframe = pd.DataFrame(confinement_dataframe), pd.DataFrame(non_confinement_dataframe)
+
+    def confinement_mask(row):
+        if row["confinement-goodness_of_fit"] is not None and row["confinement-goodness_of_fit"] > GOODNESS_OF_FIT_MAXIMUM:
+            row["confinement-k"] = None
+            row["confinement-betha"] = None
+            row["confinement-goodness_of_fit"] = None
+        return row
+
+    def non_confinement_mask(row):
+        if row["non-confinement-goodness_of_fit"] is not None and row["non-confinement-goodness_of_fit"] > GOODNESS_OF_FIT_MAXIMUM:
+            row["non-confinement-k"] = None
+            row["non-confinement-betha"] = None
+            row["non-confinement-goodness_of_fit"] = None
+        return row
+
+    confinement_dataframe = confinement_dataframe.apply(confinement_mask, axis=1)
+    non_confinement_dataframe = non_confinement_dataframe.apply(non_confinement_mask, axis=1)
+
+    return confinement_dataframe, non_confinement_dataframe
 
 def logarithmic_sampling(N, k):
     # Calcula los intervalos logarítmicos
@@ -41,28 +220,34 @@ def get_list_of_positions(filter_query):
     values = [value for value in values if value.shape[1] > 1]
     return values
 
-def get_list_of_values_of_analysis_field(filter_query, field_name):
-    values = [document['info'].get('analysis', {}).get(field_name, None) for document in Trajectory._get_collection().find(filter_query, {f'info.analysis.{field_name}':1})]
+def get_list_of_values_of_field(filter_query, field_name, mean_by_roi=False):
+    if not mean_by_roi:
+        values = [document['info'].get(field_name, None) for document in Trajectory._get_collection().find(filter_query, {f'info.{field_name}':1})]
+    else:
+        documents = list(Trajectory._get_collection().find(filter_query, {f'info.{field_name}':1,'info.dataset':1,'info.file':1,'info.roi':1}))
+
+        values_per_roi = defaultdict(lambda: [])
+        for document in documents:
+            value = document['info'].get(field_name, None)
+            if value is not None:
+                values_per_roi[document['info']['dataset']+document['info']['file']+str(document['info']['roi'])].append(value)
+
+        for alias in values_per_roi:
+            values_per_roi[alias] = np.mean(values_per_roi[alias])   
+        values = list(values_per_roi.values())
     values = [value for value in values if value is not None]
     return values
-
-def get_list_of_values_of_field(filter_query, field_name):
-    values = [document['info'].get(field_name, None) for document in Trajectory._get_collection().find(filter_query, {f'info.{field_name}':1})]
-    values = [value for value in values if value is not None]
-    return values
-
-def get_list_of_analysis_field(filter_query, field_name):
-    list_of_list = [document['info'].get('analysis', {}).get(field_name, []) for document in Trajectory._get_collection().find(filter_query, {f'info.{field_name}':1})]
-    list_of_list = [a_list for a_list in list_of_list if len(a_list) != 0]
-    return list_of_list
 
 def get_list_of_main_field(filter_query, field_name):
     list_of_list = [document.get(field_name, []) for document in Trajectory._get_collection().find(filter_query, {f'{field_name}':1})]
     list_of_list = [a_list for a_list in list_of_list if len(a_list) != 0]
     return list_of_list
 
-def get_ids_of_trayectories_under_betha_limits(filter_query, betha_min, betha_max):
+def get_ids_of_trayectories_under_betha_limits(filter_query, betha_min, betha_max, filter_by_gof=False):
+    filter_query = filter_query.copy()
     filter_query['info.analysis.betha'] = {'$gt': betha_min, '$lte': betha_max}
+    if filter_by_gof:
+        filter_query['info.analysis.goodness_of_fit'] = {'$lt': GOODNESS_OF_FIT_MAXIMUM}
     list_of_list = [str(document['_id']) for document in Trajectory._get_collection().find(filter_query, {f'_id':1})]
     return list_of_list
 
@@ -181,7 +366,7 @@ def both_segments_intersect(segment_one, segment_two):
 
     return doIntersect(p1, q1, p2, q2)
 
-def both_trajectories_intersect(trajectory_one, trajectory_two, via='kd-tree', radius_threshold=1, return_kd_tree_intersections=False):
+def both_trajectories_intersect(trajectory_one, trajectory_two, via='kd-tree', radius_threshold=1, return_kd_tree_intersections=False, grid_size=1):
     """
     points_one = np.column_stack((trajectory_one.get_noisy_x(),trajectory_one.get_noisy_y()))
     points_two = np.column_stack((trajectory_two.get_noisy_x(),trajectory_two.get_noisy_y()))
@@ -194,12 +379,81 @@ def both_trajectories_intersect(trajectory_one, trajectory_two, via='kd-tree', r
             if both_segments_intersect(segment_one, segment_two):
                 return True
     """
-    """
-    """
+
     if via=='hull':
         t_one = MultiPoint([point for point in zip(trajectory_one.get_noisy_x(), trajectory_one.get_noisy_y())]).convex_hull
         t_two = MultiPoint([point for point in zip(trajectory_two.get_noisy_x(), trajectory_two.get_noisy_y())]).convex_hull
         return t_one.intersects(t_two)
+    if via=='grid':
+        X1 = np.zeros((trajectory_one.length, 2))
+        X1[:,0] = trajectory_one.get_noisy_x()
+        X1[:,1] = trajectory_one.get_noisy_y()
+
+        X2 = np.zeros((trajectory_two.length, 2))
+        X2[:,0] = trajectory_two.get_noisy_x()
+        X2[:,1] = trajectory_two.get_noisy_y()
+
+        x_min = min(np.min(X1[:,0]), np.min(X2[:,0]))
+        x_max = max(np.max(X1[:,0]), np.max(X2[:,0]))
+
+        y_min = min(np.min(X1[:,1]), np.min(X2[:,1]))
+        y_max = max(np.max(X1[:,1]), np.max(X2[:,1]))
+
+        x_space = np.arange(x_min, x_max, grid_size)
+        y_space = np.arange(y_min, y_max, grid_size)
+
+        for x_i in x_space:
+            for y_i in y_space:
+                localization_of_one = len(X1[((x_i<X1[:,0]) & (X1[:,0]<(x_i+grid_size))) & ((y_i<X1[:,1]) & (X1[:,1]<(y_i+grid_size)))])
+                localization_of_two = len(X2[((x_i<X2[:,0]) & (X2[:,0]<(x_i+grid_size))) & ((y_i<X2[:,1]) & (X2[:,1]<(y_i+grid_size)))])
+                if localization_of_one > 0 and localization_of_two > 0:
+                    return True
+
+        return False
+
+    elif via=='ellipse':
+        X1 = np.zeros((trajectory_one.length, 2))
+        X1[:,0] = trajectory_one.get_noisy_x()
+        X1[:,1] = trajectory_one.get_noisy_y()
+
+        X2 = np.zeros((trajectory_two.length, 2))
+        X2[:,0] = trajectory_two.get_noisy_x()
+        X2[:,1] = trajectory_two.get_noisy_y()
+
+        ellipses = [get_elliptical_information_of_data_points(X, return_full_description=True)[:5] for X in [X1,X2]]
+        a, b = ellipse_polyline(ellipses)
+
+        ea = LinearRing(a)
+        eb = LinearRing(b)
+
+        return ea.intersects(eb)
+    elif via=='rectangle':
+        class Rectangle:
+            def __init__(self, min_x, max_x, min_y, max_y):
+                self.top_right_point = [max_x, max_y]
+                self.top_left_point = [min_x, max_y]
+                self.bottom_right_point = [max_x, min_y]
+                self.bottom_left_point = [min_x, min_y]
+
+            def intersects(self, other):
+                return not (self.top_right_point[0] < other.bottom_left_point[0]
+                            or self.bottom_left_point[0] > self.top_right_point[0]
+                            or self.top_right_point[1] < other.bottom_left_point[1]
+                            or self.bottom_left_point[1] > self.top_right_point[1])
+
+
+        X1 = np.zeros((trajectory_one.length, 2))
+        X1[:,0] = trajectory_one.get_noisy_x()
+        X1[:,1] = trajectory_one.get_noisy_y()
+
+        rectangle_one = Rectangle(np.min(X1[:,0]), np.max(X1[:,0]), np.min(X1[:,1]), np.max(X1[:,1]))
+
+        X2 = np.zeros((trajectory_two.length, 2))
+        X2[:,0] = trajectory_two.get_noisy_x()
+        X2[:,1] = trajectory_two.get_noisy_y()
+
+        rectangle_two = Rectangle(np.min(X2[:,0]), np.max(X2[:,0]), np.min(X2[:,1]), np.max(X2[:,1]))
+        return rectangle_one.intersects(rectangle_two)
     elif via=='brute-force':
         points_one = np.column_stack((trajectory_one.get_noisy_x(),trajectory_one.get_noisy_y()))
         points_two = np.column_stack((trajectory_two.get_noisy_x(),trajectory_two.get_noisy_y()))
@@ -417,6 +671,11 @@ def equation_free(x, D, LOCALIZATION_PRECISION):
     TERM_2 = 2*DIMENSION*(LOCALIZATION_PRECISION**2)
     return TERM_1 + TERM_2
 
+def equation_anomalous(x, T, B, LOCALIZATION_PRECISION):
+    TERM_1 = T*((x*DELTA_T)**(B-1))*2*DIMENSION*DELTA_T*x*(1-((2*R)/x))
+    TERM_2 = 2*DIMENSION*(LOCALIZATION_PRECISION**2)
+    return TERM_1 + TERM_2
+
 def equation_hop(x, DM, DU, L_HOP, LOCALIZATION_PRECISION):
     TERM_1_1_1 = (DU-DM)/DU
     TERM_1_1_2 = (L_HOP**2)/(6*DIMENSION*x*DELTA_T)
@@ -433,10 +692,11 @@ def equation_hop(x, DM, DU, L_HOP, LOCALIZATION_PRECISION):
 def equation_confined(x, DU, L_HOP, LOCALIZATION_PRECISION):
     return equation_hop(x, 0, DU, L_HOP, LOCALIZATION_PRECISION)
 
-def free_fitting(X,Y):
-    select_indexes = np.unique(np.geomspace(1,len(X),len(X)//2).astype(int))-1
-    X = X[select_indexes]
-    Y = Y[select_indexes]
+def free_fitting(X,Y, with_logarithmic_sampling=True):
+    if with_logarithmic_sampling:
+        select_indexes = np.unique(np.geomspace(1,len(X),len(X)//2).astype(int))-1
+        X = X[select_indexes]
+        Y = Y[select_indexes]
 
     def eq_4_obj_raw(x, y, d, delta): return np.sum((y - equation_free(x, d, delta))**2)
     #def eq_4_obj_raw(x, y, d, delta): return np.sum((y - equation_free(x, d, delta))**2)
@@ -451,10 +711,11 @@ def free_fitting(X,Y):
 
     return min(res_eq_4s, key=lambda r: r.fun)
 
-def hop_fitting(X,Y):
-    select_indexes = np.unique(np.geomspace(1,len(X),len(X)//2).astype(int))-1
-    X = X[select_indexes]
-    Y = Y[select_indexes]
+def hop_fitting(X,Y, with_logarithmic_sampling=True):
+    if with_logarithmic_sampling:
+        select_indexes = np.unique(np.geomspace(1,len(X),len(X)//2).astype(int))-1
+        X = X[select_indexes]
+        Y = Y[select_indexes]
 
     def eq_9_obj_raw(x, y, dm, du, l_hop, delta): return np.sum((y - equation_hop(x, dm, du, l_hop, delta))**2)
     eq_9_obj = lambda coeffs: eq_9_obj_raw(X, Y, *coeffs)
@@ -467,10 +728,11 @@ def hop_fitting(X,Y):
 
     return min(res_eq_9s, key=lambda r: r.fun)
 
-def confined_fitting(X,Y):
-    select_indexes = np.unique(np.geomspace(1,len(X),len(X)//2).astype(int))-1
-    X = X[select_indexes]
-    Y = Y[select_indexes]
+def confined_fitting(X,Y, with_logarithmic_sampling=True):
+    if with_logarithmic_sampling:
+        select_indexes = np.unique(np.geomspace(1,len(X),len(X)//2).astype(int))-1
+        X = X[select_indexes]
+        Y = Y[select_indexes]
 
     def eq_9_obj_raw(x, y, du, l, delta): return np.sum((y - equation_confined(x, du, l, delta))**2)
     eq_9_obj = lambda coeffs: eq_9_obj_raw(X, Y, *coeffs)
@@ -482,3 +744,163 @@ def confined_fitting(X,Y):
         res_eq_9s.append(res_eq_9)
 
     return min(res_eq_9s, key=lambda r: r.fun)
+
+def extract_dataset_file_roi_file():
+    file_id_and_roi_list = []
+    a_file = open(FILE_AND_ROI_FILE_CACHE, 'r')
+    for line in a_file.readlines():
+        line = line.strip()
+        line = line.split(',')
+        file_id_and_roi_list.append([line[0], line[1],int(line[2])])
+    a_file.close()
+    return file_id_and_roi_list
+
+def measure_overlap_with_iou(dataframe, bin_size=0.01):
+    X = np.arange(dataframe.x.min(),dataframe.x.max(),bin_size)
+    Y = np.arange(dataframe.y.min(),dataframe.y.max(),bin_size)
+
+    CHOL_dataframe = dataframe[dataframe['type'] == CHOL_NOMENCLATURE]
+    BTX_dataframe = dataframe[dataframe['type'] == BTX_NOMENCLATURE]
+
+    H_CHOL, _, _ = np.histogram2d(CHOL_dataframe[['x']].values[:,0], CHOL_dataframe[['y']].values[:,0], bins=[X, Y])
+    H_CHOL = (H_CHOL.T!=0).astype(int)
+
+    H_BTX, _, _ = np.histogram2d(BTX_dataframe[['x']].values[:,0], BTX_dataframe[['y']].values[:,0], bins=[X, Y])
+    H_BTX = (H_BTX.T!=0).astype(int)
+
+    H_sum = (H_CHOL + H_BTX)
+    H_overlap = (H_sum==2).astype(int)
+    #H_overlap = modify_matrix_keeping_overlaps_and_neighbors((H_CHOL*1) + (H_BTX*2))
+    H_overlap = ((0 < H_overlap) & (H_overlap < 3)).astype(int)
+
+    H_union = (H_sum != 0).astype(int)
+
+    return (H_overlap.sum())/(H_union.sum())
+
+def measure_overlap(trajectories_by_label, chol_confinement_to_chol_trajectory, chol_confinements):
+    for btx_trajectory in trajectories_by_label[BTX_NOMENCLATURE]:
+        btx_confinements = btx_trajectory.sub_trajectories_trajectories_from_confinement_states(v_th=33, transition_fix_threshold=3, use_info=True)[1]
+
+        btx_trajectory.info['number_of_confinement_zones'] = len(btx_confinements)
+        btx_trajectory.info[f'number_of_confinement_zones_with_{CHOL_NOMENCLATURE}'] = 0
+
+        for btx_confinement in btx_confinements:
+            already_overlap = False
+            for chol_confinement in chol_confinements:
+                if np.linalg.norm(chol_confinement.centroid-btx_confinement.centroid) < 1:#um
+                    there_is_overlap = both_trajectories_intersect(chol_confinement, btx_confinement, via='hull')
+                    btx_trajectory.info[f'number_of_confinement_zones_with_{CHOL_NOMENCLATURE}'] += 1 if there_is_overlap and not already_overlap else 0
+                    chol_confinement_to_chol_trajectory[chol_confinement].info[f'number_of_confinement_zones_with_{BTX_NOMENCLATURE}'] += 1
+                    if there_is_overlap:
+                        already_overlap = True
+
+def ellipse_polyline(ellipses, n=100):
+    t = np.linspace(0, 2*np.pi, n, endpoint=False)
+    st = np.sin(t)
+    ct = np.cos(t)
+    result = []
+    for x0, y0, a, b, angle in ellipses:
+        #angle = np.deg2rad(angle)
+        sa = np.sin(angle)
+        ca = np.cos(angle)
+        p = np.empty((n, 2))
+        p[:, 0] = x0 + a * ca * ct - b * sa * st
+        p[:, 1] = y0 + a * sa * ct + b * ca * st
+        result.append(p)
+    return result
+
+def intersections_between_ellipses(a, b):
+    ea = LinearRing(a)
+    eb = LinearRing(b)
+    mp = ea.intersection(eb)
+
+    x = [p.x for p in mp]
+    y = [p.y for p in mp]
+    return x, y
+
+def get_elliptical_information_of_data_points(X, return_full_description=False):
+    def cart2pol(numpy_point):
+        rho = np.linalg.norm(numpy_point)
+        phi = np.arctan2(numpy_point[1], numpy_point[0])
+        return rho, phi
+
+    #Displacement Process
+    distances = distance_matrix(X, X)
+    point_a_index, point_b_index = np.unravel_index(np.argmax(distances, axis=None), distances.shape)
+    direction_vector = X[point_a_index] - X[point_b_index]
+
+    middle_point = (X[point_a_index] + X[point_b_index])/2
+
+    displacement = (direction_vector/2) + X[point_b_index]
+
+    displaced_X = X - displacement
+
+    #Rotation Process
+
+    _, phi = cart2pol(direction_vector)
+
+    if phi <= 0:
+        direction_vector = displaced_X[point_b_index] - displaced_X[point_a_index]
+        _, phi = cart2pol(direction_vector)
+
+    rotation_matrix = np.array([
+        [np.cos(np.pi - phi), -np.sin(np.pi - phi)],
+        [np.sin(np.pi - phi), np.cos(np.pi - phi)]
+    ])
+
+    rotated_X = np.dot(rotation_matrix, X.T).T
+
+    a = (np.max(rotated_X[:,0]) - np.min(rotated_X[:,0]))/2 # Semi-Major Axis
+    b = (np.max(rotated_X[:,1]) - np.min(rotated_X[:,1]))/2 # Semi-Minor Axis
+    e = np.sqrt(1-(np.power(b,2)/np.power(a,2)))#Eccentricity
+
+    if not return_full_description:
+        return a,b,e
+    else:
+        return float(middle_point[0]),float(middle_point[1]),a,b,phi,e
+
+def modify_matrix_keeping_overlaps_and_neighbors(matriz):
+    nueva_matriz = matriz.copy()
+
+    # Desplazamientos para obtener los vecinos
+    vecinos_offsets = [(-1, -1), (-1, 0), (-1, 1),
+                       (0, -1),           (0, 1),
+                       (1, -1),  (1, 0),  (1, 1)]
+
+    # Crear máscaras para cada vecino
+    vecinos_matrices = []
+    for di, dj in vecinos_offsets:
+        vecino = np.zeros_like(matriz)
+
+        if di == -1 and dj == -1:
+            vecino[1:, 1:] = matriz[:-1, :-1]
+        elif di == -1 and dj == 0:
+            vecino[1:, :] = matriz[:-1, :]
+        elif di == -1 and dj == 1:
+            vecino[1:, :-1] = matriz[:-1, 1:]
+        elif di == 0 and dj == -1:
+            vecino[:, 1:] = matriz[:, :-1]
+        elif di == 0 and dj == 1:
+            vecino[:, :-1] = matriz[:, 1:]
+        elif di == 1 and dj == -1:
+            vecino[:-1, 1:] = matriz[1:, :-1]
+        elif di == 1 and dj == 0:
+            vecino[:-1, :] = matriz[1:, :]
+        elif di == 1 and dj == 1:
+            vecino[:-1, :-1] = matriz[1:, 1:]
+
+        vecinos_matrices.append(vecino)
+    
+    vecinos_stack = np.stack(vecinos_matrices)
+
+    v1 = np.any(vecinos_stack == 1, axis=0)
+    v2 = np.any(vecinos_stack == 2, axis=0)
+    v3 = np.any(vecinos_stack == 3, axis=0)
+
+    condicion_1 = (matriz == 1) & (v2 | v3)
+    condicion_2 = (matriz == 2) & (v1 | v3)
+    condicion_3 = (matriz == 3)
+
+    nueva_matriz[~(condicion_2 | condicion_1 | condicion_3)] = 0
+
+    return nueva_matriz

@@ -8,6 +8,7 @@ import matplotlib.pyplot as plt
 from collections import defaultdict
 import pandas as pd
 from utils import *
+from CONSTANTS import GOODNESS_OF_FIT_MAXIMUM
 
 
 fitting_dictionary = {
@@ -74,7 +75,7 @@ for index, dataset in enumerate(new_datasets_list):
     counter = 0
     limit = None
     #min_msd = float('inf')
-    for t in tqdm.tqdm(Trajectory._get_collection().find(basic_query_dict, {'_id':1, 'x':1, 'y':1, 't':1,'info.analysis.betha':1})):
+    for t in tqdm.tqdm(Trajectory._get_collection().find(basic_query_dict, {'_id':1, 'x':1, 'y':1, 't':1,'info.analysis.betha':1, 'info.analysis.goodness_of_fit':1})):
         counter += 1
         if limit is not None and counter > limit:
             break
@@ -86,7 +87,7 @@ for index, dataset in enumerate(new_datasets_list):
             noisy=True
         )
 
-        if 'betha' not in t['info']['analysis'] or t['info']['analysis']['betha'] > 1.1:
+        if 'analysis' not in t['info'] or 'betha' not in t['info']['analysis'] or t['info']['analysis']['goodness_of_fit'] > GOODNESS_OF_FIT_MAXIMUM or t['info']['analysis']['betha'] > 1.1:
             continue
 
         segments = [trajectory.build_noisy_subtrajectory_from_range(i, i+SEGMENT_LENGTH) for i in range(0,trajectory.length, SEGMENT_LENGTH)]
@@ -95,7 +96,7 @@ for index, dataset in enumerate(new_datasets_list):
             if segment.length != SEGMENT_LENGTH:
                 continue
 
-            t_msd, msd = segment.calculate_msd_curve(bin_width=DELTA_T, return_variances=False)
+            t_msd, msd = segment.calculate_msd_curve(bin_width=DELTA_T, return_variances=False, time_start=TIME_START)
             Y = np.array(msd)
             X = (np.array(t_msd)/DELTA_T)#np.array(range(1,len(Y)+1))
             X_aux = X[t_msd<MAX_T]
@@ -159,7 +160,7 @@ for index, dataset in enumerate(new_datasets_list):
         fitting_dictionary[a_key]['error_msds'] = error_msd
         fitting_dictionary[a_key]['msds'] = average_msd
         fitting_dictionary[a_key]['x_msds'] = average_msd_t
-        fitting_dictionary[a_key]['mean_msd_result'] = fitting_dictionary[a_key]['fitting'](fitting_dictionary[a_key]['x_msds'], fitting_dictionary[a_key]['msds'])
+        fitting_dictionary[a_key]['mean_msd_result'] = fitting_dictionary[a_key]['fitting'](fitting_dictionary[a_key]['x_msds'], fitting_dictionary[a_key]['msds'], with_logarithmic_sampling=False)
 
     result_file = open(f"./Results/{dataset}_hop_vs_free_vs_confined.txt", 'w')
     with pd.ExcelWriter(f"./Results/{dataset}_hop_vs_free_vs_confined.xlsx") as writer:

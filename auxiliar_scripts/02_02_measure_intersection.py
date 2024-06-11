@@ -62,14 +62,3 @@ for file in tqdm.tqdm(btx_and_chol_files):
 
 
 DatabaseHandler.disconnect()
-
-#Plotting
-"""
-if len(intersection) != 0:
-    plt.plot(btx_trajectory.get_noisy_x(), btx_trajectory.get_noisy_y(), color='blue')
-
-    for chol_trajectory in intersection:
-        plt.plot(chol_trajectory.get_noisy_x(), chol_trajectory.get_noisy_y(), color='orange')
-
-    plt.show()
-"""

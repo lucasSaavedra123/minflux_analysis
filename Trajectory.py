@@ -156,23 +156,32 @@ class Trajectory(Document):
 
     @classmethod
     def ensemble_average_mean_square_displacement(cls, trajectories, number_of_points_for_msd=50, bin_width=None, alpha=0.95):
-        """
+
         trajectories = [trajectory for trajectory in trajectories if trajectory.length > number_of_points_for_msd + 1]
         #print("len average ->", np.mean([t.length for t in trajectories]))
-        ea_msd = np.zeros((len(trajectories), number_of_points_for_msd))
-        mu_t = np.zeros((len(trajectories), number_of_points_for_msd))
+        ea_msd_dict = defaultdict(lambda: [])
+        mu_t_dict = defaultdict(lambda: [])
 
         for j_index, trajectory in enumerate(trajectories):
             positions = np.zeros((trajectory.length,2))
             positions[:,0] = trajectory.get_noisy_x()
             positions[:,1] = trajectory.get_noisy_y()
+            time_position = trajectory.get_time()
 
             for index in range(0, number_of_points_for_msd):
-                ea_msd[j_index, index] = np.linalg.norm(positions[index+1]-positions[0]) ** 2
-                mu_t[j_index, index] = np.linalg.norm(positions[index+1]-positions[0])
+                ea_msd_dict[int(time_position[index+1] - time_position[0]/bin_width)].append(np.linalg.norm(positions[index+1]-positions[0]) ** 2)
+                mu_t_dict[int(time_position[index+1] - time_position[0]/bin_width)].append(np.linalg.norm(positions[index+1]-positions[0]))
+        
+        t_lag = np.sort(np.array([bin_width * i for i in ea_msd_dict]))
 
-        ea_msd = np.mean(ea_msd, axis=0)
-        mu_t = np.mean(mu_t, axis=0)
+        ea_msd, mu_t = [], []
+
+        for t in t_lag:
+            ea_msd.append(np.mean(ea_msd_dict[t]))
+            mu_t.append(np.mean(mu_t_dict[t]))
+
+        ea_msd = np.array(ea_msd)
+        mu_t = np.array(mu_t)
 
         alpha_1 = chi2.ppf(alpha/2, len(trajectories))
         alpha_2 = chi2.ppf(1-(alpha/2), len(trajectories))
@@ -184,7 +193,8 @@ class Trajectory(Document):
             (A/alpha_2)+(mu_t**2)
         ]
 
-        return ea_msd, intervals
+        return t_lag, ea_msd, intervals
+
         """
         #print("len average ->", np.mean([t.length for t in trajectories]))
         ea_msd = defaultdict(lambda: [])
@@ -213,6 +223,7 @@ class Trajectory(Document):
         t_vec, ea_msd = (aux[:,0] * delta) + delta, aux[:,1]
 
         return t_vec, ea_msd, [np.array(intervals[0]), np.array(intervals[1])]
+        """
 
     def __init__(self, x, y=None, z=None, model_category=None, noise_x=None, noise_y=None, noise_z=None, noisy=False, t=None, exponent=None, exponent_type='anomalous', info={}, **kwargs):
 
@@ -286,6 +297,10 @@ class Trajectory(Document):
             return "Not available"
         else:
             return self.model_category
+
+    @property
+    def centroid(self):
+        return np.array([np.mean(self.get_noisy_x()), np.mean(self.get_noisy_y())])
 
     @property
     def length(self):
@@ -542,7 +557,7 @@ class Trajectory(Document):
                     t = self.get_time()[initial_index:final_index],
                     noisy=noisy
                 )
-        
+
         BTX_NOMENCLATURE = 'BTX680R'
         CHOL_NOMENCLATURE = 'fPEG-Chol'
 
@@ -554,14 +569,20 @@ class Trajectory(Document):
             new_trajectory.info['dataset'] = self.info['dataset']
         if 'roi' in self.info:
             new_trajectory.info['roi'] = self.info['roi']
-        if 'file' in self.info:
-            new_trajectory.info['file'] = self.info['file']
+        if 'roi' in self.info:
+            new_trajectory.info['roi'] = self.info['roi']
+        if 'trajectory_id' in self.info:
+            new_trajectory.info['trajectory_id'] = self.info['trajectory_id']
         if 'classified_experimental_condition' in self.info:
             new_trajectory.info['classified_experimental_condition'] = self.info['classified_experimental_condition']
         if f'{BTX_NOMENCLATURE}_single_intersections' in self.info:
             new_trajectory.info[f'{BTX_NOMENCLATURE}_single_intersections'] = self.info[f'{BTX_NOMENCLATURE}_single_intersections'][initial_index:final_index]
         if f'{CHOL_NOMENCLATURE}_single_intersections' in self.info:
             new_trajectory.info[f'{CHOL_NOMENCLATURE}_single_intersections'] = self.info[f'{CHOL_NOMENCLATURE}_single_intersections'][initial_index:final_index]
+        if 'analysis' in self.info:
+            new_trajectory.info['analysis'] = {}
+            if 'confinement-states' in self.info['analysis']:
+                new_trajectory.info['analysis']['confinement-states'] = self.info['analysis']['confinement-states'][initial_index:final_index]
 
         return new_trajectory
 
@@ -623,7 +644,7 @@ class Trajectory(Document):
         else:
             return states
 
-    def calculate_msd_curve(self, with_noise=True, bin_width=None, return_variances=False):
+    def calculate_msd_curve(self, with_noise=True, bin_width=None, return_variances=False, limit_type=None, limit_value=None, time_start=None):
         """
         Code Obtained from https://github.com/Eggeling-Lab-Microscope-Software/TRAIT2D/blob/b51498b730140ffac5c0abfc5494ebfca25b445e/trait2d/analysis/__init__.py#L1061
         """
@@ -636,8 +657,6 @@ class Trajectory(Document):
 
         N = len(x)
         assert N-3 > 0
-        col_Array  = np.zeros(N-3)
-        col_t_Array  = np.zeros(N-3)
         data_tmp = np.column_stack((x, y))
         data_t_tmp = self.get_time()
 
@@ -647,25 +666,41 @@ class Trajectory(Document):
         delta = np.min(np.diff(self.get_time())) if bin_width is None else bin_width
 
         for i in range(1,N-2):
-            calc_tmp = np.sum(np.abs((data_tmp[1+i:N,:] - data_tmp[1:N - i,:]) ** 2), axis=1)
-            calc_t_tmp = data_t_tmp[1+i:N] - data_t_tmp[1:N - i]
-
+            if limit_type == 'points' and (i-1) > limit_value:
+                break
+            if limit_type == 'time' and ((time_start is not None and time_start+((i-1)*delta) > limit_value) or (time_start is None and (i-1)*delta > limit_value)):
+                break
+            calc_tmp = np.sum(np.abs((data_tmp[i:N,:]-data_tmp[0:N-i,:]) ** 2), axis=1)
+            calc_t_tmp = data_t_tmp[i:N] - data_t_tmp[0:N-i]
+            #plt.scatter(calc_t_tmp, calc_tmp, color='blue', s=0.1)
             for interval, square_displacement in zip(calc_t_tmp, calc_tmp):
-                msd_dict[int(interval/delta)].append(square_displacement)
-
-            col_Array[i-1] = np.mean(calc_tmp)
-            col_t_Array[i-1] = i * delta
+                if time_start is not None:
+                    if time_start < interval:
+                        msd_dict[int((interval-time_start)/delta)+1].append(square_displacement)
+                else:
+                    msd_dict[int(interval/delta)].append(square_displacement)
 
         for i in msd_dict:
             msd_variances_dict[i] = np.var(msd_dict[i])
             msd_dict[i] = np.mean(msd_dict[i])
 
-        aux = np.array(sorted(list(zip(list(msd_dict.keys()), list(msd_dict.values()))), key=lambda x: x[0]))
-        t_vec, msd = (aux[:,0] * delta) + delta, aux[:,1]
+        if time_start is not None:
+            time_msd = [[time_start+(bin_width*(t-(1/2))), msd_dict[t]] for t in msd_dict]
+        else:
+            time_msd = [[bin_width*t, msd_dict[t]] for t in msd_dict]
 
-        aux = np.array(sorted(list(zip(list(msd_variances_dict.keys()), list(msd_variances_dict.values()))), key=lambda x: x[0]))
-        _, msd_var = (aux[:,0] * delta) + delta, aux[:,1]
+        aux = np.array(sorted(time_msd, key=lambda x: x[0]))
+        t_vec, msd = aux[:,0], aux[:,1]
 
+        if time_start is not None:
+            time_msd = [[time_start+(bin_width*(t-(1/2))), msd_variances_dict[t]] for t in msd_variances_dict]
+        else:
+            time_msd = [[bin_width*t, msd_variances_dict[t]] for t in msd_variances_dict]
+
+        aux = np.array(sorted(time_msd, key=lambda x: x[0]))
+        t_vec, msd_var = aux[:,0], aux[:,1]
+        #plt.scatter(t_vec, np.zeros_like(t_vec))
+        #plt.show()
         assert len(t_vec) == len(msd) == len(msd_var)
 
         if not return_variances:
@@ -673,30 +708,79 @@ class Trajectory(Document):
         else:
             return t_vec, msd, msd_var
 
-    def temporal_average_mean_squared_displacement(self, non_linear=True, log_log_fit_limit=50, with_noise=True, bin_width=None):
-        def real_func(t, betha, k):
-            return k * (t ** betha)
+    def temporal_average_mean_squared_displacement(self, log_log_fit_limit=50, limit_type='points', with_noise=True, bin_width=None, time_start=None, with_corrections=False):
+        t_vec, msd = self.calculate_msd_curve(with_noise=with_noise, bin_width=bin_width, limit_type=limit_type, limit_value=log_log_fit_limit, time_start=time_start)
 
-        def linear_func(t, betha, k):
-            return np.log(k) + (np.log(t) * betha)
+        if limit_type == 'points':
+            msd_fit = msd[0:log_log_fit_limit]
+            t_vec_fit = t_vec[0:log_log_fit_limit]
+            assert len(t_vec_fit) == log_log_fit_limit
+            assert len(msd_fit) == log_log_fit_limit
+        elif limit_type == 'time':
+            msd_fit = msd[t_vec < log_log_fit_limit]
+            t_vec_fit = t_vec[t_vec < log_log_fit_limit]
+            enough_number_of_points = int((log_log_fit_limit/bin_width)*0.75)
+            assert len(t_vec_fit) >= enough_number_of_points
+            assert len(msd_fit) >= enough_number_of_points
+        else:
+            raise Exception(f'limit_type=={limit_type} is not accepted')
 
-        t_vec, msd = self.calculate_msd_curve(with_noise=with_noise, bin_width=bin_width)
+        if not with_corrections:
+            def real_func(t, betha, k):
+                return k * (t ** betha)
 
-        msd_fit = msd[0:log_log_fit_limit]
-        t_vec_fit = t_vec[0:log_log_fit_limit]
-        assert len(t_vec_fit) == log_log_fit_limit
-        assert len(msd_fit) == log_log_fit_limit
+            def linear_func(t, betha, k):
+                return np.log(k) + (np.log(t) * betha)
 
-        popt, _ = curve_fit(linear_func, t_vec_fit, np.log(msd_fit), bounds=((0, 0), (2, np.inf)), maxfev=2000)
-        goodness_of_fit = r2_score(np.log(msd_fit), linear_func(t_vec_fit, popt[0], popt[1]))
+            popt, _ = curve_fit(real_func, t_vec_fit, msd_fit, bounds=((0, 0), (2, np.inf)), maxfev=2000)
+            goodness_of_fit = r2_score(np.log(msd_fit), linear_func(t_vec_fit, popt[0], popt[1]))
+            """
+            fig, ax = plt.subplots(1,2)
 
-        #plt.title(f"betha={np.round(popt[0], 2)}, k={popt[1]}")
-        #plt.plot(t_vec_fit, t_vec_fit * popt[1])
-        #plt.plot(t_vec_fit, msd_fit)
-        #plt.show()
-        return t_vec, msd, popt[0], popt[1], goodness_of_fit
+            ax[0].set_title(f"betha={np.round(popt[0], 2)}, k={popt[1]}")
+            ax[0].plot(t_vec_fit, real_func(t_vec_fit, popt[0], popt[1]), marker='X', color='black')
+            ax[0].plot(t_vec_fit, msd_fit, marker='X', color='red')
 
-    def short_range_diffusion_coefficient_msd(self, with_noise=True, bin_width=None):
+            ax[1].set_title(f"betha={np.round(popt[0], 2)}, k={popt[1]}")
+            ax[1].loglog(t_vec_fit, real_func(t_vec_fit, popt[0], popt[1]), marker='X', color='black')
+            ax[1].loglog(t_vec_fit, msd_fit, marker='X', color='red')
+
+            plt.show()
+            """
+            return t_vec, msd, popt[0], popt[1], goodness_of_fit
+        else:
+            R = 1/6
+            DELTA_T = bin_width
+            DIMENSION = 2
+
+            def equation_anomalous(x, T, B, LOCALIZATION_PRECISION):
+                TERM_1 = T*((x*DELTA_T)**(B-1))*2*DIMENSION*DELTA_T*x*(1-((2*R)/x))
+                TERM_2 = 2*DIMENSION*(LOCALIZATION_PRECISION**2)
+                return TERM_1 + TERM_2 
+
+            def log_equation_anomalous(x, T, B, LOCALIZATION_PRECISION):
+                return np.log10(equation_anomalous(10**x, T, B, LOCALIZATION_PRECISION))
+
+            popt, _ = curve_fit(log_equation_anomalous, np.log10(t_vec_fit/DELTA_T), np.log10(msd_fit), bounds=((0, 0, 0), (np.inf, 2, np.inf)), maxfev=2000)
+            goodness_of_fit = msd_fit - equation_anomalous(t_vec_fit/DELTA_T, popt[0], popt[1], popt[2])
+            goodness_of_fit = np.sum(goodness_of_fit**2)/(len(t_vec_fit)-2)
+            goodness_of_fit = np.sqrt(goodness_of_fit)
+            """
+            fig, ax = plt.subplots(1,2)
+            print(goodness_of_fit) #1000 < goodness_of_fit * 1e6 fittings are ignored.
+            ax[0].set_title(f"T={np.round(popt[0], 3)}, betha={np.round(popt[1], 2)}, loc_precision={np.round(popt[2], 3)}")
+            ax[0].plot(t_vec_fit, equation_anomalous(t_vec_fit/DELTA_T, popt[0], popt[1], popt[2]), marker='X', color='black')
+            ax[0].plot(t_vec_fit, msd_fit, marker='X', color='red')
+
+            ax[1].set_title(f"T={np.round(popt[0], 3)}, betha={np.round(popt[1], 2)}, loc_precision={np.round(popt[2], 3)}")
+            ax[1].loglog(t_vec_fit, equation_anomalous(t_vec_fit/DELTA_T, popt[0], popt[1], popt[2]), marker='X', color='black')
+            ax[1].loglog(t_vec_fit, msd_fit, marker='X', color='red')
+
+            plt.show()
+            """
+            return t_vec, msd, popt[0], popt[1], popt[2], goodness_of_fit
+
+    def short_range_diffusion_coefficient_msd(self, with_noise=True, bin_width=None, time_start=None):
         def linear_func(t, d, sigma):
             return (4 * t * d) + (sigma**2)
 
@@ -707,7 +791,7 @@ class Trajectory(Document):
             x = self.get_x()
             y = self.get_y()
 
-        t_vec, msd = self.calculate_msd_curve(with_noise=with_noise, bin_width=bin_width)
+        t_vec, msd = self.calculate_msd_curve(with_noise=with_noise, bin_width=bin_width, time_start=time_start)
 
         msd_fit = msd[1:4]
         t_vec_fit = t_vec[1:4]
@@ -799,3 +883,77 @@ class Trajectory(Document):
             steps_lag=1
         )
         return np.nanmean(np.sign(normalized_angles[1:])>0)
+
+    def random_sample(self, roi_x, roi_y, in_place=False):
+        """
+        Only works with noisy trajectories
+        """
+        import math
+
+        def rotate(origin, point, angle):
+            """
+            Rotate a point counterclockwise by a given angle around a given origin.
+
+            The angle should be given in radians.
+            """
+            ox, oy = origin
+            px, py = point
+
+            qx = ox + math.cos(angle) * (px - ox) - math.sin(angle) * (py - oy)
+            qy = oy + math.sin(angle) * (px - ox) + math.cos(angle) * (py - oy)
+            return qx, qy
+
+
+        x = self.get_noisy_x()
+        y = self.get_noisy_y()
+
+        x -= np.mean(x)
+        y -= np.mean(y)
+
+        #plt.plot(x, y)
+        rotation_angle = np.random.uniform(0,180)
+        rotated_points = np.array([rotate([0,0], point, math.radians(rotation_angle)) for point in zip(x, y)])
+        rotated_x, rotated_y = rotated_points[:,0] * np.random.choice([1,-1]), rotated_points[:,1] * np.random.choice([1,-1])
+        new_x, new_y = rotated_x, rotated_y
+        #plt.plot(rotated_x, rotated_y)
+        #plt.show()
+
+        def is_correct_offset(i_x,i_y):
+            condition_a = roi_x[0] < min(i_x) and max(i_x) < roi_x[1]
+            condition_b = roi_y[0] < min(i_y) and max(i_y) < roi_y[1]
+            return condition_a and condition_b
+
+        while not is_correct_offset(new_x,new_y):
+            offset_x = np.random.uniform(low=min(roi_x), high=max(roi_x))
+            offset_y = np.random.uniform(low=min(roi_y), high=max(roi_y))
+            new_x = rotated_x + offset_x
+            new_y = rotated_y + offset_y
+
+        #plt.plot(new_x, new_y)
+        #plt.xlim(roi_x)
+        #plt.ylim(roi_y)
+        #plt.show()
+
+        if in_place:
+            self.x = new_x.tolist()
+            self.y = new_y.tolist()
+        else:
+            return Trajectory(
+                x=new_x.tolist(),
+                y=new_y.tolist(),
+                t=self.t,
+                info=self.info,
+                noisy=True
+            )
+
+    def copy(self):
+        """
+        Only works with noisy trajectories
+        """
+        return Trajectory(
+            x=self.get_noisy_x().tolist(),
+            y=self.get_noisy_y().tolist(),
+            t=self.get_time(),
+            info=self.info,
+            noisy=True
+        )

@@ -1,29 +1,27 @@
+from collections import defaultdict
 import tqdm
 import numpy as np
 import matplotlib.pyplot as plt
-from scipy.stats import chi2
+import matplotlib as mpl
 
 from DatabaseHandler import DatabaseHandler
 from Trajectory import Trajectory
 from CONSTANTS import *
 from scipy.optimize import curve_fit
+mpl.rcParams['axes.linewidth'] = 2
 
-import ray
-ray.init()
+def equation_anomalous(x, T, B, LOCALIZATION_PRECISION):
+    TERM_1 = T*((x*DELTA_T)**(B-1))*2*DIMENSION*DELTA_T*x*(1-((2*R)/x))
+    TERM_2 = 2*DIMENSION*(LOCALIZATION_PRECISION**2)
+    return TERM_1 + TERM_2 
 
-NUMBER_OF_POINTS_FOR_MSD = 250
-
-@ray.remote
 def analyze_trajectory(trajectory_id, dataset):
-    DatabaseHandler.connect_over_network(None, None, IP_ADDRESS, COLLECTION_NAME)
     trajectories = Trajectory.objects(id=trajectory_id)
     assert len(trajectories) == 1
     trajectory = trajectories[0]
-    DatabaseHandler.disconnect()
 
     try:
-        t_vec,msd,_,_,_ = trajectory.temporal_average_mean_squared_displacement(log_log_fit_limit=NUMBER_OF_POINTS_FOR_MSD, bin_width=0.001)
-        msd = msd[:NUMBER_OF_POINTS_FOR_MSD]
+        t_vec,msd,_,_,_,_ = trajectory.temporal_average_mean_squared_displacement(log_log_fit_limit=MAX_T, limit_type='time', bin_width=DELTA_T, time_start=TIME_START, with_corrections=True)
     except AssertionError as e:
         return None
     except ValueError as e:
@@ -56,47 +54,70 @@ for combined_dataset in [
     new_datasets_list.append((combined_dataset, BTX_NOMENCLATURE))
     new_datasets_list.append((combined_dataset, CHOL_NOMENCLATURE))
 
+DatabaseHandler.connect_over_network(None, None, IP_ADDRESS, COLLECTION_NAME)
+
 for index, dataset in enumerate(new_datasets_list):
     print(dataset)
+    fig, ax = plt.subplots(1,1)
     SEARCH_FIELD = {'info.dataset': dataset, 'info.immobile': False} if index < len(INDIVIDUAL_DATASETS) else {'info.dataset': dataset[0], 'info.classified_experimental_condition':dataset[1], 'info.immobile': False}
-    DatabaseHandler.connect_over_network(None, None, IP_ADDRESS, COLLECTION_NAME)
+    SEARCH_FIELD.update({'info.analysis.goodness_of_fit': {'$lt':GOODNESS_OF_FIT_MAXIMUM}})
     uploaded_trajectories_ids = [str(trajectory_result['_id']) for trajectory_result in Trajectory._get_collection().find(SEARCH_FIELD, {'_id':1})]
-    DatabaseHandler.disconnect()
 
     results = []
 
-    for id_batch in tqdm.tqdm(batch(uploaded_trajectories_ids, n=1000)):
-        results += ray.get([analyze_trajectory.remote(an_id, dataset) for an_id in id_batch])
+    for id_batch in tqdm.tqdm(list(batch(uploaded_trajectories_ids, n=100))):
+        results += [analyze_trajectory(an_id, dataset) for an_id in id_batch]
 
     results = [result for result in results if result is not None]
 
     number_of_analyzed_trajectories = len(results)
     reconstructed_trajectories_results = [result[0] for result in results]
-    msd_results = np.vstack([result[1] for result in results])
-    t_lag = [result[2] for result in results][0][:NUMBER_OF_POINTS_FOR_MSD]
+    msd_results = [result[1] for result in results]
+    t_lags = [result[2] for result in results]
+
+    ea_ta_msd = defaultdict(lambda: [])
 
     #print("n->", len(msd_results))
     #t_lag = np.arange(0,NUMBER_OF_POINTS_FOR_MSD * DATASET_TO_DELTA_T[dataset], DATASET_TO_DELTA_T[dataset])
     #t_lag = np.linspace(DATASET_TO_DELTA_T[dataset], DATASET_TO_DELTA_T[dataset] * 250, 250 - 2)
 
-    for i in range(number_of_analyzed_trajectories):
-        plt.loglog(t_lag, msd_results[i],color='cyan')
+    for t_lag, msd_result in zip(t_lags, msd_results):
+        msd_result = msd_result[t_lag < MAX_T]
+        t_lag = t_lag[t_lag < MAX_T]
+        ax.loglog(t_lag, msd_result, color='#BEB7A4', linewidth=0.1)#'gray', linewidth=0.1)
 
-    ea_ta_msd = np.mean(msd_results, axis=0)
-    popt, _ = curve_fit(lambda t,b,k: np.log(k) + (np.log(t) * b), t_lag, np.log(ea_ta_msd), bounds=((0, 0), (2, np.inf)), maxfev=2000)
+        for t, m in zip(t_lag, msd_result):
+            ea_ta_msd[t].append(m)
+
+    for t in ea_ta_msd:
+        ea_ta_msd[t] = np.mean(ea_ta_msd[t])
+
+    time_msd = [[t, ea_ta_msd[t]] for t in ea_ta_msd]
+    aux = np.array(sorted(time_msd, key=lambda x: x[0]))
+    ea_ta_msd_t_vec, ea_ta_msd = aux[:,0], aux[:,1]
+    
+    brown_line = np.linspace(min(ea_ta_msd_t_vec), max(ea_ta_msd_t_vec), 100)
+
+    ax.loglog(ea_ta_msd_t_vec, ea_ta_msd, color='#FF1B1C', linewidth=2)#'red')
+    ax.loglog(brown_line,equation_anomalous(brown_line/DELTA_T, 0.05, 1, 0.010), color='black', linestyle='dashed', linewidth=2)
+
+    popt, _ = curve_fit(lambda t,b,k: k * (t ** b), ea_ta_msd_t_vec, ea_ta_msd, bounds=((0, 0), (2, np.inf)), maxfev=2000)
     print(popt[0], popt[1])
 
-    plt.loglog(t_lag,t_lag, color='black', linestyle='dashed')
+    """
     plt.loglog(t_lag,popt[1]*(t_lag**popt[0]), color='red')
-
-    plt.xlim([0.001, NUMBER_OF_POINTS_FOR_MSD * 0.001])
-    #plt.ylim([1e-6, 1])
-    plt.xticks(fontsize=20)
-    plt.yticks(fontsize=20)
-    plt.subplots_adjust(left=0.17)
+    """
+    ax.set_xlim([min(ea_ta_msd_t_vec), max(ea_ta_msd_t_vec)])
+    ax.set_ylim([10e-6, 20e-1])
+    plt.xticks(fontsize=45)
+    plt.yticks(fontsize=45)
+    ax.tick_params(which='major', direction='out', length=6, width=2, pad=5)
+    ax.tick_params(which='minor', direction='out', length=3, width=2, pad=5)
+    plt.subplots_adjust(left=0.31, right=0.983, top=0.968, bottom=0.137)
+    plt.yticks([1e-5, 1e-3, 1e-1])
     plt.savefig(f"{index}_{dataset}_msd.png", dpi=300)
     plt.clf()
-
+    """
     t_vec, ea_msd, intervals = Trajectory.ensemble_average_mean_square_displacement(reconstructed_trajectories_results, number_of_points_for_msd=NUMBER_OF_POINTS_FOR_MSD)
 
     plt.plot(t_lag,ea_ta_msd,color='red')
@@ -110,5 +131,6 @@ for index, dataset in enumerate(new_datasets_list):
     plt.subplots_adjust(left=0.20)
     plt.savefig(f"{index}_{dataset}_ea_msd.png", dpi=300)
     plt.clf()
+    """
 
 DatabaseHandler.disconnect()
