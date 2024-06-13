@@ -12,33 +12,31 @@ from DatabaseHandler import DatabaseHandler
 from Trajectory import Trajectory
 from CONSTANTS import *
 from utils import measure_overlap, extract_dataset_file_roi_file, transform_trajectories_with_confinement_states_from_mongo_to_dataframe, measure_overlap_with_iou
+from andi_datasets.models_phenom import models_phenom
 
+PIXEL = 0.100
 
-#ray.init()
-#@ray.remote
-def get_random_value(trajectories):
-    trajectories_by_label = {
-        CHOL_NOMENCLATURE: [],
-        BTX_NOMENCLATURE: []
-    }
+def andi_datasets_to_trajectories(trajs, labels, particle_type=None):
+    trajectories = []
+    for i in range(trajs.shape[1]):
+        trajectories.append(Trajectory(
+            x=trajs[:,i,0]*PIXEL,
+            y=trajs[:,i,1]*PIXEL,
+            t=list(range(len(trajs[:,i,0]))),
+            noisy=True,
+            info={'analysis': {'confinement-states': (labels[:,i,-1]!=2).astype(int)}, 'classified_experimental_condition': particle_type, 'trajectory_id': str(i)+'_'+particle_type}
+        ))
+    return trajectories
 
-    min_x, max_x = float('inf'), float('-inf')
-    min_y, max_y = float('inf'), float('-inf')
-
-    for trajectory in trajectories:
-        if 'analysis' in trajectory.info:
-            trajectories_by_label[trajectory.info['classified_experimental_condition']].append(trajectory)
-            min_x, max_x = min(min_x, np.min(trajectory.get_noisy_x())), max(max_x, np.max(trajectory.get_noisy_x()))
-            min_y, max_y = min(min_y, np.min(trajectory.get_noisy_y())), max(max_y, np.max(trajectory.get_noisy_y()))
-
-    for t in trajectories:
-        t.random_sample([min_x, max_x], [min_y, max_y], in_place=True)
-
-    chol_confinement_to_chol_trajectory, chol_confinements = get_chol_confinement_to_chol_trajectory_and_chol_confinements(trajectories)
-    measure_overlap(trajectories_by_label, chol_confinement_to_chol_trajectory, chol_confinements)
-    return np.mean([t.info[f'number_of_confinement_zones_with_{CHOL_NOMENCLATURE}']/t.info['number_of_confinement_zones'] for t in trajectories_by_label[BTX_NOMENCLATURE] if t.info['number_of_confinement_zones'] != 0])
-
+ray.init()
+@ray.remote
 def get_random_value_with_iou(trajectories):
+    D = [0.0001,1] #um2/s^-1
+    D = [D[0]/(PIXEL**2), D[1]/(PIXEL**2)]
+
+    chol_trajectories = []
+    btx_trajectories = []
+
     min_x, max_x = float('inf'), float('-inf')
     min_y, max_y = float('inf'), float('-inf')
 
@@ -46,26 +44,36 @@ def get_random_value_with_iou(trajectories):
         min_x, max_x = min(min_x, np.min(trajectory.get_noisy_x())), max(max_x, np.max(trajectory.get_noisy_x()))
         min_y, max_y = min(min_y, np.min(trajectory.get_noisy_y())), max(max_y, np.max(trajectory.get_noisy_y()))
 
-    for t in trajectories:
-        t.random_sample([min_x, max_x], [min_y, max_y], in_place=True)
+    ROI = max(max_x-min_x, max_y-min_y)
+    NC = (ROI**2)*(25/(5**2))
 
-    dataframe = transform_trajectories_with_confinement_states_from_mongo_to_dataframe(trajectories)
+    original_chol_trajectories = [t for t in trajectories if t.info['classified_experimental_condition'] == CHOL_NOMENCLATURE]
+    original_btx_trajectories = [t for t in trajectories if t.info['classified_experimental_condition'] == BTX_NOMENCLATURE]
+
+    for original_chol_trajectory in original_chol_trajectories:
+        try:
+            trajs, labels = models_phenom().confinement(1, original_chol_trajectory.length, L=ROI/PIXEL,r=np.mean([a/2 for a in original_chol_trajectory.info['analysis']['confinement-a'] if a is not None])/PIXEL,Nc=NC*ROI,deltaT=0.0003, Ds=[[np.random.uniform(*D),0],[np.random.uniform(*D),0]], alphas=[[1,0], [1,0]])
+            chol_trajectories += andi_datasets_to_trajectories(trajs, labels, particle_type=CHOL_NOMENCLATURE)
+        except KeyError:
+            pass
+    for original_btx_trajectory in original_btx_trajectories:
+        try:
+            trajs, labels = models_phenom().confinement(1, original_btx_trajectory.length, L=ROI/PIXEL,r=np.mean([a/2 for a in original_btx_trajectory.info['analysis']['confinement-a'] if a is not None])/PIXEL,Nc=NC*ROI,deltaT=0.0003, Ds=[[np.random.uniform(*D),0],[np.random.uniform(*D),0]], alphas=[[1,0], [1,0]])
+            btx_trajectories += andi_datasets_to_trajectories(trajs, labels, particle_type=BTX_NOMENCLATURE)
+        except KeyError:
+            pass
+
+    dataframe = transform_trajectories_with_confinement_states_from_mongo_to_dataframe(chol_trajectories+btx_trajectories)
+
+    #dataframe_plot = dataframe[dataframe['confinement-overlaps']!=0].copy()
+    #dataframe_plot = dataframe_plot[dataframe_plot['confinement-states']==1]
+    #dataframe_plot = dataframe[dataframe['color']=='red'].copy()
+    #plt.scatter(dataframe_plot.x, dataframe_plot.y, c=dataframe_plot.color,s=0.5,alpha=0.1)
+    #plt.xlabel('X [um]')
+    #plt.ylabel('Y [um]')
+    #plt.show()
     dataframe = dataframe[dataframe['confinement-states'] == 1]
     return measure_overlap_with_iou(dataframe)
-
-def get_chol_confinement_to_chol_trajectory_and_chol_confinements(list_of_trajectories):
-    chol_confinement_to_chol_trajectory = {}
-    chol_confinements = []
-    for trajectory in list_of_trajectories:
-        if 'analysis' in trajectory.info and trajectory.info['classified_experimental_condition'] == CHOL_NOMENCLATURE:
-            new_chol_confinements = trajectory.sub_trajectories_trajectories_from_confinement_states(v_th=33, transition_fix_threshold=3, use_info=True)[1]
-
-            for c in new_chol_confinements:
-                chol_confinement_to_chol_trajectory[c] = trajectory
-
-            chol_confinements += new_chol_confinements
-
-    return chol_confinement_to_chol_trajectory, chol_confinements
 
 CHOL_AND_BTX_DATASETS = [
     'Cholesterol and btx',
@@ -73,6 +81,8 @@ CHOL_AND_BTX_DATASETS = [
     'BTX680-fPEG-CHOL-50-nM',
     'BTX680-fPEG-CHOL-100-nM',
 ]
+
+os.makedirs('overlaps_significant_test_files', exist_ok=True)
 
 file_and_rois = [info for info in extract_dataset_file_roi_file() if info[0] in CHOL_AND_BTX_DATASETS]
 
@@ -86,6 +96,6 @@ for dataset, file, roi in file_and_rois:
         real_dataframe = transform_trajectories_with_confinement_states_from_mongo_to_dataframe(trajectories)
         real_dataframe = real_dataframe[real_dataframe['confinement-states'] == 1]
         real_value = measure_overlap_with_iou(real_dataframe)
-        simulated_values = [get_random_value_with_iou([t.copy() for t in trajectories]) for i in tqdm.tqdm(range(99))]
+        simulated_values = ray.get([get_random_value_with_iou.remote([t.copy() for t in trajectories]) for i in tqdm.tqdm(range(99))])
         simulated_values.append(real_value)
         np.savetxt(f'./overlaps_significant_test_files/{dataset}_{file}_{roi}.txt', simulated_values)
