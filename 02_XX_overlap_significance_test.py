@@ -28,8 +28,8 @@ def andi_datasets_to_trajectories(trajs, labels, particle_type=None):
         ))
     return trajectories
 
-ray.init()
-@ray.remote
+#ray.init()
+#@ray.remote
 def get_random_value_with_iou(trajectories):
     D = [0.0001,1] #um2/s^-1
     D = [D[0]/(PIXEL**2), D[1]/(PIXEL**2)]
@@ -45,21 +45,33 @@ def get_random_value_with_iou(trajectories):
         min_y, max_y = min(min_y, np.min(trajectory.get_noisy_y())), max(max_y, np.max(trajectory.get_noisy_y()))
 
     ROI = max(max_x-min_x, max_y-min_y)
-    NC = (ROI**2)*(25/(5**2))
+    L = ROI/PIXEL
 
     original_chol_trajectories = [t for t in trajectories if t.info['classified_experimental_condition'] == CHOL_NOMENCLATURE]
     original_btx_trajectories = [t for t in trajectories if t.info['classified_experimental_condition'] == BTX_NOMENCLATURE]
 
     for original_chol_trajectory in original_chol_trajectories:
         try:
-            trajs, labels = models_phenom().confinement(1, original_chol_trajectory.length, L=ROI/PIXEL,r=np.mean([a/2 for a in original_chol_trajectory.info['analysis']['confinement-a'] if a is not None])/PIXEL,Nc=NC*ROI,deltaT=0.0003, Ds=[[np.random.uniform(*D),0],[np.random.uniform(*D),0]], alphas=[[1,0], [1,0]])
+            mean_radius = np.mean([np.sqrt((a/np.pi)) for a in original_chol_trajectory.info['analysis']['confinement-area'] if a is not None])
+            NC = 0 
+            if np.isnan(mean_radius):
+                NC = 0
+            else:
+                NC = int(0.10 * (ROI**2) / (2 * np.pi * (mean_radius**2)))
+            trajs, labels = models_phenom().confinement(1, original_chol_trajectory.length, L=L,r=mean_radius/PIXEL,Nc=NC,deltaT=0.0003, Ds=[[np.random.uniform(*D),0],[np.random.uniform(*D),0]], alphas=[[1,0], [1,0]])
             chol_trajectories += andi_datasets_to_trajectories(trajs, labels, particle_type=CHOL_NOMENCLATURE)
         except KeyError:
             pass
     for original_btx_trajectory in original_btx_trajectories:
         try:
-            trajs, labels = models_phenom().confinement(1, original_btx_trajectory.length, L=ROI/PIXEL,r=np.mean([a/2 for a in original_btx_trajectory.info['analysis']['confinement-a'] if a is not None])/PIXEL,Nc=NC*ROI,deltaT=0.0003, Ds=[[np.random.uniform(*D),0],[np.random.uniform(*D),0]], alphas=[[1,0], [1,0]])
-            btx_trajectories += andi_datasets_to_trajectories(trajs, labels, particle_type=BTX_NOMENCLATURE)
+            mean_radius = np.mean([np.sqrt((a/np.pi)) for a in original_btx_trajectory.info['analysis']['confinement-area'] if a is not None])
+            NC = 0 
+            if np.isnan(mean_radius):
+                NC = 0
+            else:
+                NC = int(0.10 * (ROI**2) / (2 * np.pi * (mean_radius**2)))
+            trajs, labels = models_phenom().confinement(1, original_btx_trajectory.length, L=L,r=mean_radius/PIXEL,Nc=NC,deltaT=0.0003, Ds=[[np.random.uniform(*D),0],[np.random.uniform(*D),0]], alphas=[[1,0], [1,0]])
+            chol_trajectories += andi_datasets_to_trajectories(trajs, labels, particle_type=BTX_NOMENCLATURE)
         except KeyError:
             pass
 
@@ -96,6 +108,7 @@ for dataset, file, roi in file_and_rois:
         real_dataframe = transform_trajectories_with_confinement_states_from_mongo_to_dataframe(trajectories)
         real_dataframe = real_dataframe[real_dataframe['confinement-states'] == 1]
         real_value = measure_overlap_with_iou(real_dataframe)
-        simulated_values = ray.get([get_random_value_with_iou.remote([t.copy() for t in trajectories]) for i in tqdm.tqdm(range(99))])
+        #simulated_values = ray.get([get_random_value_with_iou.remote(trajectories) for i in range(99)])
+        simulated_values = [get_random_value_with_iou(trajectories) for i in tqdm.tqdm(range(99))]
         simulated_values.append(real_value)
         np.savetxt(f'./overlaps_significant_test_files/{dataset}_{file}_{roi}.txt', simulated_values)
