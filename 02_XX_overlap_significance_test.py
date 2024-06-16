@@ -14,7 +14,7 @@ from CONSTANTS import *
 from utils import measure_overlap, extract_dataset_file_roi_file, transform_trajectories_with_confinement_states_from_mongo_to_dataframe, measure_overlap_with_iou
 from andi_datasets.models_phenom import models_phenom
 
-PIXEL = 0.100
+PIXEL = 0.100#um
 
 def andi_datasets_to_trajectories(trajs, labels, particle_type=None):
     trajectories = []
@@ -53,7 +53,6 @@ def get_random_value_with_iou(trajectories):
     for original_chol_trajectory in original_chol_trajectories:
         try:
             mean_radius = np.mean([np.sqrt((a/np.pi)) for a in original_chol_trajectory.info['analysis']['confinement-area'] if a is not None])
-            NC = 0 
             if np.isnan(mean_radius):
                 NC = 0
             else:
@@ -65,7 +64,6 @@ def get_random_value_with_iou(trajectories):
     for original_btx_trajectory in original_btx_trajectories:
         try:
             mean_radius = np.mean([np.sqrt((a/np.pi)) for a in original_btx_trajectory.info['analysis']['confinement-area'] if a is not None])
-            NC = 0 
             if np.isnan(mean_radius):
                 NC = 0
             else:
@@ -85,7 +83,7 @@ def get_random_value_with_iou(trajectories):
     #plt.ylabel('Y [um]')
     #plt.show()
     dataframe = dataframe[dataframe['confinement-states'] == 1]
-    return measure_overlap_with_iou(dataframe)
+    return measure_overlap_with_iou(dataframe, bin_size=0.007)
 
 CHOL_AND_BTX_DATASETS = [
     'Cholesterol and btx',
@@ -107,7 +105,7 @@ for dataset, file, roi in file_and_rois:
 
         real_dataframe = transform_trajectories_with_confinement_states_from_mongo_to_dataframe(trajectories)
         real_dataframe = real_dataframe[real_dataframe['confinement-states'] == 1]
-        real_value = measure_overlap_with_iou(real_dataframe)
+        real_value = measure_overlap_with_iou(real_dataframe, bin_size=0.007)
         simulated_values = ray.get([get_random_value_with_iou.remote(trajectories) for _ in range(99)])
         #simulated_values = [get_random_value_with_iou(trajectories) for i in tqdm.tqdm(range(99))]
         simulated_values.append(real_value)
