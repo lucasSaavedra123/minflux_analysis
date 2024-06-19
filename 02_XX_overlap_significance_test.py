@@ -85,7 +85,7 @@ os.makedirs('overlaps_significant_test_files', exist_ok=True)
 
 file_and_rois = [info for info in extract_dataset_file_roi_file() if info[0] in CHOL_AND_BTX_DATASETS]
 file_and_rois = file_and_rois[:len(file_and_rois)//2] if FIRST_HALF else file_and_rois[len(file_and_rois)//2:]
-
+print('Number of samples to analyze:', len(file_and_rois))
 for dataset, file, roi in file_and_rois:
     print(f'./overlaps_significant_test_files/{dataset}_{file}_{roi}.txt')
     if not os.path.exists(f'./overlaps_significant_test_files/{dataset}_{file}_{roi}.txt'):
