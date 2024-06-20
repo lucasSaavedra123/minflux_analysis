@@ -17,7 +17,7 @@ CHOL_AND_BTX_DATASETS = [
 ]
 
 file_and_rois = [info for info in extract_dataset_file_roi_file() if info[0] in CHOL_AND_BTX_DATASETS]
-
+passed_rois_counter = 0
 for dataset, file, roi in file_and_rois:
     if os.path.exists(f'./overlaps_significant_test_files/{dataset}_{file}_{roi}.txt'):
         ious = np.loadtxt(f'./overlaps_significant_test_files/{dataset}_{file}_{roi}.txt')
@@ -26,13 +26,13 @@ for dataset, file, roi in file_and_rois:
 
         q_9500 = np.quantile(ious, 0.9500)
 
-        plt.hist(ious)
-        plt.axvline(real_iou, color='black')
-        plt.axvline(q_9500, color='red')
-        plt.tight_layout()
-        plt.show()
+        #plt.hist(ious)
+        #plt.axvline(real_iou, color='black')
+        #plt.axvline(q_9500, color='red')
+        #plt.tight_layout()
+        #plt.show()
 
         if q_9500 < real_iou:
-            print(f'higher')
-        else:
-            print('random')
+            passed_rois_counter += 1
+
+print(passed_rois_counter/len(file_and_rois))
