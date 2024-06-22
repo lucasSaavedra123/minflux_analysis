@@ -52,6 +52,9 @@ for index, dataset in enumerate(new_datasets_list):
         trajectory_analysis_dataframe[f'{BTX_NOMENCLATURE}_overlap_confinement_portion'] = trajectory_analysis_dataframe[f'number_of_confinement_zones_with_{BTX_NOMENCLATURE}']/trajectory_analysis_dataframe['number_of_confinement_zones']
         trajectory_analysis_dataframe[f'{CHOL_NOMENCLATURE}_overlap_confinement_portion'] = trajectory_analysis_dataframe[f'number_of_confinement_zones_with_{CHOL_NOMENCLATURE}']/trajectory_analysis_dataframe['number_of_confinement_zones']
 
+        trajectory_analysis_dataframe[f'{BTX_NOMENCLATURE}_overlap_non_confinement_portion'] = trajectory_analysis_dataframe[f'{BTX_NOMENCLATURE}_intersections']/trajectory_analysis_dataframe['number_of_non_confined_portions']
+        trajectory_analysis_dataframe[f'{CHOL_NOMENCLATURE}_overlap_non_confinement_portion'] = trajectory_analysis_dataframe[f'{CHOL_NOMENCLATURE}_intersections']/trajectory_analysis_dataframe['number_of_non_confined_portions']
+
         trajectory_analysis_dataframe.to_excel(writer, sheet_name=f'trajectory', index=False)
         trajectory_analysis_dataframe.groupby(['file', 'roi']).mean().to_excel(writer, sheet_name=f'trajectory_by_roi', index=False)
 
