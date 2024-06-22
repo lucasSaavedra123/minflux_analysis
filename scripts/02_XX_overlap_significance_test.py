@@ -43,8 +43,19 @@ def parallel_get_random_value_with_iou(ROI, L, D, mean_radius, length, label):
 @ray.remote
 def parallel_get_free_random_value_with_iou(ROI, L, D, length, label):
     try:
-        trajs, labels = models_phenom().single_state(1, length, L=L, deltaT=0.0003, Ds=[np.random.uniform(*D),0], alphas=[1,0])
-        return andi_datasets_to_trajectories(trajs, labels, particle_type=label)[0]
+        D = np.random.uniform(*D)
+        trajectory = Trajectory(
+            x = np.cumsum(np.random.normal(size=length) * np.sqrt(2*D*0.0003)),
+            y = np.cumsum(np.random.normal(size=length) * np.sqrt(2*D*0.0003)),
+            noise_x=np.random.normal(size=length) * 0.007,
+            noise_y=np.random.normal(size=length) * 0.007,
+            t=np.arange(0,length,1)*0.0003,
+            info={'analysis': 
+                {'confinement-states': np.zeros(length)},
+                'classified_experimental_condition': label, 'trajectory_id': str(np.random.randint(1,10000))+'_'+label}
+        )
+        trajectory = trajectory.random_sample(roi_x=[0,L], roi_y=[0,L])
+        return trajectory
     except KeyError:
         return None
 
@@ -83,7 +94,6 @@ def get_random_value_with_iou(trajectories):
 
 def get_non_confinement_random_value_with_iou(trajectories):
     D = [0.0001,1] #um2/s^-1
-    D = [D[0]/(PIXEL**2), D[1]/(PIXEL**2)]
 
     min_x, max_x = float('inf'), float('-inf')
     min_y, max_y = float('inf'), float('-inf')

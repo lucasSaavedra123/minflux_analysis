@@ -19,20 +19,27 @@ CHOL_AND_BTX_DATASETS = [
 file_and_rois = [info for info in extract_dataset_file_roi_file() if info[0] in CHOL_AND_BTX_DATASETS]
 passed_rois_counter = 0
 for dataset, file, roi in file_and_rois:
-    if os.path.exists(f'./overlaps_significant_test_files/{dataset}_{file}_{roi}.txt'):
-        ious = np.loadtxt(f'./overlaps_significant_test_files/{dataset}_{file}_{roi}.txt')
+    if os.path.exists(f'./confinements_overlaps_significant_test_files/{dataset}_{file}_{roi}.txt'):
+        ious = np.loadtxt(f'./confinements_overlaps_significant_test_files/{dataset}_{file}_{roi}.txt')
         real_iou = ious[-1]
         ious = ious[:-1]
 
         q_9500 = np.quantile(ious, 0.9500)
-
-        #plt.hist(ious)
-        #plt.axvline(real_iou, color='black')
-        #plt.axvline(q_9500, color='red')
-        #plt.tight_layout()
-        #plt.show()
-
         if q_9500 < real_iou:
             passed_rois_counter += 1
 
-print(passed_rois_counter/len(file_and_rois))
+print('Confinement:', passed_rois_counter/len(file_and_rois))
+
+file_and_rois = [info for info in extract_dataset_file_roi_file() if info[0] in CHOL_AND_BTX_DATASETS]
+passed_rois_counter = 0
+for dataset, file, roi in file_and_rois:
+    if os.path.exists(f'./non_confinement_overlaps_significant_test_files/{dataset}_{file}_{roi}.txt'):
+        ious = np.loadtxt(f'./non_confinement_overlaps_significant_test_files/{dataset}_{file}_{roi}.txt')
+        real_iou = ious[-1]
+        ious = ious[:-1]
+
+        q_9500 = np.quantile(ious, 0.9500)
+        if q_9500 < real_iou:
+            passed_rois_counter += 1
+
+print('Non confinement:', passed_rois_counter/len(file_and_rois))
