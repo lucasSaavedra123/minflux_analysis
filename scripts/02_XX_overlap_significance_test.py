@@ -94,6 +94,7 @@ def get_random_value_with_iou(trajectories):
 
 def get_non_confinement_random_value_with_iou(trajectories):
     D = [0.0001,1] #um2/s^-1
+    D = [D[0]/(PIXEL**2), D[1]/(PIXEL**2)]
 
     min_x, max_x = float('inf'), float('-inf')
     min_y, max_y = float('inf'), float('-inf')
@@ -105,12 +106,12 @@ def get_non_confinement_random_value_with_iou(trajectories):
     ROI = max(max_x-min_x, max_y-min_y)
     L = ROI/PIXEL
 
-    #(ROI, D, length, label)
-    original_chol_infos = [(ROI, L, D, t.length, CHOL_NOMENCLATURE) for t in trajectories if t.info['classified_experimental_condition'] == CHOL_NOMENCLATURE and 'analysis' in t.info]
-    original_btx_infos = [(ROI, L, D, t.length, BTX_NOMENCLATURE) for t in trajectories if t.info['classified_experimental_condition'] == BTX_NOMENCLATURE and 'analysis' in t.info]
+    #(ROI, D, mean_radius, length, label)
+    original_chol_infos = [(ROI, L, D, np.mean([np.sqrt((a/np.pi)) for a in t.info['analysis']['confinement-area'] if a is not None]), t.length, CHOL_NOMENCLATURE) for t in trajectories if t.info['classified_experimental_condition'] == CHOL_NOMENCLATURE and 'analysis' in t.info]
+    original_btx_infos = [(ROI, L, D, np.mean([np.sqrt((a/np.pi)) for a in t.info['analysis']['confinement-area'] if a is not None]), t.length, BTX_NOMENCLATURE) for t in trajectories if t.info['classified_experimental_condition'] == BTX_NOMENCLATURE and 'analysis' in t.info]
 
-    chol_trajectories = ray.get([parallel_get_free_random_value_with_iou.remote(*info) for info in original_chol_infos])
-    btx_trajectories = ray.get([parallel_get_free_random_value_with_iou.remote(*info) for info in original_btx_infos])
+    chol_trajectories = ray.get([parallel_get_random_value_with_iou.remote(*info) for info in original_chol_infos])
+    btx_trajectories = ray.get([parallel_get_random_value_with_iou.remote(*info) for info in original_btx_infos])
 
     dataframe = transform_trajectories_with_confinement_states_from_mongo_to_dataframe(chol_trajectories+btx_trajectories)
 
