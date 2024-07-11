@@ -36,6 +36,7 @@ for file, roi in tqdm.tqdm(files):
     trajectories = Trajectory.objects(info__file=file, info__roi=roi)
     for index, trajectory in enumerate(trajectories):
         if trajectory.info['classified_experimental_condition'] == BTX_NOMENCLATURE and trajectory.info['number_of_confinement_zones'] != 0:# and 0.30 <= trajectory.info[f'number_of_confinement_zones_with_{CHOL_NOMENCLATURE}']/trajectory.info['number_of_confinement_zones'] <= 0.40:
+            video_found = False
             """
             x, y = trajectory.get_noisy_x(), trajectory.get_noisy_y()
             tck,u = interpolate.splprep([x,y], s=20)
@@ -59,19 +60,21 @@ for file, roi in tqdm.tqdm(files):
             for aux_t in [t for t in trajectories if t.info['classified_experimental_condition'] == CHOL_NOMENCLATURE]:
                 chol_polygons = []
                 #aux_t = Trajectory.objects(id=chol_trajectory_id)[0]
-
-                for sub_t in aux_t.sub_trajectories_trajectories_from_confinement_states(v_th=33, use_info=True)[1]:
-                    try:
-                        xx, yy = MultiPoint(list(zip(sub_t.get_noisy_x(), sub_t.get_noisy_y()))).convex_hull.exterior.coords.xy
-                        xx, yy =  xx.tolist(), yy.tolist()
-                        chol_polygons.append((sub_t, sort_vertices_anti_clockwise_and_remove_duplicates(list(zip(xx, yy)))))
-                    except AttributeError:
-                        pass
+                try:
+                    for sub_t in aux_t.sub_trajectories_trajectories_from_confinement_states(v_th=33, use_info=True)[1]:
+                        try:
+                            xx, yy = MultiPoint(list(zip(sub_t.get_noisy_x(), sub_t.get_noisy_y()))).convex_hull.exterior.coords.xy
+                            xx, yy =  xx.tolist(), yy.tolist()
+                            chol_polygons.append((sub_t, sort_vertices_anti_clockwise_and_remove_duplicates(list(zip(xx, yy)))))
+                        except AttributeError:
+                            pass
+                except KeyError:
+                    pass
                 for chol_polygon in chol_polygons:
                     for receptor_polygon in receptor_polygons:
                         polygon_intersection = intersect(receptor_polygon[1], chol_polygon[1])
                         if len(polygon_intersection) != 0:
-                            print("Creating video...")
+                            video_found = True
                             chol_time_mean = np.mean(chol_polygon[0].get_time())
                             receptor_time_mean = np.mean(receptor_polygon[0].get_time())
 
@@ -275,5 +278,12 @@ for file, roi in tqdm.tqdm(files):
 
                             combined_clip.write_videofile(f'./animations/{file}_{plot_counter}_animation.mp4')
                             plot_counter += 1
-                            exit()
+
+                        if video_found:
+                            break
+                    if video_found:
+                        break
+                if video_found:
+                    break
+
 DatabaseHandler.disconnect()
