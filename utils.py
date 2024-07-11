@@ -65,6 +65,9 @@ def get_dataframe_of_trajectory_analysis_data(a_query):
         'info.roi':1,
         'info.analysis.confinement-states': 1,
         't': 1,
+        'info.number_of_non_confined_portions': 1,
+        f'info.{CHOL_NOMENCLATURE}_intersections': 1,
+        f'info.{BTX_NOMENCLATURE}_intersections': 1,
         f'info.number_of_confinement_zones_with_{CHOL_NOMENCLATURE}': 1,
         f'info.number_of_confinement_zones_with_{BTX_NOMENCLATURE}': 1,
         'info.number_of_confinement_zones': 1
@@ -80,8 +83,11 @@ def get_dataframe_of_trajectory_analysis_data(a_query):
     dataframe['file'] = []
     dataframe['roi'] = []
     dataframe['change_rate'] = []
+    dataframe[f'{CHOL_NOMENCLATURE}_intersections'] = []
+    dataframe[f'{BTX_NOMENCLATURE}_intersections'] = []
     dataframe[f'number_of_confinement_zones_with_{CHOL_NOMENCLATURE}'] = []
     dataframe[f'number_of_confinement_zones_with_{BTX_NOMENCLATURE}'] = []
+    dataframe[f'number_of_non_confined_portions'] = []
     dataframe[f'number_of_confinement_zones'] = []
 
     documents = Trajectory._get_collection().find(a_query, p)
@@ -106,6 +112,19 @@ def get_dataframe_of_trajectory_analysis_data(a_query):
         dataframe[f'number_of_confinement_zones_with_{CHOL_NOMENCLATURE}'].append(0)
         dataframe[f'number_of_confinement_zones_with_{BTX_NOMENCLATURE}'].append(0)
         dataframe[f'number_of_confinement_zones'].append(0)
+
+        dataframe[f'{CHOL_NOMENCLATURE}_intersections'].append(0)
+        dataframe[f'{BTX_NOMENCLATURE}_intersections'].append(0)
+        dataframe[f'number_of_non_confined_portions'].append(0)
+
+        if f'{CHOL_NOMENCLATURE}_intersections' in d['info']:
+            dataframe[f'{CHOL_NOMENCLATURE}_intersections'][-1] = d['info'][f'{CHOL_NOMENCLATURE}_intersections']
+
+        if f'{BTX_NOMENCLATURE}_intersections' in d['info']:
+            dataframe[f'{BTX_NOMENCLATURE}_intersections'][-1] = d['info'][f'{BTX_NOMENCLATURE}_intersections']
+
+        if f'number_of_non_confined_portions' in d['info']:
+            dataframe[f'number_of_non_confined_portions'][-1] = d['info'][f'number_of_non_confined_portions']
 
         if f'number_of_confinement_zones_with_{CHOL_NOMENCLATURE}' in d['info']:
             dataframe[f'number_of_confinement_zones_with_{CHOL_NOMENCLATURE}'][-1] = d['info'][f'number_of_confinement_zones_with_{CHOL_NOMENCLATURE}']

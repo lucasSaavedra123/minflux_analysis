@@ -11,6 +11,7 @@ from collections import defaultdict
 
 import tqdm
 import numpy as np
+import ray
 
 from DatabaseHandler import DatabaseHandler
 from Trajectory import Trajectory
@@ -19,8 +20,6 @@ from utils import both_trajectories_intersect, extract_dataset_file_roi_file
 
 RADIUS_THRESHOLD = 0.01
 
-DatabaseHandler.connect_over_network(None, None, IP_ADDRESS, COLLECTION_NAME)
-
 CHOL_AND_BTX_DATASETS = [
     'Cholesterol and btx',
     'CK666-BTX680-CHOL',
@@ -28,10 +27,12 @@ CHOL_AND_BTX_DATASETS = [
     'BTX680-fPEG-CHOL-100-nM',
 ]
 
-btx_and_chol_files = list(set([info[1] for info in extract_dataset_file_roi_file() if info[0] in CHOL_AND_BTX_DATASETS]))
 
-for file in tqdm.tqdm(btx_and_chol_files):
-    trajectories = Trajectory.objects(info__file=file)
+ray.init()
+@ray.remote
+def analyze_dataset(dataset,file,roi):
+    DatabaseHandler.connect_over_network(None, None, IP_ADDRESS, COLLECTION_NAME)
+    trajectories = Trajectory.objects(info__dataset=dataset, info__file=file, info__roi=roi)
     trajectories_by_condition = defaultdict(lambda: [])
     non_confined_portions_by_condition = defaultdict(lambda: [])
 
@@ -43,27 +44,38 @@ for file in tqdm.tqdm(btx_and_chol_files):
         trajectories_by_condition[trajectory.info['classified_experimental_condition']].append(trajectory)
 
     for btx_trajectory in trajectories_by_condition[BTX_NOMENCLATURE]:
-        btx_trajectory.info[f'non_confinement_portions_lengths'] = []
-        btx_trajectory.info[f'{CHOL_NOMENCLATURE}_intersections'] = []
-        for non_btx_confinement_portion in btx_trajectory.sub_trajectories_trajectories_from_confinement_states(v_th=33, transition_fix_threshold=3, use_info=True)[0]:
-            btx_trajectory.info[f'non_confinement_portions_lengths'].append(non_btx_confinement_portion.length)
-            btx_trajectory.info[f'{CHOL_NOMENCLATURE}_intersections'].append(0)
+        try:
+            non_confined_portions = btx_trajectory.sub_trajectories_trajectories_from_confinement_states(v_th=33, transition_fix_threshold=3, use_info=True)[0]
+        except KeyError:
+            continue
+        btx_trajectory.info[f'{CHOL_NOMENCLATURE}_intersections'] = 0
+        btx_trajectory.info[f'number_of_non_confined_portions'] = len(non_confined_portions)
+        for non_btx_confinement_portion in non_confined_portions:
             for non_chol_confinement_portion in non_confined_portions_by_condition[CHOL_NOMENCLATURE]:
                 overlap, intersections = both_trajectories_intersect(non_btx_confinement_portion, non_chol_confinement_portion, via='kd-tree', radius_threshold=RADIUS_THRESHOLD, return_kd_tree_intersections=True)
-                for intersection in intersections:
-                    btx_trajectory.info[f'{CHOL_NOMENCLATURE}_intersections'][-1] += 1 if len(intersection) > 0 else 0
+                if overlap:
+                    btx_trajectory.info[f'{CHOL_NOMENCLATURE}_intersections'] += 1
+                    break
+
         btx_trajectory.save()
 
     for chol_trajectory in trajectories_by_condition[CHOL_NOMENCLATURE]:
-        chol_trajectory.info[f'non_confinement_portions_lengths'] = []
-        chol_trajectory.info[f'{BTX_NOMENCLATURE}_intersections'] = []
-        for non_chol_confinement_portion in chol_trajectory.sub_trajectories_trajectories_from_confinement_states(v_th=33, transition_fix_threshold=3, use_info=True)[0]:
-            chol_trajectory.info[f'non_confinement_portions_lengths'].append(non_btx_confinement_portion.length)
-            chol_trajectory.info[f'{BTX_NOMENCLATURE}_intersections'].append(0)
+        try:
+            non_confined_portions = chol_trajectory.sub_trajectories_trajectories_from_confinement_states(v_th=33, transition_fix_threshold=3, use_info=True)[0]
+        except KeyError:
+            continue
+        chol_trajectory.info[f'{BTX_NOMENCLATURE}_intersections'] = 0
+        chol_trajectory.info[f'number_of_non_confined_portions'] = len(non_confined_portions)
+        for non_chol_confinement_portion in non_confined_portions:
             for non_btx_confinement_portion in non_confined_portions_by_condition[BTX_NOMENCLATURE]:
                 overlap, intersections = both_trajectories_intersect(non_chol_confinement_portion, non_btx_confinement_portion, via='kd-tree', radius_threshold=RADIUS_THRESHOLD, return_kd_tree_intersections=True)
-                for intersection in intersections:
-                    chol_trajectory.info[f'{BTX_NOMENCLATURE}_intersections'][-1] += 1 if len(intersection) > 0 else 0
+                if overlap:
+                    chol_trajectory.info[f'{BTX_NOMENCLATURE}_intersections'] += 1
+                    break
+
         chol_trajectory.save()
 
-DatabaseHandler.disconnect()
+    DatabaseHandler.disconnect()
+
+btx_and_chol_files = [info for info in extract_dataset_file_roi_file() if info[0] in CHOL_AND_BTX_DATASETS]
+ray.get([analyze_dataset.remote(dataset,file,roi) for dataset, file, roi in btx_and_chol_files])

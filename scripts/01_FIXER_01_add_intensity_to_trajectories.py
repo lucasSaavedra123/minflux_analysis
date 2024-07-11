@@ -14,6 +14,7 @@ import tqdm
 from DatabaseHandler import DatabaseHandler
 from Trajectory import Trajectory
 from CONSTANTS import *
+from utils import extract_dataset_file_roi_file
 
 
 DatabaseHandler.connect_over_network(None, None, IP_ADDRESS, 'MINFLUX_DATA')
@@ -65,8 +66,6 @@ def extract_dataframes_from_file(a_file):
             initial_row = row_index
             current_id = dataset.iloc[row_index]['track_id']
 
-
-
     extraction_result.append((
         dataset.iloc[initial_row:row_index].copy().sort_values('t', ascending=True),
         int(current_id),
@@ -75,9 +74,9 @@ def extract_dataframes_from_file(a_file):
 
     return extraction_result
 
-
-for a_file in tqdm.tqdm(glob.glob("../AChR data/*.txt")):
-    if Trajectory._get_collection().count_documents({'info.file': a_file.split('\\')[-1]}) != 0:
+file_names = list(set([a[1] for a in extract_dataset_file_roi_file()]))
+for a_file in tqdm.tqdm(glob.glob("../Datasets-Sorted/*/*.txt")):
+    if a_file.split('\\')[-1] in file_names:
         extraction_result = extract_dataframes_from_file(a_file)
 
         for info_extracted in extraction_result:
