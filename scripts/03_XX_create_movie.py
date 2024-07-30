@@ -31,7 +31,8 @@ CHOL_AND_BTX_DATASETS = [
 files = [[info[1], info[2]] for info in extract_dataset_file_roi_file() if info[0] in CHOL_AND_BTX_DATASETS]
 
 
-for file, roi in tqdm.tqdm(files):
+for file, roi in files:
+    print(file,roi)
     plot_counter = 0
     trajectories = Trajectory.objects(info__file=file, info__roi=roi)
     for index, trajectory in enumerate(trajectories):
@@ -74,6 +75,7 @@ for file, roi in tqdm.tqdm(files):
                     for receptor_polygon in receptor_polygons:
                         polygon_intersection = intersect(receptor_polygon[1], chol_polygon[1])
                         if len(polygon_intersection) != 0:
+                            print("video_found = True")
                             video_found = True
                             chol_time_mean = np.mean(chol_polygon[0].get_time())
                             receptor_time_mean = np.mean(receptor_polygon[0].get_time())
@@ -258,25 +260,26 @@ for file, roi in tqdm.tqdm(files):
                                     marker='+')
                                 ]
 
-                            anim_one = animation.FuncAnimation(fig=fig, func=update_one, frames=frames)
-                            anim_two = animation.FuncAnimation(fig=fig, func=update_two, frames=frames)
-                            anim_three = animation.FuncAnimation(fig=fig, func=update_three, frames=frames)
-
+                            anim_one = animation.FuncAnimation(fig=fig, func=update_one, frames=frames[::4], blit=True, interval=1)
+                            anim_two = animation.FuncAnimation(fig=fig, func=update_two, frames=frames[::4], blit=True, interval=1)
+                            anim_three = animation.FuncAnimation(fig=fig, func=update_three, frames=frames[::4], blit=True, interval=1)
+                            print("for i, anim in enumerate([anim_one, anim_two, anim_three]):")
                             for i, anim in enumerate([anim_one, anim_two, anim_three]):
-                                anim.save(f'animation.gif', writer=animation.PillowWriter(fps=30), dpi=300)
-
+                                print("anim.save(f'animation.gif', writer=animation.PillowWriter(fps=30), dpi=60)")
+                                anim.save(f'animation.gif', writer=animation.PillowWriter(fps=30), dpi=60)
+                                print("mp.VideoFileClip(f'animation.gif')")
                                 clip = mp.VideoFileClip(f'animation.gif')
                                 (w, h) = clip.size
                                 clip = crop(clip, width=h, height=h, x_center=w/2, y_center=h/2)
-                                clip.write_videofile(f'./animations/{file}_{plot_counter}_animation_{i}.mp4')
+                                clip.write_videofile(f'./animations/{file}_{trajectory.info["id"]}_{plot_counter}_animation_{i}.mp4')
 
                             combined_clip = clips_array([[
-                                mp.VideoFileClip(f'./animations/{file}_{plot_counter}_animation_0.mp4'),
-                                mp.VideoFileClip(f'./animations/{file}_{plot_counter}_animation_1.mp4'),
-                                mp.VideoFileClip(f'./animations/{file}_{plot_counter}_animation_2.mp4'),
+                                mp.VideoFileClip(f'./animations/{file}_{trajectory.info["id"]}_{plot_counter}_animation_0.mp4'),
+                                mp.VideoFileClip(f'./animations/{file}_{trajectory.info["id"]}_{plot_counter}_animation_1.mp4'),
+                                mp.VideoFileClip(f'./animations/{file}_{trajectory.info["id"]}_{plot_counter}_animation_2.mp4'),
                             ]])
 
-                            combined_clip.write_videofile(f'./animations/{file}_{plot_counter}_animation.mp4')
+                            combined_clip.write_videofile(f'./animations/{file}_{trajectory.info["id"]}_{plot_counter}_animation.mp4')
                             plot_counter += 1
 
                         if video_found:
