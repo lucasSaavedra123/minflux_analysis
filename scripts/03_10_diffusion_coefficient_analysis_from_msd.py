@@ -124,7 +124,7 @@ for index, dataset in enumerate(new_datasets_list):
         plt.loglog(t_lag,popt[1]*(t_lag**popt[0]), color='red')
         """
         ax.set_xlim([min(ea_ta_msd_t_vec), max(ea_ta_msd_t_vec)])
-        #ax.set_ylim([0, 1])
+        ax.set_ylim([1e-2, 1])
         plt.xticks(fontsize=45)
         plt.yticks(fontsize=45)
         ax.tick_params(which='major', direction='out', length=6, width=2, pad=5)

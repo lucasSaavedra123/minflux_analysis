@@ -34,8 +34,10 @@ def analyze_dcr(datasets_one, datasets_two, datasets_combined, dataset_one_label
 
         sns.set(font_scale=2)
         sns.set_style("whitegrid")
-        sns.histplot(data=dcr_dataframe, x='Track detection channel ratio (tDCR)', hue='Experimental condition', kde=True, legend=False, binwidth=0.01)
+        sns.histplot(data=dcr_dataframe, x='Track detection channel ratio (tDCR)', hue='Experimental condition', kde=True, legend=False, binwidth=0.01, stat='probability')
+        plt.ylabel('Fraction')
         plt.xlim([0,1])
+        plt.ylim([0,0.3])
         plt.xticks([0.2,0.4,0.6,0.8,1.0])
         plt.axvline(TDCR_THRESHOLD, color='black', linestyle='--', linewidth=2)
         plt.tight_layout()
@@ -58,8 +60,10 @@ def analyze_dcr(datasets_one, datasets_two, datasets_combined, dataset_one_label
 
         sns.set(font_scale=2)
         sns.set_style("whitegrid")
-        sns.histplot(data=dcr_dataframe, x='Track detection channel ratio (tDCR)', color='#805380', edgecolor='#634163', kde=True, legend=False, binwidth=0.01)
+        sns.histplot(data=dcr_dataframe, x='Track detection channel ratio (tDCR)', color='#805380', edgecolor='#634163', kde=True, legend=False, binwidth=0.01, stat='probability')
+        plt.ylabel('Fraction')
         plt.xlim([0,1])
+        plt.ylim([0,0.3])
         plt.xticks([0.2,0.4,0.6,0.8,1.0])
         plt.axvline(TDCR_THRESHOLD, color='black', linestyle='--', linewidth=2)
         plt.tight_layout()
