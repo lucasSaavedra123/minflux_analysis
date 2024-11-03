@@ -51,10 +51,19 @@ for dataset in DATASETS_LIST:
             steps = list(range(1, len(info['t'])+1))
 
             # Normalize the array vals so they can be mapped to a color
-            c_norm = mpl.colors.Normalize(vmin=0.35, vmax=0.75)
+            c_norm = mpl.colors.Normalize(vmin=0, vmax=1)
 
             # Pick a colormap
-            c_map  = mpl.cm.inferno
+            #c_map  = mpl.cm.cividis
+            c_map = mpl.colors.LinearSegmentedColormap.from_list('custom_grad', (
+                    (0.000, (0.000, 0.439, 1.000)),
+                    (0.350, (0.000, 0.439, 1.000)),
+                    (0.400, (0.000, 0.000, 0.000)),
+                    (0.550, (0.000, 0.000, 0.000)),
+                    (0.600, (0.000, 0.439, 1.000)),
+                    (1.000, (0.000, 0.439, 1.000))
+                )
+            )
 
             # Scalar mappable of normalized array to colormap
             s_map  = mpl.cm.ScalarMappable(cmap=c_map, norm=c_norm)
@@ -85,7 +94,6 @@ for dataset in DATASETS_LIST:
 
             plt.tight_layout()
             plt.savefig(f'./dcr_intensities/{dataset}_{str(i).zfill(9)}.svg')
-            plt.clf()
 
             fig, ax = plt.subplots(1,1)
 
@@ -109,6 +117,8 @@ for dataset in DATASETS_LIST:
                 ax.set_xlim([x_middle-((ylim[1] - ylim[0])/2), x_middle+((ylim[1] - ylim[0])/2)])
                 ax.set_ylim([y_middle-((ylim[1] - ylim[0])/2), y_middle+((ylim[1] - ylim[0])/2)])
 
+            plt.subplots_adjust(left=0.31, right=0.983, top=0.968, bottom=0.137)
+            plt.tight_layout()
             plt.savefig(f'./dcr_intensities/{dataset}_{str(i).zfill(9)}_trajectory.png', dpi=600)
 
 """
