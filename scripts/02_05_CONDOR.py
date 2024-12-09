@@ -20,12 +20,14 @@ from Trajectory import Trajectory
 from collections import defaultdict
 import pickle
 import glob
-
+from scipy.stats import mode
+from collections import Counter
+ 
 
 APPEND_MORE_DATA = False
 CREATE_DATA = False
 LOAD_MODEL = True
-PLOT_STATS = True
+PLOT_STATS = False
 
 DATASET_PATH = './single_simulations'
 RAW_DATA_PATH = './dataset.npy'
@@ -86,6 +88,7 @@ X = RAW_ARRAY[~np.any(np.isnan(RAW_ARRAY), axis=1), :-len(CLASS_LABELS)]
 Y = RAW_ARRAY[~np.any(np.isnan(RAW_ARRAY), axis=1), -len(CLASS_LABELS):]
 
 print("Data shape", X.shape, Y.shape)
+
 model = keras.Sequential(
     [   
         keras.Input(shape=(X.shape[1],)),
@@ -102,8 +105,8 @@ model.summary()
 if LOAD_MODEL:
     try:
         model.load_weights('model.keras')
-        X_val, Y_val = np.load('X_val_do_not_delete.npy'), np.load('Y_val_do_not_delete.npy')
-        history_dict = json.load(open('training_history_do_not_delete.json', 'r'))
+        #X_val, Y_val = np.load('X_val_do_not_delete.npy'), np.load('Y_val_do_not_delete.npy')
+        #history_dict = json.load(open('training_history_do_not_delete.json', 'r'))
     except FileNotFoundError:
         print("LOAD_MODEL=True cannot be executed because files are measing. Please, set LOAD_MODEL=False")
 else:
@@ -168,12 +171,9 @@ p = {
     'info.analysis.confinement-classification': 1,
 }
 
-for t_info in tqdm.tqdm(Trajectory._get_collection().find({'info.immobile':False}, p)):
+t_classifications = []
+for t_info in tqdm.tqdm(Trajectory._get_collection().find({'info.immobile':True}, p)):
     #t = Trajectory.objects(id=t_info['_id'])[0]
-    if 'analysis' not in t_info['info'] or len(t_info['x']) <= 1 or 'confinement-classification' in t_info['info']['analysis']:
-        continue
-
-    confinement_classifications = []
 
     fake_trajectory = Trajectory(
         x=t_info['x'],
@@ -181,6 +181,29 @@ for t_info in tqdm.tqdm(Trajectory._get_collection().find({'info.immobile':False
         t=t_info['t'],
         noisy=True
     )
+
+    fake_trajectory.plot()
+    raw_input = np.zeros((1, (60*2)))
+    raw_sub_t = np.zeros((1, fake_trajectory.length, 3))
+    raw_sub_t[0,:,0] = np.array(fake_trajectory.get_noisy_x()) * 1000
+    raw_sub_t[0,:,1] = np.array(fake_trajectory.get_noisy_y()) * 1000
+    raw_sub_t[0,:,2] = np.array(fake_trajectory.get_time())
+
+    try:
+        raw_input[0, :] = transform_traj_into_features(raw_sub_t)[0]
+    except:
+        t_classifications.append(None)
+        continue
+
+    predicted = np.argmax(model.predict(raw_input, verbose=0), axis=-1)
+    t_classifications.append(CLASS_LABELS[predicted[0]])
+    print(Counter(t_classifications))
+    continue
+
+    if 'analysis' not in t_info['info'] or len(t_info['x']) <= 1 or 'confinement-classification' in t_info['info']['analysis']:
+        continue
+
+    confinement_classifications = []
 
     for sub_t in fake_trajectory.sub_trajectories_trajectories_from_confinement_states(v_th=33)[1]:
         raw_input = np.zeros((1, (60*2)))
@@ -198,7 +221,18 @@ for t_info in tqdm.tqdm(Trajectory._get_collection().find({'info.immobile':False
 
         predicted = np.argmax(model.predict(raw_input, verbose=0), axis=-1)
         confinement_classifications.append(CLASS_LABELS[predicted[0]])
+    if len(confinement_classifications) != 0:
+        def most_frequent(List):
+            occurence_count = Counter(List)
+            return occurence_count.most_common(1)[0][0]
 
-    Trajectory._get_collection().update_one({'_id':t_info['_id']}, {"$set":{"info.analysis.confinement-classification":confinement_classifications}})
+        plt.title(most_frequent(confinement_classifications))
+        plt.plot(t_info['x'], t_info['y'])
+        plt.tight_layout()
+        plt.show()
+
+        fake_trajectory.plot_confinement_states(v_th=33, transition_fix_threshold=3)
+
+    #Trajectory._get_collection().update_one({'_id':t_info['_id']}, {"$set":{"info.analysis.confinement-classification":confinement_classifications}})
 
 DatabaseHandler.disconnect()
