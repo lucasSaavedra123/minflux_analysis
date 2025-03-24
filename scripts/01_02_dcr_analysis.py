@@ -14,7 +14,7 @@ from CONSTANTS import *
 from utils import *
 
 def analyze_dcr(datasets_one, datasets_two, datasets_combined, dataset_one_label, dataset_two_label):
-    plt.rcParams['savefig.dpi'] = 500
+    plt.rcParams['savefig.dpi'] = 150
     DatabaseHandler.connect_over_network(None, None, IP_ADDRESS, COLLECTION_NAME)
 
     dataset_one_dcr_values, dataset_one_efo_values = [], []
@@ -41,7 +41,7 @@ def analyze_dcr(datasets_one, datasets_two, datasets_combined, dataset_one_label
     plt.show()
 
     sns.set(font_scale=3.5)
-    sns.histplot(data=dcr_dataframe, x='Track detection channel ratio (tDCR)', y='EFO', hue='Experimental condition', kde=True)
+    sns.histplot(data=dcr_dataframe, x='Track detection channel ratio (tDCR)', y='EFO', hue='Experimental condition', kde=True, legend=False)
     plt.xlim([0,1])
     plt.ylim([0,1e6])
     plt.xticks([0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1.0])
@@ -60,13 +60,13 @@ def analyze_dcr(datasets_one, datasets_two, datasets_combined, dataset_one_label
     })
 
     sns.set(font_scale=3.5)
-    sns.histplot(data=dcr_dataframe, x='Track detection channel ratio (tDCR)', color='#805380', edgecolor='#634163', kde=True)
+    sns.histplot(data=dcr_dataframe, x='Track detection channel ratio (tDCR)', color='#805380', edgecolor='#634163', kde=True, legend=False)
     plt.xlim([0,1])
     plt.xticks([0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1.0])
     plt.show()
 
     sns.set(font_scale=3.5)
-    sns.histplot(data=dcr_dataframe, x='Track detection channel ratio (tDCR)', y='EFO', color='#805380', kde=True)
+    sns.histplot(data=dcr_dataframe, x='Track detection channel ratio (tDCR)', y='EFO', color='#805380', kde=True, legend=False)
     plt.xlim([0,1])
     plt.ylim([0,1e6])
     plt.xticks([0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1.0])
