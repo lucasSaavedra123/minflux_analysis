@@ -23,6 +23,8 @@ DATASETS_LIST = [
     'BTX640-CHOL-50-nM-LOW-DENSITY',
     'BTX680-fPEG-CHOL-50-nM',
     'BTX680-fPEG-CHOL-100-nM',
+    'Control2',
+    'Antibody'
 ]
 
 DATASET_TO_COLOR = {
