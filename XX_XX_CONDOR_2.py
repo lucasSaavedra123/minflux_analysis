@@ -123,7 +123,7 @@ for _ in tqdm.tqdm(list(range(10_000))):
         Fs = np.array([1.0]), # Fractions of each state
         Ds = np.array([d]), # Diffusion coefficients of each state
         nb_dims = 2,
-        velocities = np.array([0.01]), # Velocities coefficients of each state
+        velocities = np.array([0.0]), # Velocities coefficients of each state
         angular_Ds = np.array([0.0]), # Rotational diffusion coefficient of the velocity for each state
         conf_forces = np.array([confinement_factor]), # Confinement factor for each state
         conf_Ds = np.array([confinement_d]), # Diffusion coefficients of the potential well for each state
