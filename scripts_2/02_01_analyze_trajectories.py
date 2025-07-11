@@ -50,6 +50,10 @@ def analyze_trajectory(trajectory_id):
 
         trajectory.info['analysis'][f'{state}-steps-deepspt'] = []
         trajectory.info['analysis'][f'{state}-duration-deepspt'] = []
+        trajectory.info['analysis'][f'{state}-area-deepspt'] = []
+        trajectory.info['analysis'][f'{state}-a-deepspt'] = []
+        trajectory.info['analysis'][f'{state}-b-deepspt'] = []
+        trajectory.info['analysis'][f'{state}-e-deepspt'] = []
         trajectory.info['analysis'][f'{state}-k-deepspt'] = []
         trajectory.info['analysis'][f'{state}-betha-deepspt'] = []
         trajectory.info['analysis'][f'{state}-goodness_of_fit-deepspt'] = []
@@ -77,7 +81,6 @@ def analyze_trajectory(trajectory_id):
 
                 a,b,e = get_elliptical_information_of_data_points(raw_trajectory)
 
-                trajectory.info['analysis'][f'{state}_areas_centroids-deepspt'].append(np.mean(raw_trajectory, axis=0).tolist())
                 trajectory.info['analysis'][f'{state}-duration-deepspt'].append(sub_trajectory.duration)
                 trajectory.info['analysis'][f'{state}-steps-deepspt'].append(sub_trajectory.length)
                 trajectory.info['analysis'][f'{state}-area-deepspt'].append(area)
@@ -99,7 +102,6 @@ def analyze_trajectory(trajectory_id):
                     trajectory.info['analysis'][f'{state}-betha-deepspt'].append(None)
                     trajectory.info['analysis'][f'{state}-goodness_of_fit-deepspt'].append(None)
             except QhullError:
-                trajectory.info['analysis'][f'{state}_areas_centroids-deepspt'].append(None)
                 trajectory.info['analysis'][f'{state}-duration-deepspt'].append(None)
                 trajectory.info['analysis'][f'{state}-steps-deepspt'].append(None)
                 trajectory.info['analysis'][f'{state}-area-deepspt'].append(None)
