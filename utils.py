@@ -59,6 +59,39 @@ def transform_trajectories_with_confinement_states_from_mongo_to_dataframe(traje
     dataframe = pd.DataFrame(dataframe)
     return dataframe
 
+def get_dataframe_of_trajectory_analysis_data_deep_spt(a_query, state):
+    p = {
+        'info.file':1,
+        'info.roi':1,
+    }
+
+    dataframe = {}
+    fields = [f'{state}_residence_time-deepspt', f'{state}_inverse_residence_time-deepspt']
+
+    for field in fields:
+        p[f'info.analysis.{field}'] = 1
+        dataframe[field] = []
+
+    dataframe['file'] = []
+    dataframe['roi'] = []
+
+    documents = Trajectory._get_collection().find(a_query, p)
+
+    for d in documents:
+        if 'analysis' not in d['info']:
+            continue
+        dataframe['file'].append(d['info']['file'])
+        dataframe['roi'].append(d['info']['roi'])
+        for field in fields:
+            try:
+                dataframe[field].append(d['info']['analysis'][field])
+            except KeyError:
+                dataframe[field].append(None)
+
+    dataframe = pd.DataFrame(dataframe)
+    return dataframe
+
+
 def get_dataframe_of_trajectory_analysis_data(a_query):
     p = {
         'info.file':1,
