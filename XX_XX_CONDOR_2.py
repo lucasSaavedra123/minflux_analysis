@@ -165,11 +165,12 @@ p = {
     'y':1,
     't': 1,
     'info.analysis.confinement-factor': 1,
+    'info.analysis.confinement-states-deepspt': 1,
 }
 
 t_classifications = []
 for t_info in tqdm.tqdm(Trajectory._get_collection().find({}, p)):#find({'info.immobile':True}, p)):
-    if 'analysis' not in t_info['info'] or len(t_info['x']) <= 1 or 'confinement-factor' in t_info['info']['analysis']:
+    if 'analysis' not in t_info['info'] or 'confinement-states-deepspt' not in t_info['info']['analysis'] or len(t_info['x']) <= 1:
         continue
 
     fake_trajectory = Trajectory(
@@ -181,7 +182,7 @@ for t_info in tqdm.tqdm(Trajectory._get_collection().find({}, p)):#find({'info.i
 
     confinement_classifications = []
 
-    for sub_t in fake_trajectory.sub_trajectories_trajectories_from_confinement_states(v_th=33, transition_fix_threshold=3)[1]:
+    for sub_t in fake_trajectory.sub_trajectories_trajectories_from_confinement_states(custom_states=t_info['info']['analysis']['confinement-states-deepspt'])[1]:
         raw_input = np.zeros((1, (60*2)))
 
         raw_sub_t = np.zeros((1, sub_t.length, 3))
