@@ -261,6 +261,35 @@ def get_confinement_factors(a_query):
     confinement_dataframe = pd.DataFrame(confinement_dataframe)
     return confinement_dataframe
 
+def get_directed_deviations(a_query):
+    p = {'info.file':1,'info.roi':1}
+
+    confinement_dataframe = {}
+    confinement_fields = ['directed-deviation']
+
+    confinement_dataframe['roi'], confinement_dataframe['file'] = [], []
+    for field in confinement_fields:
+        p[f'info.analysis.{field}'] = 1
+        confinement_dataframe[field] = []
+
+    documents = Trajectory._get_collection().find(a_query, p)
+
+    for d in documents:
+        if 'analysis' not in d['info']:
+            continue
+        confinement_values = [d['info']['analysis'][field] for field in confinement_fields]
+        confinement_values = zip(*confinement_values)
+
+        for row in confinement_values:
+            confinement_dataframe['file'].append(d['info']['file'])
+            confinement_dataframe['roi'].append(d['info']['roi'])
+
+            for field, value in zip(confinement_fields, row):
+                confinement_dataframe[field].append(value)
+
+    confinement_dataframe = pd.DataFrame(confinement_dataframe)
+    return confinement_dataframe
+
 def get_dataframe_of_portions_analysis_data(a_query):
     p = {'info.file':1,'info.roi':1}
 
