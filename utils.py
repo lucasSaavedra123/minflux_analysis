@@ -63,10 +63,11 @@ def get_dataframe_of_trajectory_analysis_data_deep_spt(a_query, state):
     p = {
         'info.file':1,
         'info.roi':1,
+        't': 1
     }
 
     dataframe = {}
-    fields = [f'{state}_residence_time-deepspt', f'{state}_inverse_residence_time-deepspt']
+    fields = [f'{state}_residence_time-deepspt']
 
     for field in fields:
         p[f'info.analysis.{field}'] = 1
@@ -74,6 +75,7 @@ def get_dataframe_of_trajectory_analysis_data_deep_spt(a_query, state):
 
     dataframe['file'] = []
     dataframe['roi'] = []
+    dataframe['duration'] = []
 
     documents = Trajectory._get_collection().find(a_query, p)
 
@@ -82,6 +84,7 @@ def get_dataframe_of_trajectory_analysis_data_deep_spt(a_query, state):
             continue
         dataframe['file'].append(d['info']['file'])
         dataframe['roi'].append(d['info']['roi'])
+        dataframe['duration'].append(d['t'][-1] - d['t'][0])
         for field in fields:
             try:
                 dataframe[field].append(d['info']['analysis'][field])
@@ -228,6 +231,35 @@ def get_dataframe_of_portions_analysis_data_by_state(a_query, state):
     state_dataframe = state_dataframe.apply(state_mask, axis=1)
 
     return state_dataframe
+
+def get_confinement_factors(a_query):
+    p = {'info.file':1,'info.roi':1}
+
+    confinement_dataframe = {}
+    confinement_fields = ['confinement-factor']
+
+    confinement_dataframe['roi'], confinement_dataframe['file'] = [], []
+    for field in confinement_fields:
+        p[f'info.analysis.{field}'] = 1
+        confinement_dataframe[field] = []
+
+    documents = Trajectory._get_collection().find(a_query, p)
+
+    for d in documents:
+        if 'analysis' not in d['info']:
+            continue
+        confinement_values = [d['info']['analysis'][field] for field in confinement_fields]
+        confinement_values = zip(*confinement_values)
+
+        for row in confinement_values:
+            confinement_dataframe['file'].append(d['info']['file'])
+            confinement_dataframe['roi'].append(d['info']['roi'])
+
+            for field, value in zip(confinement_fields, row):
+                confinement_dataframe[field].append(value)
+
+    confinement_dataframe = pd.DataFrame(confinement_dataframe)
+    return confinement_dataframe
 
 def get_dataframe_of_portions_analysis_data(a_query):
     p = {'info.file':1,'info.roi':1}
@@ -721,8 +753,10 @@ def ischange(xn, method='variance', threshold=0, window_size=1):
     else:
         raise ValueError(f"Method '{method}' is not valid.")
 
-def transform_traj_into_features(array):
-    expected_q = 60*(array.shape[-1]-1)
+def transform_traj_into_features(array, add_turning_angle=False):
+    from Trajectory import turning_angles
+
+    expected_q = 60*(array.shape[-1]-1) if not add_turning_angle else (60*(array.shape[-1]-1))+(4*6)
     features = np.zeros((array.shape[0], expected_q))
 
     for trajectory_index in range(array.shape[0]):
