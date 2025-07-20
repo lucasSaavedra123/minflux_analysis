@@ -195,7 +195,8 @@ def get_dataframe_of_portions_analysis_data_by_state(a_query, state):
         f'{state}-betha-deepspt',
         f'{state}-k-deepspt',
         f'{state}-duration-deepspt',
-        f'{state}-goodness_of_fit-deepspt'
+        f'{state}-goodness_of_fit-deepspt',
+        f'{state}-anomaly_score-deepspt'
     ]
     state_dataframe = {}
 
