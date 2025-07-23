@@ -585,6 +585,8 @@ class Trajectory(Document):
             new_trajectory.info['analysis'] = {}
             if 'confinement-states' in self.info['analysis']:
                 new_trajectory.info['analysis']['confinement-states'] = self.info['analysis']['confinement-states'][initial_index:final_index]
+            if 'anomaly_scores' in self.info['analysis']:
+                new_trajectory.info['analysis']['anomaly_scores'] = self.info['analysis']['anomaly_scores'][initial_index:final_index]
 
         return new_trajectory
 
