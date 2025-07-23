@@ -57,6 +57,7 @@ def analyze_trajectory(trajectory_id):
         trajectory.info['analysis'][f'{state}-k-deepspt'] = []
         trajectory.info['analysis'][f'{state}-betha-deepspt'] = []
         trajectory.info['analysis'][f'{state}-goodness_of_fit-deepspt'] = []
+        trajectory.info['analysis'][f'{state}-anomaly_score-deepspt'] = []
 
         indices = np.nonzero(states[1:] != states[:-1])[0] + 1
         intervals = np.split(trajectory.get_time(), indices)
@@ -73,6 +74,11 @@ def analyze_trajectory(trajectory_id):
 
         sub_trajectories_by_state = trajectory.sub_trajectories_trajectories_from_confinement_states(custom_states=states)
         for sub_trajectory in sub_trajectories_by_state[1]:
+            if 'anomaly_scores' not in sub_trajectory.info['analysis']:
+                trajectory.info['analysis'][f'{state}-anomaly_score-deepspt'].append(None)
+            else:
+                trajectory.info['analysis'][f'{state}-anomaly_score-deepspt'].append(np.mean(sub_trajectory.info['analysis']['anomaly_scores']))
+
             try:
                 raw_trajectory = np.zeros((sub_trajectory.length, 2))
                 raw_trajectory[:,0] = sub_trajectory.get_noisy_x()
