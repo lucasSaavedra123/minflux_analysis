@@ -196,8 +196,14 @@ def get_dataframe_of_portions_analysis_data_by_state(a_query, state):
         f'{state}-k-deepspt',
         f'{state}-duration-deepspt',
         f'{state}-goodness_of_fit-deepspt',
-        f'{state}-anomaly_score-deepspt'
+        f'{state}-anomaly_score-deepspt',
     ]
+
+    if state == 'confinement':
+        state_fields.append(f'confinement-factor')
+    if state == 'directed':
+        state_fields.append(f'directed-deviation')
+
     state_dataframe = {}
 
     state_dataframe['roi'], state_dataframe['file'] = [], []
