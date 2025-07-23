@@ -17,7 +17,7 @@ ray.init()
 
 @ray.remote
 def analyze_trajectory(trajectory_id):
-    DatabaseHandler.connect_over_network(None, None, IP_ADDRESS, COLLECTION_NAME)
+    DatabaseHandler.connect_over_network(None, None, IP_ADDRESS, COLLECTION_NAME_STORM)
 
     trajectories = Trajectory.objects(id=trajectory_id)
     assert len(trajectories) == 1
