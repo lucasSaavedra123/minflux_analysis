@@ -35,7 +35,7 @@ DatabaseHandler.connect_over_network(None, None, IP_ADDRESS, COLLECTION_NAME_STO
 
 for data in dataset:
     print(f"Label: {data['label']}, Experimental Condition: {data['exp_cond']}")
-    trajectories = Trajectory.from_mat_dataset(data['tracks'], data['label'], data['exp_cond'])
+    trajectories = Trajectory.from_mat_dataset(data['tracks'], data['label'], data['exp_cond'], scale_factor=1) #Scale factor = 1 -> Dimensions ars 1um
     for trajectory in tqdm.tqdm(trajectories):
         trajectory.save()
 
