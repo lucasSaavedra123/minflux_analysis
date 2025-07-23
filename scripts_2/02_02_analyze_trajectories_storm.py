@@ -91,11 +91,10 @@ def analyze_trajectory(trajectory_id):
     trajectory.info['analysis']['confinement-states'] = states.tolist()
 
     try:
-        _,_,transport_coefficient,betha,localization_precision,goodness_of_fit = trajectory.temporal_average_mean_squared_displacement(log_log_fit_limit=50, limit_type='points', bin_width=0.010, with_corrections=False)
+        _,_,transport_coefficient,betha,goodness_of_fit = trajectory.temporal_average_mean_squared_displacement(log_log_fit_limit=50, limit_type='points', bin_width=0.010, with_corrections=False, time_start=0.010)
         trajectory.info['analysis']['k'] = transport_coefficient*2*DIMENSION
         trajectory.info['analysis']['betha'] = betha
         trajectory.info['analysis']['goodness_of_fit'] = goodness_of_fit
-        trajectory.info['analysis']['localization_precision'] = localization_precision
     except AssertionError:
         pass
     except ValueError:
@@ -130,7 +129,7 @@ def analyze_trajectory(trajectory_id):
                     trajectory.info['analysis']['confinement-e'].append(e)
 
                     try:
-                        _,_,transport_coefficient,betha,_,goodness_of_fit = sub_trajectory.temporal_average_mean_squared_displacement(log_log_fit_limit=25, limit_type='points', bin_width=0.010, with_corrections=False)
+                        _,_,transport_coefficient,betha,goodness_of_fit = sub_trajectory.temporal_average_mean_squared_displacement(log_log_fit_limit=25, limit_type='points', bin_width=0.010, with_corrections=False, time_start=0.010)
                         trajectory.info['analysis']['confinement-k'].append(transport_coefficient*2*DIMENSION)
                         trajectory.info['analysis']['confinement-betha'].append(betha)
                         trajectory.info['analysis']['confinement-goodness_of_fit'].append(goodness_of_fit)
@@ -157,7 +156,7 @@ def analyze_trajectory(trajectory_id):
                 trajectory.info['analysis']['non-confinement-steps'].append(sub_trajectory.length)
                 trajectory.info['analysis']['non-confinement-duration'].append(sub_trajectory.duration)
                 try:
-                    _,_,transport_coefficient,betha,_,goodness_of_fit = sub_trajectory.temporal_average_mean_squared_displacement(log_log_fit_limit=SUB_MAX_T, limit_type='time', bin_width=DELTA_T, time_start=TIME_START, with_corrections=True)
+                    _,_,transport_coefficient,betha,goodness_of_fit = sub_trajectory.temporal_average_mean_squared_displacement(log_log_fit_limit=SUB_MAX_T, limit_type='time', bin_width=DELTA_T, time_start=TIME_START, with_corrections=True)
                     trajectory.info['analysis']['non-confinement-k'].append(transport_coefficient*2*DIMENSION)
                     trajectory.info['analysis']['non-confinement-betha'].append(betha)
                     trajectory.info['analysis']['non-confinement-goodness_of_fit'].append(goodness_of_fit)
