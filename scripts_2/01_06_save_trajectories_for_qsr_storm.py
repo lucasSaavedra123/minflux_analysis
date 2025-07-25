@@ -41,7 +41,7 @@ for data in dataset:
     for traj in trajectories:
         dataset_dataframe['x'].extend(traj.get_noisy_x())
         dataset_dataframe['y'].extend(traj.get_noisy_y())
-        dataset_dataframe['frame'].extend((traj.get_time()/0.010).astype(int))
+        dataset_dataframe['frame'].extend(traj.get_time().tolist())
         dataset_dataframe['traj_id'].extend([str(traj.id)] * traj.length)
 
     pd.DataFrame(dataset_dataframe).to_csv(f'STORM Datasets/{data["label"]}_{data["exp_cond"]}.csv', index=False)
