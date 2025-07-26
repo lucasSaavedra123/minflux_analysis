@@ -1,3 +1,4 @@
+#It needs tensorflow 2.13 to Run
 import numpy as np
 import tqdm
 from Trajectory import Trajectory
@@ -38,7 +39,7 @@ def smooth_classifications(classifications):
     return result
 
 model = build_dgn(5)
-model.load_weights('dgn_for_minflux.keras')
+model.load_weights("dgn_for_minflux.keras")
 
 DatabaseHandler.connect_over_network(None, None, IP_ADDRESS, COLLECTION_NAME)
 
@@ -56,8 +57,15 @@ for traj in Trajectory.objects():
       y_c = np.argmax(y_c,axis=-1)[0]
       y_o = y_o[0,:,0]
 
+      classifications = smooth_classifications(y_c)
+
       traj['info']['analysis']['eco_cleaned'] = y_o.tolist()
-      traj['info']['analysis']['eco_states'] = smooth_classifications(y_c).tolist()
+      traj['info']['analysis']['eco_states'] = classifications.tolist()
+      traj['info']['analysis']['eco_state_0'] = (classifications==0).astype(int).tolist()
+      traj['info']['analysis']['eco_state_1'] = (classifications==1).astype(int).tolist()
+      traj['info']['analysis']['eco_state_2'] = (classifications==2).astype(int).tolist()
+      traj['info']['analysis']['eco_state_3'] = (classifications==3).astype(int).tolist()
+      traj['info']['analysis']['eco_state_4'] = (classifications==4).astype(int).tolist()
       traj.save()
 
 DatabaseHandler.disconnect()
