@@ -29,29 +29,31 @@ def analyze_trajectory(trajectory_id):
         return None
 
     trajectory.info['analysis']['angles_by_state_dgn'] = {
-        0: {
-            'label': 0,
+        '0': {
+            'label': '0',
             'angles': default_angles()
         },
-        1: {
-            'label': 1,
+        '1': {
+            'label': '1',
             'angles': default_angles()
         },
-        2: {
-            'label': 2,
+        '2': {
+            'label': '2',
             'angles': default_angles()
         },
-        3: {
-            'label': 3,
+        '3': {
+            'label': '3',
             'angles': default_angles()
         },
-        4: {
-            'label': 4,
+        '4': {
+            'label': '4',
             'angles': default_angles()
         },
     }
 
     for dgn_state in range(5):
+        if f'eco_state_{dgn_state}' not in trajectory.info['analysis']:
+            continue
         states = trajectory.info['analysis'][f'eco_state_{dgn_state}']
 
         trajectory.info['analysis'][f'{dgn_state}-steps-dgn'] = []
@@ -59,6 +61,7 @@ def analyze_trajectory(trajectory_id):
         trajectory.info['analysis'][f'{dgn_state}-k-dgn'] = []
         trajectory.info['analysis'][f'{dgn_state}-betha-dgn'] = []
         trajectory.info['analysis'][f'{dgn_state}-goodness_of_fit-dgn'] = []
+        trajectory.info['analysis'][f'{dgn_state}-deepspt_state'] = []
 
         indices = np.nonzero(states[1:] != states[:-1])[0] + 1
         intervals = np.split(trajectory.get_time(), indices)
@@ -75,6 +78,12 @@ def analyze_trajectory(trajectory_id):
 
         sub_trajectories_by_state = trajectory.sub_trajectories_trajectories_from_confinement_states(custom_states=states)
         for sub_trajectory in sub_trajectories_by_state[1]:
+            if 'deepspt_segmenter_result' in sub_trajectory.info['analysis']:
+                deepspt_states = sub_trajectory.info['analysis']['deepspt_segmenter_result']
+                trajectory.info['analysis'][f'{dgn_state}-deepspt_state'].append(max(set(deepspt_states), key=deepspt_states.count))
+            else:
+                trajectory.info['analysis'][f'{dgn_state}-deepspt_state'].append(None)
+
             try:
                 assert sub_trajectory.length > 1
                 trajectory.info['analysis'][f'{dgn_state}-duration-dgn'].append(sub_trajectory.duration)
@@ -98,9 +107,15 @@ def analyze_trajectory(trajectory_id):
                 trajectory.info['analysis'][f'{dgn_state}-k-dgn'].append(None)
                 trajectory.info['analysis'][f'{dgn_state}-betha-dgn'].append(None)
                 trajectory.info['analysis'][f'{dgn_state}-goodness_of_fit-dgn'].append(None)
+            except AssertionError:
+                trajectory.info['analysis'][f'{dgn_state}-duration-dgn'].append(None)
+                trajectory.info['analysis'][f'{dgn_state}-steps-dgn'].append(None)
+                trajectory.info['analysis'][f'{dgn_state}-k-dgn'].append(None)
+                trajectory.info['analysis'][f'{dgn_state}-betha-dgn'].append(None)
+                trajectory.info['analysis'][f'{dgn_state}-goodness_of_fit-dgn'].append(None)
 
-            for angle in trajectory.info['analysis']['angles_by_state_dgn'][dgn_state]['angles']:
-                trajectory.info['analysis']['angles_by_state_dgn'][dgn_state]['angles'][angle] += sub_trajectory.turning_angles(steps_lag=int(angle))
+            for angle in trajectory.info['analysis']['angles_by_state_dgn'][str(dgn_state)]['angles']:
+                trajectory.info['analysis']['angles_by_state_dgn'][str(dgn_state)]['angles'][angle] += sub_trajectory.turning_angles(steps_lag=int(angle))
 
     trajectory.save()
 

@@ -44,11 +44,11 @@ model.load_weights("dgn_for_minflux.keras")
 DatabaseHandler.connect_over_network(None, None, IP_ADDRESS, COLLECTION_NAME)
 
 for traj in Trajectory.objects():
-    if 'intensity' not in traj['info']:
+    if 'intensity' not in traj.info:
       continue
 
     t = np.array(traj['t'])
-    efo = np.array(traj['info']['intensity'])
+    efo = np.array(traj.info['intensity'])
     eco = np.diff(t) * efo[:-1]
 
     if len(eco) > 0:
@@ -59,13 +59,13 @@ for traj in Trajectory.objects():
 
       classifications = smooth_classifications(y_c)
 
-      traj['info']['analysis']['eco_cleaned'] = y_o.tolist()
-      traj['info']['analysis']['eco_states'] = classifications.tolist()
-      traj['info']['analysis']['eco_state_0'] = (classifications==0).astype(int).tolist()
-      traj['info']['analysis']['eco_state_1'] = (classifications==1).astype(int).tolist()
-      traj['info']['analysis']['eco_state_2'] = (classifications==2).astype(int).tolist()
-      traj['info']['analysis']['eco_state_3'] = (classifications==3).astype(int).tolist()
-      traj['info']['analysis']['eco_state_4'] = (classifications==4).astype(int).tolist()
+      traj.info['analysis']['eco_cleaned'] = y_o.tolist()
+      traj.info['analysis']['eco_states'] = classifications.tolist()
+      traj.info['analysis']['eco_state_0'] = (classifications==0).astype(int).tolist()
+      traj.info['analysis']['eco_state_1'] = (classifications==1).astype(int).tolist()
+      traj.info['analysis']['eco_state_2'] = (classifications==2).astype(int).tolist()
+      traj.info['analysis']['eco_state_3'] = (classifications==3).astype(int).tolist()
+      traj.info['analysis']['eco_state_4'] = (classifications==4).astype(int).tolist()
       traj.save()
 
 DatabaseHandler.disconnect()

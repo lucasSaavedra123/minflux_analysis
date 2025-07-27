@@ -83,6 +83,20 @@ for index, dataset in enumerate(new_datasets_list):
             states_dataframe_average[immobile_str].append(state_dataframe.groupby(['file', 'roi','dataset']).mean().reset_index())
             states_dataframe[immobile_str].append(state_dataframe)
 
+        for dgn_state in [0,1,2,3,4]:
+            filter_query = basic_query_dict.copy()
+            filter_query.update({'info.immobile': immobile})
+            try:
+                state_dataframe = get_dataframe_of_portions_analysis_data_by_intensity_state(filter_query, dgn_state)
+            except KeyError:
+                break
+            state_dataframe[f'{dgn_state}-duration-dgn'] = 10**remove_outliers_from_set_of_values_of_column(np.log10(state_dataframe[f'{dgn_state}-duration-dgn']))
+            state_dataframe[f'{dgn_state}-steps-dgn'] = 10**remove_outliers_from_set_of_values_of_column(np.log10(state_dataframe[f'{dgn_state}-steps-dgn']))
+
+            state_dataframe['dataset'] = str(dataset)
+            states_dataframe_average[immobile_str].append(state_dataframe.groupby(['file', 'roi','dataset']).mean().reset_index())
+            states_dataframe[immobile_str].append(state_dataframe)
+
 for immobile in [False, True]:
     immobile_str = 'immobile' if immobile else 'not-immobile'
 
