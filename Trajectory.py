@@ -583,6 +583,8 @@ class Trajectory(Document):
             new_trajectory.info[f'{CHOL_NOMENCLATURE}_single_intersections'] = self.info[f'{CHOL_NOMENCLATURE}_single_intersections'][initial_index:final_index]
         if 'analysis' in self.info:
             new_trajectory.info['analysis'] = {}
+            if 'deepspt_segmenter_result' in self.info['analysis']:
+                new_trajectory.info['analysis']['deepspt_segmenter_result'] = self.info['analysis']['deepspt_segmenter_result'][initial_index:final_index]
             if 'confinement-states' in self.info['analysis']:
                 new_trajectory.info['analysis']['confinement-states'] = self.info['analysis']['confinement-states'][initial_index:final_index]
             if 'anomaly_scores' in self.info['analysis']:
