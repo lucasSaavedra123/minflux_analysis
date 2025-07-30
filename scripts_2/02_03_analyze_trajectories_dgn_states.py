@@ -62,6 +62,7 @@ def analyze_trajectory(trajectory_id):
         trajectory.info['analysis'][f'{dgn_state}-betha-dgn'] = []
         trajectory.info['analysis'][f'{dgn_state}-goodness_of_fit-dgn'] = []
         trajectory.info['analysis'][f'{dgn_state}-deepspt_state'] = []
+        trajectory.info['analysis'][f'{dgn_state}-eco-dgn'] = []
 
         indices = np.nonzero(states[1:] != states[:-1])[0] + 1
         intervals = np.split(trajectory.get_time(), indices)
@@ -78,6 +79,12 @@ def analyze_trajectory(trajectory_id):
 
         sub_trajectories_by_state = trajectory.sub_trajectories_trajectories_from_confinement_states(custom_states=states)
         for sub_trajectory in sub_trajectories_by_state[1]:
+            t = np.array(sub_trajectory.get_time())
+            efo = np.array(sub_trajectory.info['intensity'])
+            mean_eco = np.mean(np.diff(t) * efo[:-1])
+
+            trajectory.info['analysis'][f'{dgn_state}-eco-dgn'].append(mean_eco)
+
             if 'deepspt_segmenter_result' in sub_trajectory.info['analysis']:
                 deepspt_states = sub_trajectory.info['analysis']['deepspt_segmenter_result']
                 trajectory.info['analysis'][f'{dgn_state}-deepspt_state'].append(max(set(deepspt_states), key=deepspt_states.count))
