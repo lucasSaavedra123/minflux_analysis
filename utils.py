@@ -7,7 +7,6 @@ import scipy
 import numpy as np
 import scipy
 import pandas as pd
-import EntropyHub as EH
 from collections import defaultdict
 from scipy.optimize import minimize, LinearConstraint, NonlinearConstraint
 from CONSTANTS import *
@@ -237,6 +236,51 @@ def get_dataframe_of_portions_analysis_data_by_state(a_query, state):
 
     state_dataframe = state_dataframe.apply(state_mask, axis=1)
 
+    return state_dataframe
+
+
+def get_dataframe_of_portions_analysis_data_by_intensity_state(a_query, state):
+    p = {'info.file':1,'info.roi':1}
+
+    state_fields = [
+        f'{state}-steps-dgn',
+        f'{state}-duration-dgn',
+        f'{state}-eco-dgn',
+    ]
+
+    state_dataframe = {}
+
+    state_dataframe['roi'], state_dataframe['file'] = [], []
+    for field in state_fields:
+        p[f'info.analysis.{field}'] = 1
+        state_dataframe[field] = []
+
+    documents = Trajectory._get_collection().find(a_query, p)
+
+    for d in documents:
+        if 'analysis' not in d['info']:
+            continue
+        state_values = [d['info']['analysis'][field] for field in state_fields]
+        state_values = zip(*state_values)
+
+        for row in state_values:
+            state_dataframe['file'].append(d['info']['file'])
+            state_dataframe['roi'].append(d['info']['roi'])
+
+            for field, value in zip(state_fields, row):
+                state_dataframe[field].append(value)
+
+    state_dataframe = pd.DataFrame(state_dataframe)
+    """
+    def state_mask(row):
+        if row[f"{state}-goodness_of_fit-deepspt"] is not None and row[f"{state}-goodness_of_fit-deepspt"] > GOODNESS_OF_FIT_MAXIMUM:
+            row[f"{state}-k-deepspt"] = None
+            row[f"{state}-betha-deepspt"] = None
+            row[f"{state}-goodness_of_fit-deepspt"] = None
+        return row
+
+    state_dataframe = state_dataframe.apply(state_mask, axis=1)
+    """
     return state_dataframe
 
 def get_confinement_factors(a_query):
