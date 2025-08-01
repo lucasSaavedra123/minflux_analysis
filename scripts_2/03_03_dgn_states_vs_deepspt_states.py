@@ -94,50 +94,53 @@ DatabaseHandler.disconnect()
 
 df = pd.DataFrame(df)
 
-
 for dataset in new_datasets_list:
-    dataset_df = df[df['dataset']==str(dataset)]
-    groups = dataset_df.groupby(['file', 'roi'])
-
-    crosses = []
-
-    for (file, roi), group in groups:
-        cross = pd.crosstab(group['dgn-state'], group['deepspt_state'], normalize='index')
-        crosses.append(cross)
-
-    all_states = set()
-    for cross in crosses:
-        all_states.update(cross.index)
-        all_states.update(cross.columns)
-
-    all_states = sorted(all_states)
-
-    aligned_crosses = [
-        cross.reindex(index=all_states, columns=all_states, fill_value=0)
-        for cross in crosses
-    ]
-
-    if len(aligned_crosses) == 0:
+    dataset_df = df[df['dataset'] == str(dataset)]
+    if dataset_df.empty:
         continue
 
-    average_cross = sum(aligned_crosses) / len(aligned_crosses)
+    all_dgn_states = sorted(dataset_df['dgn-state'].unique())
+    all_deep_states = sorted(set(df['deepspt_state']))
 
-    arr = np.stack([df.values for df in aligned_crosses])  # shape: (n, rows, cols)
+    table_data = defaultdict(list)
 
-    mean = arr.mean(axis=0)
+    for dgn_state in all_dgn_states:
+        sub_df = dataset_df[dataset_df['dgn-state'] == dgn_state]
+        if sub_df.empty:
+            continue
 
-    # SEM = std / sqrt(n)
-    sem = arr.std(axis=0, ddof=1) / np.sqrt(len(arr))
+        roi_groups = sub_df.groupby(['file', 'roi'])
 
-    average_cross = pd.DataFrame(mean, index=aligned_crosses[0].index, columns=aligned_crosses[0].columns)
-    sem_cross = pd.DataFrame(sem, index=aligned_crosses[0].index, columns=aligned_crosses[0].columns)
+        roi_crosses = []
+        for (file, roi), group in roi_groups:
+            cross = pd.crosstab(index=group['dgn-state'], columns=group['deepspt_state'], normalize='index')
+            cross = cross.reindex(columns=all_deep_states, fill_value=np.nan)
+            roi_crosses.append(cross.iloc[0].values)
 
-    mean_values = average_cross.values
-    sem_values = sem_cross.values
+        if not roi_crosses:
+            continue
 
-    formatter = np.vectorize(lambda m, s: f"{m:.3f} ± {s:.3f}")
-    combined_values = formatter(mean_values, sem_values)
+        arr = np.vstack(roi_crosses)
+        means = np.nanmean(arr, axis=0)
+        sems = np.nanstd(arr, axis=0, ddof=1) / np.sqrt(np.sum(~np.isnan(arr), axis=0))
+        counts = np.sum(~np.isnan(arr), axis=0)
 
-    combined_df = pd.DataFrame(combined_values, index=average_cross.index, columns=average_cross.columns)
+        table_data['Group'].append(dgn_state)
+        for idx, deep_state in enumerate(all_deep_states):
+            table_data[f'{deep_state} - Mean'].append(round(means[idx], 4) if not np.isnan(means[idx]) else np.nan)
+            table_data[f'{deep_state} - SEM'].append(round(sems[idx], 4) if not np.isnan(sems[idx]) else np.nan)
+            table_data[f'{deep_state} - N'].append(int(counts[idx]) if counts[idx] > 0 else np.nan)
 
-    combined_df.to_csv(f'Results/dgn_vs_deepspt_states_{dataset}.csv')
+    result_df = pd.DataFrame(table_data)
+    result_df = result_df.sort_values(by='Group')
+
+    # Ordenar columnas: Group first, then sorted deepspt_state chunks
+    first_col = ['Group']
+    rest_cols = []
+    for deep_state in sorted(all_deep_states):
+        rest_cols += [f'{deep_state} - Mean', f'{deep_state} - SEM', f'{deep_state} - N']
+
+    result_df = result_df[first_col + rest_cols]
+
+    # Guardar
+    result_df.to_excel(f'Results/table_dgn_vs_deepspt_wide_{str(dataset)}.xlsx', index=False)
