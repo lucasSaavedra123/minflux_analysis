@@ -23,10 +23,8 @@ for predicted_file in glob.glob('./STORM Datasets/*full_prediction_qsr.csv'):
             traj_id = cluster['traj_id'].unique()[0]
             dataset.loc[dataset['traj_id'] == traj_id,'cluster_id_predicted'] = 0
             dataset.loc[dataset['traj_id'] == traj_id,'clusterized_predicted'] = 0
-
-    #plt.scatter(dataset['x'], dataset['y'], c=dataset['clusterized_predicted'])
-    #plt.show()
-
+    # plt.scatter(dataset['x'], dataset['y'], c=dataset['clusterized_predicted'])
+    # plt.show()
     DatabaseHandler.connect_over_network(None, None, IP_ADDRESS, COLLECTION_NAME_STORM)
     for traj_id in dataset['traj_id'].unique():
         traj = dataset[dataset['traj_id'] == traj_id]
