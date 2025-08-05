@@ -552,6 +552,33 @@ class Trajectory(Document):
         
         return trajectories
 
+    def undersample(self, delta_t, noisy=True):
+        times = self.get_time()
+        xs = self.get_noisy_x()
+        ys = self.get_noisy_y()
+
+        new_t = [times[0]]
+        new_x = [xs[0]]
+        new_y = [ys[0]]
+        
+        last_t = times[0]
+
+        for i in range(1, len(times)):
+            if times[i] - last_t >= delta_t:
+                new_t.append(times[i])
+                new_x.append(xs[i])
+                new_y.append(ys[i])
+                last_t = times[i]
+
+        new_trajectory = Trajectory(
+            x=new_x,
+            y=new_y,
+            t=new_t,
+            noisy=noisy
+        )
+
+        return new_trajectory
+
     def build_noisy_subtrajectory_from_range(self, initial_index, final_index, noisy=True):
         new_trajectory = Trajectory(
                     x = self.get_noisy_x()[initial_index:final_index],
