@@ -61,12 +61,14 @@ for index, dataset in enumerate(new_datasets_list):
 
     df = pd.DataFrame(df)
 
+    # Porcentajes de clustered/unclustered dentro de cada dgn-state
     clustered_dgn_percentages = df.groupby(['file', 'roi', 'dgn-state'])['clustering_state'] \
         .value_counts(normalize=True) \
         .mul(100) \
         .rename('clustered_pct_within_dgn') \
         .reset_index()
 
+    # Porcentajes de clustered/unclustered dentro de cada deepspt (intensidad)
     clustered_deepspt_percentages = df.groupby(['file', 'roi', 'deepspt'])['clustering_state'] \
         .value_counts(normalize=True) \
         .mul(100) \
@@ -78,5 +80,31 @@ for index, dataset in enumerate(new_datasets_list):
 
     print("\nPorcentajes clustered/unclustered dentro de cada intensidad (deepspt):")
     print(clustered_deepspt_percentages)
+
+    # ========================
+    # Promedio de porcentajes
+    # ========================
+    avg_dgn = clustered_dgn_percentages.groupby(['dgn-state', 'clustering_state'])['clustered_pct_within_dgn'].mean().reset_index()
+    avg_deepspt = clustered_deepspt_percentages.groupby(['deepspt', 'clustering_state'])['clustered_pct_within_deepspt'].mean().reset_index()
+
+    print("\nPromedio porcentajes por estado dgn-state:")
+    print(avg_dgn)
+
+    print("\nPromedio porcentajes por estado deepspt:")
+    print(avg_deepspt)
+
+    # ========================
+    # Porcentaje total en clustered
+    # ========================
+    total_clustered_pct = (df['clustering_state'] == 'clustered').mean() * 100
+    print(f"\nPorcentaje total en clustered: {total_clustered_pct:.2f}%")
+
+    # Promedio de porcentaje clustered por ROI y file
+    clustered_by_roi_file = df.groupby(['file', 'roi'])['clustering_state'] \
+        .apply(lambda x: (x == 'clustered').mean() * 100) \
+        .reset_index(name='clustered_pct')
+
+    avg_clustered_pct = clustered_by_roi_file['clustered_pct'].mean()
+    print(f"Promedio de porcentaje clustered por ROI y file: {avg_clustered_pct:.2f}%")
 
 DatabaseHandler.disconnect()
