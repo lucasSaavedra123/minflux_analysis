@@ -1,15 +1,9 @@
-"""
-All important results like areas, axis lengths, etc. 
-are produced within this file.
-"""
 import pandas as pd
 import matplotlib.pyplot as plt
 
 from DatabaseHandler import DatabaseHandler
 from CONSTANTS import *
 from utils import *
-
-
 
 
 DatabaseHandler.connect_over_network(None, None, IP_ADDRESS, COLLECTION_NAME)
@@ -30,9 +24,10 @@ TO_SAVE_DATASET = [
     "('Cholesterol and btx', 'BTX680R')",
 ]
 
-df = []
 
 for index, dataset in enumerate(new_datasets_list):
+    df = []
+
     print(dataset,index)
 
     basic_query_dict = {'info.dataset': dataset} if index < len(INDIVIDUAL_DATASETS) else {'info.dataset': dataset[0], 'info.classified_experimental_condition':dataset[1]}
@@ -63,8 +58,25 @@ for index, dataset in enumerate(new_datasets_list):
             })
         except KeyError:
             pass
-    
-    print(len(df))
 
+    df = pd.DataFrame(df)
+
+    clustered_dgn_percentages = df.groupby(['file', 'roi', 'dgn-state'])['clustering_state'] \
+        .value_counts(normalize=True) \
+        .mul(100) \
+        .rename('clustered_pct_within_dgn') \
+        .reset_index()
+
+    clustered_deepspt_percentages = df.groupby(['file', 'roi', 'deepspt'])['clustering_state'] \
+        .value_counts(normalize=True) \
+        .mul(100) \
+        .rename('clustered_pct_within_deepspt') \
+        .reset_index()
+
+    print("\nPorcentajes clustered/unclustered dentro de cada dgn-state:")
+    print(clustered_dgn_percentages)
+
+    print("\nPorcentajes clustered/unclustered dentro de cada intensidad (deepspt):")
+    print(clustered_deepspt_percentages)
 
 DatabaseHandler.disconnect()
