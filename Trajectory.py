@@ -12,9 +12,7 @@ from scipy.spatial import ConvexHull
 import scipy.stats as st
 import matplotlib.animation as animation
 from collections import defaultdict
-import moviepy.editor as mp
-from moviepy.video.fx.all import crop
-from moviepy.editor import *
+from scipy.interpolate import CubicSpline
 
 #Example about how to read trajectories from .mat
 """
@@ -49,6 +47,133 @@ for data in dataset:
             trajectory.save()
 """
 
+def rotate_vector_numpy(vector, angle_degrees):
+    angle_radians = np.deg2rad(angle_degrees)
+    rotation_matrix = np.array([
+        [np.cos(angle_radians), -np.sin(angle_radians)],
+        [np.sin(angle_radians), np.cos(angle_radians)]
+    ])
+    rotated_vector = np.dot(rotation_matrix, vector)
+    return rotated_vector
+
+def project_points_onto_line(points, p0, v):
+    points = np.asarray(points)
+    p0 = np.asarray(p0)
+    v = np.asarray(v)
+    v_unit = v / np.linalg.norm(v)
+    projections = np.dot(points - p0, v_unit)
+    return projections
+
+def trajectory_width(traj,n_segments):
+    def __divide_trajectory(traj, n_segments):
+        segment_length = len(traj) // n_segments
+        segments = [traj[i*segment_length:(i+1)*segment_length] for i in range(n_segments+1)]
+
+        if len(segments[-1]) == 0:
+            segments = segments[:-1]
+
+        return segments
+
+    width = []
+
+    traj_distances = scipy.spatial.distance.cdist(traj, traj, 'euclidean')
+    max_arg = np.unravel_index(traj_distances.argmax(), traj_distances.shape)
+    farthest_point1 = traj[max_arg[0]]
+    farthest_point2 = traj[max_arg[1]]
+    direction_vector = farthest_point2 - farthest_point1
+    perpendicular_direction_vector = np.array([direction_vector[0],-direction_vector[1]])
+
+    for traj_segment in __divide_trajectory(traj, n_segments):
+        projected_points = project_points_onto_line(traj_segment, farthest_point1[0], perpendicular_direction_vector)
+        width.append(np.std(projected_points))
+    width = float(np.mean(width))
+    return width
+
+def get_new_center(points,r_1,center=None,current_direction=None):
+    r_inner = r_1
+    r_outer = r_1*2
+
+    if center is None:
+        distances = scipy.spatial.distance.cdist([points[-1]], points, 'euclidean')[0]
+        within_distance_mask = distances <= r_1
+        points_within_distance = points[within_distance_mask]
+        return np.where(within_distance_mask)[0], points_within_distance.mean(axis=0).tolist()
+
+    points = points - center
+
+    distances_with_center = scipy.spatial.distance.cdist([[0,0]], points, 'euclidean')
+    within_annulus_mask = (distances_with_center >= r_inner) & (distances_with_center <= r_outer)
+
+    annulus_points_index = np.where(within_annulus_mask)[1]
+    annulus_points = points[annulus_points_index]
+
+    if len(annulus_points) == 0:
+        return None
+
+    angles = np.arctan2(annulus_points[:, 1], annulus_points[:, 0]) # [-pi,pi]
+    bin_width = (2*np.pi) / 45
+
+    if current_direction is None:
+        bins = np.arange(-np.pi, np.pi + bin_width, bin_width)
+    else:
+        angle_of_current_direction = np.arctan2(current_direction[1], current_direction[0])
+        bins = np.arange(angle_of_current_direction-(np.pi/3), angle_of_current_direction + (np.pi/3) + bin_width, bin_width)
+
+    hist, edges = np.histogram(angles, bins=bins)
+    max_idx = np.argmax(hist)
+    angle_of_more_density = (edges[max_idx] + edges[max_idx + 1]) / 2
+
+    sector_half_angle = np.pi / 4
+    sector_mask = np.abs(np.angle(np.exp(1j * (angles - angle_of_more_density)))) <= sector_half_angle
+
+    final_points_index = annulus_points_index[sector_mask]
+
+    if len(final_points_index) == 0:
+        return None
+
+    return final_points_index, points[final_points_index].mean(axis=0) + center
+
+def get_spline_points(traj):
+    n_segments = max(len(traj)//50,1)
+
+    sigma_n = trajectory_width(traj, n_segments)
+    r_1 = sigma_n*6
+
+    spline_points = []
+    indexes = []
+
+    run = True
+
+    while run:
+        retry = True
+        factor = 1
+        while retry:
+            if len(spline_points)==0:
+                info = get_new_center(traj, factor*r_1)
+            elif len(spline_points)==1:
+                info = get_new_center(traj, factor*r_1, spline_points[-1])
+            else:
+                direction = spline_points[-1] - spline_points[-2]
+                info = get_new_center(traj, factor*r_1, spline_points[-1], direction)
+
+            if info is None:
+                if factor == 3:
+                    run = False
+                    retry = False
+                else:
+                    factor += 1
+            else:
+                factor = 1
+                spline_points.append(info[1])
+                retry = False
+
+                if all([i in indexes for i in info[0].tolist()]):
+                    run = False
+
+                indexes.extend(info[0].tolist())
+
+    spline_points = np.array(spline_points)
+    return spline_points
 
 def turning_angles(length, x, y, steps_lag=1, normalized=False):
     #if length/steps_lag <= 1:
@@ -251,6 +376,82 @@ class Trajectory(Document):
             info=info,
             **kwargs
         )
+
+    def spline(self):
+        traj = np.zeros(shape=(self.length, 2))
+        traj[:, 0] = self.get_noisy_x()
+        traj[:, 1] = self.get_noisy_y()
+
+        spline_points = get_spline_points(traj)
+
+        idx = np.argsort(spline_points[:,0])
+        x_sorted = spline_points[idx, 0]
+        y_sorted = spline_points[idx, 1]
+        cs = CubicSpline(x_sorted, y_sorted, bc_type='natural')
+
+        x_new = np.linspace(x_sorted[0]*0.95, x_sorted[-1]*1.05, 10_000)
+        y_interpolated = cs(x_new)
+        """
+        plt.grid(True)
+        plt.plot(traj[:,0], traj[:,1], color='black')
+        plt.scatter(spline_points[:,0], spline_points[:,1], color='red', marker='X')
+        plt.plot(x_new, y_interpolated, color='red')
+        plt.xlim([traj[:,0].min()-0.1,traj[:,0].max()+0.1])
+        plt.ylim([traj[:,1].min()-0.1,traj[:,1].max()+0.1])
+        plt.show()
+        """
+        return x_new, y_interpolated
+
+    def scda(self):
+        try:
+            spline_x, spline_y = self.spline()
+        except ValueError:
+            return None, None
+        traj = np.zeros(shape=(self.length, 2))
+        traj[:, 0] = self.get_noisy_x()
+        traj[:, 1] = self.get_noisy_y()
+
+        displacements = traj[:-1] - traj[1:]
+
+        d_parallel = [] #||
+        d_perpendicular = [] #|-
+
+        for p_i, displacement in enumerate(displacements):
+            try:
+                selected_spline_x_i = np.argmin(np.abs(spline_x-traj[p_i,0]))
+                start_spline_x = np.array([spline_x[selected_spline_x_i],spline_y[selected_spline_x_i]])
+                end_spline_x = np.array([spline_x[selected_spline_x_i+1],spline_y[selected_spline_x_i+1]])
+                tangent_vector = end_spline_x-start_spline_x
+                tangent_vector = tangent_vector/np.linalg.norm(tangent_vector)
+
+                d_parallel.append(np.abs(np.dot(tangent_vector,displacement)))
+                d_perpendicular.append(np.abs(np.dot(rotate_vector_numpy(tangent_vector,90),displacement)))
+            except:
+                return None, None
+        return np.mean(d_parallel), np.mean(d_perpendicular)
+
+    def scsa(self):
+        try:
+            spline_x, spline_y = self.spline()
+        except ValueError:
+            return None
+        traj = np.zeros(shape=(self.length, 2))
+        traj[:, 0] = self.get_noisy_x()
+        traj[:, 1] = self.get_noisy_y()
+
+        spline = np.zeros(shape=(len(spline_x), 2))
+        spline[:, 0] = spline_x
+        spline[:, 1] = spline_y
+
+        d_i = []
+
+        for p in traj:
+            try:
+                distances = scipy.spatial.distance.cdist([p], spline, 'euclidean')[0]
+                d_i.append(np.min(distances))
+            except:
+                return None
+        return np.mean(d_i)
 
     """
     Below method only works for bidimension trajectories
