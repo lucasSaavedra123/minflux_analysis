@@ -76,7 +76,7 @@ def trajectory_width(traj,n_segments):
 
     width = []
 
-    traj_distances = scipy.spatial.distance.cdist(traj, traj, 'euclidean')
+    traj_distances = scipy.spatial.distance.cdist(traj.astype(np.float16), traj.astype(np.float16), 'euclidean')
     max_arg = np.unravel_index(traj_distances.argmax(), traj_distances.shape)
     farthest_point1 = traj[max_arg[0]]
     farthest_point2 = traj[max_arg[1]]
