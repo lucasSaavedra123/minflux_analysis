@@ -137,7 +137,7 @@ def get_spline_points(traj):
     n_segments = max(len(traj)//50,1)
 
     sigma_n = trajectory_width(traj, n_segments)
-    r_1 = sigma_n*6
+    r_1 = sigma_n*3
 
     spline_points = []
     indexes = []
