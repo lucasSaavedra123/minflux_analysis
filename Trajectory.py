@@ -402,33 +402,35 @@ class Trajectory(Document):
         """
         return x_new, y_interpolated
 
-    def scda(self):
-        try:
-            spline_x, spline_y = self.spline()
-        except ValueError:
-            return None, None
-        traj = np.zeros(shape=(self.length, 2))
-        traj[:, 0] = self.get_noisy_x()
-        traj[:, 1] = self.get_noisy_y()
+    def scda(self, with_noise=True, bin_width=None, limit_type=None, limit_value=None, time_start=None):
+        def linear_func(t, d, sigma):
+            return (t * d) + (sigma**2)
 
-        displacements = traj[:-1] - traj[1:]
+        [t_vec_parallel, msd_parallel], [t_vec_perpendicular, msd_perpendicular] = self.calculate_msd_curve(
+            with_noise=with_noise,
+            bin_width=bin_width,
+            return_variances=False,
+            limit_type=limit_type,
+            limit_value=limit_value,
+            time_start=time_start,
+            scda=True
+        )
 
-        d_parallel = [] #||
-        d_perpendicular = [] #|-
+        msd_fit = msd_parallel[1:4]
+        t_vec_fit = t_vec_parallel[1:4]
+        assert len(msd_fit) == 3
+        assert len(t_vec_fit) == 3
+        popt, _ = curve_fit(linear_func, t_vec_fit, msd_fit, bounds=((0, 0), (np.inf, np.inf)), maxfev=2000)
+        d_parallel = popt[0]
 
-        for p_i, displacement in enumerate(displacements):
-            try:
-                selected_spline_x_i = np.argmin(np.abs(spline_x-traj[p_i,0]))
-                start_spline_x = np.array([spline_x[selected_spline_x_i],spline_y[selected_spline_x_i]])
-                end_spline_x = np.array([spline_x[selected_spline_x_i+1],spline_y[selected_spline_x_i+1]])
-                tangent_vector = end_spline_x-start_spline_x
-                tangent_vector = tangent_vector/np.linalg.norm(tangent_vector)
+        msd_fit = msd_perpendicular[1:4]
+        t_vec_fit = t_vec_perpendicular[1:4]
+        assert len(msd_fit) == 3
+        assert len(t_vec_fit) == 3
+        popt, _ = curve_fit(linear_func, t_vec_fit, msd_fit, bounds=((0, 0), (np.inf, np.inf)), maxfev=2000)
+        d_perpendicular = popt[0]
 
-                d_parallel.append(np.abs(np.dot(tangent_vector,displacement)))
-                d_perpendicular.append(np.abs(np.dot(rotate_vector_numpy(tangent_vector,90),displacement)))
-            except:
-                return None, None
-        return np.mean(d_parallel), np.mean(d_perpendicular)
+        return d_parallel, d_perpendicular
 
     def scsa(self):
         try:
@@ -878,9 +880,9 @@ class Trajectory(Document):
         else:
             return states
 
-    def calculate_msd_curve(self, with_noise=True, bin_width=None, return_variances=False, limit_type=None, limit_value=None, time_start=None):
+    def calculate_msd_curve(self, with_noise=True, bin_width=None, return_variances=False, limit_type=None, limit_value=None, time_start=None, scda=False):
         """
-        Code Obtained from https://github.com/Eggeling-Lab-Microscope-Software/TRAIT2D/blob/b51498b730140ffac5c0abfc5494ebfca25b445e/trait2d/analysis/__init__.py#L1061
+        Some code was obtained from https://github.com/Eggeling-Lab-Microscope-Software/TRAIT2D/blob/b51498b730140ffac5c0abfc5494ebfca25b445e/trait2d/analysis/__init__.py#L1061
         """
         if with_noise:
             x = self.get_noisy_x()
@@ -889,13 +891,20 @@ class Trajectory(Document):
             x = self.get_x()
             y = self.get_y()
 
+        if scda:
+            spline_x, spline_y = self.spline()
+            msd_dict_perpendicular = defaultdict(lambda: [])
+            msd_variances_dict_perpendicular = defaultdict(lambda: [])
+            msd_dict_parallel = defaultdict(lambda: [])
+            msd_variances_dict_parallel = defaultdict(lambda: [])
+        else:
+            msd_dict = defaultdict(lambda: [])
+            msd_variances_dict = defaultdict(lambda: [])
+
         N = len(x)
         assert N-3 > 0
         data_tmp = np.column_stack((x, y))
         data_t_tmp = self.get_time()
-
-        msd_dict = defaultdict(lambda: [])
-        msd_variances_dict = defaultdict(lambda: [])
 
         delta = np.min(np.diff(self.get_time())) if bin_width is None else bin_width
 
@@ -904,43 +913,99 @@ class Trajectory(Document):
                 break
             if limit_type == 'time' and ((time_start is not None and time_start+((i-1)*delta) > limit_value) or (time_start is None and (i-1)*delta > limit_value)):
                 break
-            calc_tmp = np.sum(np.abs((data_tmp[i:N,:]-data_tmp[0:N-i,:]) ** 2), axis=1)
+
+            if scda:
+                calc_tmp_parallel = []
+                calc_tmp_perpendicular = []
+                for disp_i, disp_vector in enumerate(data_tmp[i:N,:]-data_tmp[0:N-i,:]):
+                    selected_spline_x_i = np.argmin(np.abs(spline_x-data_tmp[disp_i,0]))
+                    start_spline_x = np.array([spline_x[selected_spline_x_i],spline_y[selected_spline_x_i]])
+                    end_spline_x = np.array([spline_x[selected_spline_x_i+1],spline_y[selected_spline_x_i+1]])
+                    tangent_vector = end_spline_x-start_spline_x
+                    tangent_vector = tangent_vector/np.linalg.norm(tangent_vector)
+
+                    calc_tmp_parallel.append(np.abs(np.dot(tangent_vector,disp_vector)))
+                    calc_tmp_perpendicular.append(np.abs(np.dot(rotate_vector_numpy(tangent_vector,90),disp_vector)))
+            else:
+                calc_tmp = np.sum(np.abs((data_tmp[i:N,:]-data_tmp[0:N-i,:]) ** 2), axis=1)
+            
             calc_t_tmp = data_t_tmp[i:N] - data_t_tmp[0:N-i]
             #plt.scatter(calc_t_tmp, calc_tmp, color='blue', s=0.1)
-            for interval, square_displacement in zip(calc_t_tmp, calc_tmp):
-                if time_start is not None:
-                    if time_start < interval:
-                        msd_dict[int((interval-time_start)/delta)+1].append(square_displacement)
-                else:
-                    msd_dict[int(interval/delta)].append(square_displacement)
+            if scda:
+                for interval, (parallel_disp, perpendicular_disp) in zip(calc_t_tmp, list(zip(calc_tmp_parallel,calc_tmp_perpendicular))):
+                    if time_start is not None:
+                        if time_start < interval:
+                            msd_dict_parallel[int((interval-time_start)/delta)+1].append(parallel_disp)
+                            msd_dict_perpendicular[int((interval-time_start)/delta)+1].append(perpendicular_disp)
+                    else:
+                        msd_dict_parallel[int(interval/delta)].append(parallel_disp)
+                        msd_dict_perpendicular[int(interval/delta)].append(perpendicular_disp)
+            else:
+                for interval, square_displacement in zip(calc_t_tmp, calc_tmp):
+                    if time_start is not None:
+                        if time_start < interval:
+                            msd_dict[int((interval-time_start)/delta)+1].append(square_displacement)
+                    else:
+                        msd_dict[int(interval/delta)].append(square_displacement)
 
-        for i in msd_dict:
-            msd_variances_dict[i] = np.var(msd_dict[i])
-            msd_dict[i] = np.mean(msd_dict[i])
+        if scda:
+            for i in msd_dict_parallel:
+                msd_variances_dict_parallel[i] = np.var(msd_dict_parallel[i])
+                msd_dict_parallel[i] = np.mean(msd_dict_parallel[i])
 
-        if time_start is not None:
-            time_msd = [[time_start+(bin_width*(t-(1/2))), msd_dict[t]] for t in msd_dict]
+            for i in msd_dict_perpendicular:
+                msd_variances_dict_perpendicular[i] = np.var(msd_dict_perpendicular[i])
+                msd_dict_perpendicular[i] = np.mean(msd_dict_perpendicular[i])
+
+            if time_start is not None:
+                time_msd_parallel = [[time_start+(bin_width*(t-(1/2))), msd_dict_parallel[t]] for t in msd_dict_parallel]
+                time_msd_perpendicular = [[time_start+(bin_width*(t-(1/2))), msd_dict_perpendicular[t]] for t in msd_dict_perpendicular]
+            else:
+                time_msd_parallel = [[bin_width*t, msd_dict_parallel[t]] for t in msd_dict_parallel]
+                time_msd_perpendicular = [[bin_width*t, msd_dict_perpendicular[t]] for t in msd_dict_perpendicular]
+
+            aux = np.array(sorted(time_msd_parallel, key=lambda x: x[0]))
+            t_vec_parallel, msd_parallel = aux[:,0], aux[:,1]
+
+            aux = np.array(sorted(time_msd_perpendicular, key=lambda x: x[0]))
+            t_vec_perpendicular, msd_perpendicular = aux[:,0], aux[:,1]
+
+            assert len(t_vec_parallel) == len(time_msd_parallel) == len(msd_dict_parallel)
+            assert len(t_vec_perpendicular) == len(time_msd_perpendicular) == len(msd_dict_perpendicular)
+
+            if not return_variances:
+                return [t_vec_parallel, msd_parallel], [t_vec_perpendicular, msd_perpendicular]
+            else:
+                return [t_vec_parallel, msd_parallel, msd_variances_dict_parallel], [t_vec_perpendicular, msd_perpendicular, msd_variances_dict_perpendicular]
+
         else:
-            time_msd = [[bin_width*t, msd_dict[t]] for t in msd_dict]
+            for i in msd_dict:
+                msd_variances_dict[i] = np.var(msd_dict[i])
+                msd_dict[i] = np.mean(msd_dict[i])
 
-        aux = np.array(sorted(time_msd, key=lambda x: x[0]))
-        t_vec, msd = aux[:,0], aux[:,1]
+            if time_start is not None:
+                time_msd = [[time_start+(bin_width*(t-(1/2))), msd_dict[t]] for t in msd_dict]
+            else:
+                time_msd = [[bin_width*t, msd_dict[t]] for t in msd_dict]
 
-        if time_start is not None:
-            time_msd = [[time_start+(bin_width*(t-(1/2))), msd_variances_dict[t]] for t in msd_variances_dict]
-        else:
-            time_msd = [[bin_width*t, msd_variances_dict[t]] for t in msd_variances_dict]
+            aux = np.array(sorted(time_msd, key=lambda x: x[0]))
+            t_vec, msd = aux[:,0], aux[:,1]
 
-        aux = np.array(sorted(time_msd, key=lambda x: x[0]))
-        t_vec, msd_var = aux[:,0], aux[:,1]
-        #plt.scatter(t_vec, np.zeros_like(t_vec))
-        #plt.show()
-        assert len(t_vec) == len(msd) == len(msd_var)
+            if time_start is not None:
+                time_msd = [[time_start+(bin_width*(t-(1/2))), msd_variances_dict[t]] for t in msd_variances_dict]
+            else:
+                time_msd = [[bin_width*t, msd_variances_dict[t]] for t in msd_variances_dict]
 
-        if not return_variances:
-            return t_vec, msd
-        else:
-            return t_vec, msd, msd_var
+            aux = np.array(sorted(time_msd, key=lambda x: x[0]))
+            t_vec, msd_var = aux[:,0], aux[:,1]
+            #plt.scatter(t_vec, np.zeros_like(t_vec))
+            #plt.show()
+            assert len(t_vec) == len(msd) == len(msd_var)
+
+            if not return_variances:
+                return t_vec, msd
+            else:
+                return t_vec, msd, msd_var
 
     def temporal_average_mean_squared_displacement(self, log_log_fit_limit=50, limit_type='points', with_noise=True, bin_width=None, time_start=None, with_corrections=False):
         t_vec, msd = self.calculate_msd_curve(with_noise=with_noise, bin_width=bin_width, limit_type=limit_type, limit_value=log_log_fit_limit, time_start=time_start)
