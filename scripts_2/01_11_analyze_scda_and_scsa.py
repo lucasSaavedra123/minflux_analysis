@@ -34,8 +34,12 @@ def analyze_trajectory(trajectory_id):
 
         sub_trajectories_by_state = trajectory.sub_trajectories_trajectories_from_confinement_states(custom_states=states)
         for sub_trajectory in sub_trajectories_by_state[1]:
-            d_parallel, d_perpendicular = sub_trajectory.scda()
-            d_i = sub_trajectory.scsa()
+            try:
+                d_parallel, d_perpendicular = sub_trajectory.scda(bin_width=DELTA_T, limit_type='time', limit_value=SUB_MAX_T, time_start=TIME_START)
+                d_i = sub_trajectory.scsa()
+            except:
+                d_parallel, d_perpendicular = None, None
+                d_i = None
 
             trajectory.info['analysis'][f'{state}-d-parallel'].append(d_parallel)
             trajectory.info['analysis'][f'{state}-d-perpendicular'].append(d_perpendicular)

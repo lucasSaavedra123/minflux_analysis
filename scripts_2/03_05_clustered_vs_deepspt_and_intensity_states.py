@@ -10,6 +10,7 @@ DatabaseHandler.connect_over_network(None, None, IP_ADDRESS, COLLECTION_NAME)
 
 INDIVIDUAL_DATASETS = [
     'BTX680R',
+    'CDx'
 ]
 
 new_datasets_list = INDIVIDUAL_DATASETS.copy()
@@ -18,11 +19,6 @@ for combined_dataset in [
     'Cholesterol and btx',
 ]:
     new_datasets_list.append((combined_dataset, BTX_NOMENCLATURE))
-
-TO_SAVE_DATASET = [
-    'BTX680R',
-    "('Cholesterol and btx', 'BTX680R')",
-]
 
 
 for index, dataset in enumerate(new_datasets_list):
@@ -61,14 +57,12 @@ for index, dataset in enumerate(new_datasets_list):
 
     df = pd.DataFrame(df)
 
-    # Porcentajes de clustered/unclustered dentro de cada dgn-state
     clustered_dgn_percentages = df.groupby(['file', 'roi', 'dgn-state'])['clustering_state'] \
         .value_counts(normalize=True) \
         .mul(100) \
         .rename('clustered_pct_within_dgn') \
         .reset_index()
 
-    # Porcentajes de clustered/unclustered dentro de cada deepspt (intensidad)
     clustered_deepspt_percentages = df.groupby(['file', 'roi', 'deepspt'])['clustering_state'] \
         .value_counts(normalize=True) \
         .mul(100) \
@@ -81,9 +75,6 @@ for index, dataset in enumerate(new_datasets_list):
     print("\nPorcentajes clustered/unclustered dentro de cada intensidad (deepspt):")
     print(clustered_deepspt_percentages)
 
-    # ========================
-    # Promedio de porcentajes con SEM
-    # ========================
     def mean_sem(series):
         return pd.Series({
             'mean': series.mean(),
@@ -102,19 +93,15 @@ for index, dataset in enumerate(new_datasets_list):
     print("\nPromedio porcentajes por estado deepspt (con SEM):")
     print(avg_deepspt)
 
-    # ========================
-    # Porcentaje total en clustered
-    # ========================
     total_clustered_pct = (df['clustering_state'] == 'clustered').mean() * 100
-    print(f"\nPorcentaje total en clustered: {total_clustered_pct:.2f}%")
+    print(f"\nTotal clustered percentage: {total_clustered_pct:.2f}%")
 
-    # Promedio y SEM de porcentaje clustered por ROI y file
     clustered_by_roi_file = df.groupby(['file', 'roi'])['clustering_state'] \
         .apply(lambda x: (x == 'clustered').mean() * 100) \
         .reset_index(name='clustered_pct')
 
     avg_clustered_stats = mean_sem(clustered_by_roi_file['clustered_pct'])
 
-    print(f"Promedio de porcentaje clustered por ROI y file: {avg_clustered_stats['mean']:.2f}% (SEM={avg_clustered_stats['sem']:.2f}%)")
+    print(f"Average percentage per ROI and File: {avg_clustered_stats['mean']:.2f}% (SEM={avg_clustered_stats['sem']:.2f}%)")
 
 DatabaseHandler.disconnect()
