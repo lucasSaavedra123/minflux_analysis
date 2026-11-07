@@ -819,6 +819,14 @@ class Trajectory(Document):
                 new_trajectory.info['analysis']['confinement-states'] = self.info['analysis']['confinement-states'][initial_index:final_index]
             if 'anomaly_scores' in self.info['analysis']:
                 new_trajectory.info['analysis']['anomaly_scores'] = self.info['analysis']['anomaly_scores'][initial_index:final_index]
+            if 'segmented_diffusion_coefficient_t' in self.info['analysis']:
+                new_trajectory.info['analysis']['segmented_diffusion_coefficient_t'] = self.info['analysis']['segmented_diffusion_coefficient_t'][initial_index:final_index]
+            if 'diffusion_coefficient_t' in self.info['analysis']:
+                new_trajectory.info['analysis']['diffusion_coefficient_t'] = self.info['analysis']['diffusion_coefficient_t'][initial_index:final_index]
+            if 'segmented_hurst_exponent_t' in self.info['analysis']:
+                new_trajectory.info['analysis']['segmented_hurst_exponent_t'] = self.info['analysis']['segmented_hurst_exponent_t'][initial_index:final_index]
+            if 'hurst_exponent_t' in self.info['analysis']:
+                new_trajectory.info['analysis']['hurst_exponent_t'] = self.info['analysis']['hurst_exponent_t'][initial_index:final_index]
 
         return new_trajectory
 

@@ -9,6 +9,7 @@ from DatabaseHandler import DatabaseHandler
 from Trajectory import Trajectory
 from CONSTANTS import *
 from utils import *
+import anDiffReg as an
 
 
 DatabaseHandler.connect_over_network(None, None, IP_ADDRESS, COLLECTION_NAME)
@@ -99,20 +100,19 @@ for index, dataset in enumerate(new_datasets_list):
                 if f'{state}-states-deepspt' not in trajectory.info['analysis']:
                     continue
 
-                if 'hurst_exponent_t' not in trajectory.info['analysis']:
-                    continue
-
-                if 'diffusion_coefficient_t' not in trajectory.info['analysis']:
-                    continue
-
                 states = trajectory.info['analysis'][f'{state}-states-deepspt']
 
                 sub_trajectories_by_state = trajectory.sub_trajectories_trajectories_from_confinement_states(custom_states=states)
 
                 for subtrajectory in sub_trajectories_by_state[1]:
                     if subtrajectory.length >= 30:
-                        alpha = np.mean(subtrajectory.info['analysis']['hurst_exponent_t']) * 2
-                        d = np.mean(subtrajectory.info['analysis']['diffusion_coefficient_t'])
+                        X = np.array([[s] for s in trajectory.get_noisy_x()])
+                        Y = np.array([[s] for s in trajectory.get_noisy_y()])
+                        msd = an.tamsd(np.dstack((X,Y)))
+                        
+                        from IPython import embed
+                        embed()
+
                         rows_by_state[state].append({
                             f'{state}-alpha': alpha,
                             f'{state}-d': d,
